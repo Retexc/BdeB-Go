@@ -16,7 +16,7 @@
         <div class="map-maker"></div>
       </div>
       <div class="flex-column-e">
-        <span class="time">Current Time: {{ current_time }}</span>
+        <span class="time">{{ current_time }}</span>
         {% for bus in buses %}
         <div class="frame">
           <button class="button">
@@ -28,9 +28,6 @@
           </div>
           <div class="frame-2">
             <span class="min">{{ bus.arrival_time | time_difference }} min</span>
-            <div class="group">
-              <div class="rss-feed"></div>
-            </div>
           </div>
         </div>
         {% endfor %}

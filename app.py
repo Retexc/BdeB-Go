@@ -13,39 +13,31 @@ STM_REALTIME_ENDPOINT = "https://api.stm.info/pub/od/gtfs-rt/ic/v2/tripUpdates"
 DESIRED_ROUTES = ["171", "164", "180"]
 
 def get_bus_data():
-    headers = {
-        "apiKey": STM_API_KEY,
-        "accept": "application/x-protobuf"
-    }
+    headers = {"apikey": STM_API_KEY}
     response = requests.get(STM_REALTIME_ENDPOINT, headers=headers)
-
     if response.status_code == 200:
-        # Parse the Protobuf response
+        # Parse Protobuf data
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.ParseFromString(response.content)
-
         buses = []
         for entity in feed.entity:
             if entity.HasField("trip_update"):
-                trip_update = entity.trip_update
-                route_id = trip_update.trip.route_id
-                if route_id not in DESIRED_ROUTES:
-                    continue  # Skip routes not in the desired list
-
-                for stop_time_update in trip_update.stop_time_update:
-                    stop_id = stop_time_update.stop_id
-                    arrival_time = stop_time_update.arrival.time
-
+                trip = entity.trip_update.trip
+                stop_time_updates = entity.trip_update.stop_time_update
+                route_id = trip.route_id
+                if route_id in DESIRED_ROUTES and stop_time_updates:
                     buses.append({
                         "route_id": route_id,
-                        "direction": "Ouest",  # Placeholder for direction
-                        "stop_name": stop_id,  # Replace this with a stop name mapping if available
-                        "arrival_time": arrival_time
+                        "direction": "Ouest",  # Static for now, update with real data if needed
+                        "stop_name": "Henri-Bourassa / du Bois-de-Boulogne",  # Static, update dynamically if possible
+                        "arrival_time": int(stop_time_updates[0].departure.time)
                     })
         return buses
     else:
         print(f"Error: {response.status_code}, {response.text}")
         return []
+
+
 
 @app.template_filter('time_difference')
 def time_difference_filter(epoch_time):
@@ -56,8 +48,11 @@ def time_difference_filter(epoch_time):
 @app.route("/")
 def index():
     buses = get_bus_data()
+    # Limit to only the first 3 items
+    buses = buses[:3]
     current_time = time.strftime('%H:%M')  # Format current time as HH:MM
     return render_template("index.html", buses=buses, current_time=current_time)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
