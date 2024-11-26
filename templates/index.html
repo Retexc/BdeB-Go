@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real-Time Bus Tracker</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Atlas+Grotesk:wght@500;900&display=swap"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="rectangle">
+        <div class="map-maker"></div>
+      </div>
+      <div class="flex-column-e">
+        <span class="time">Current Time: {{ current_time }}</span>
+        {% for bus in buses %}
+        <div class="frame">
+          <button class="button">
+            <span class="number">{{ bus.route_id }}</span>
+          </button>
+          <div class="frame-1">
+            <span class="direction">{{ bus.direction }}</span>
+            <span class="henri-bourassa-du-bois-de-boulogne">{{ bus.stop_name }}</span>
+          </div>
+          <div class="frame-2">
+            <span class="min">{{ bus.arrival_time | time_difference }} min</span>
+            <div class="group">
+              <div class="rss-feed"></div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not buses %}
+        <div class="no-buses">No bus information available at this time.</div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>
