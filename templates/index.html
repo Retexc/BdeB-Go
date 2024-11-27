@@ -12,8 +12,10 @@
               const response = await fetch('/api/data'); // Call the API endpoint
               const data = await response.json();
 
-              // Update the current time
-              document.querySelector('.time').textContent = data.current_time;
+              // Update the current time without seconds
+              const timeElement = document.querySelector('.time');
+              const currentTimeParts = data.current_time.split(':'); // Split the time string
+              timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`; // Keep hours and minutes, add AM/PM
 
               // Update buses
               const frameContainer = document.querySelector('.frame');
