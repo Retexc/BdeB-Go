@@ -90,42 +90,47 @@ def process_trip_updates(entities, gtfs_trips):
 
 # Process static data for the Saint-Jérôme train
 def process_train_data():
-    train_stop_id = "MTL7D"  # Saint-Jérôme train stop ID
-    saint_jerome_route_id = "4"  # Route ID for Saint-Jérôme train
-
-    train_schedule = []
+    # Add stops and route IDs for the new trains
+    train_stops = {
+        "MTL7B": "4",  # Saint-Jérôme direction Montreal-Ouest
+        "MTL7D": "4",  # Saint-Jérôme direction Saint-Jérôme
+        "MTL59C": "6"  # Mascouche train at Gare Ahuntsic
+    }
     current_time = datetime.now()
+    train_schedule = []
 
     # Map trip IDs to their route IDs
     trip_to_route = {}
     with open(trips_path, "r") as trips_file:
         reader = csv.DictReader(trips_file)
         for row in reader:
-            if row["route_id"] == saint_jerome_route_id:
+            if row["route_id"] in train_stops.values():
                 trip_to_route[row["trip_id"]] = row["route_id"]
 
-    # Read stop times
+    # Read stop times for each train stop
     with open(stop_times_path, "r") as stop_times_file:
         reader = csv.DictReader(stop_times_file)
         for row in reader:
-            if row["stop_id"] == train_stop_id and row["trip_id"] in trip_to_route:
+            stop_id = row["stop_id"]
+            if stop_id in train_stops and row["trip_id"] in trip_to_route:
                 arrival_time_str = row["arrival_time"]
                 arrival_time = datetime.strptime(arrival_time_str, "%H:%M:%S").replace(
                     year=current_time.year, month=current_time.month, day=current_time.day
                 )
                 if arrival_time < current_time:
-                    continue  # Skip trains that have already departed
+                    continue  # Skip past trains
                 minutes_to_arrival = int((arrival_time - current_time).total_seconds() // 60)
                 train_schedule.append({
-                    "route_id": saint_jerome_route_id,
+                    "route_id": trip_to_route[row["trip_id"]],
+                    "stop_id": stop_id,
                     "trip_id": row["trip_id"],
-                    "stop_id": train_stop_id,
                     "arrival_time": minutes_to_arrival,
                 })
 
-    # Sort the train schedule by the closest arrival times and return only the next one
+    # Sort the train schedule by closest arrival time
     train_schedule.sort(key=lambda x: x["arrival_time"])
-    return train_schedule[0] if train_schedule else None
+    return train_schedule[:3]  # Return the next three trains
+
 
 # Load trips data from GTFS static file
 gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
@@ -148,12 +153,13 @@ def index():
 def api_data():
     entities = fetch_realtime_data()
     buses = process_trip_updates(entities, gtfs_trips)
-    next_train = process_train_data()
+    next_trains = process_train_data()  # Return all relevant train directions
     return {
         "buses": buses,
-        "next_train": next_train,
+        "next_trains": next_trains,
         "current_time": time.strftime("%I:%M:%S %p")
     }
+
 
 if __name__ == "__main__":
     app.run(debug=True)
