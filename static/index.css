@@ -861,3 +861,16 @@ button {
 .rss-feed {
   animation: blink 1.5s infinite;
 }
+
+.occupancy-icon {
+  display: inline-block;
+  margin-left: 10px; /* Space between time and icon */
+  vertical-align: middle;
+  width: 20px; /* Adjust size to fit your design */
+  height: 20px;
+}
+
+.occupancy-icon img {
+  max-width: 100%;
+  height: auto;
+}
