@@ -1,40 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Real-Time Bus Tracker</title>
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Atlas+Grotesk:wght@500;900&display=swap"
-    />
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Real-Time</title>
+    <link rel="stylesheet" href="./static/index.css">
+    <script>
+      // Function to update the page dynamically
+      async function refreshData() {
+          try {
+              const response = await fetch('/api/data'); // Call the API endpoint
+              const data = await response.json();
+
+              // Update the current time
+              document.querySelector('.time').textContent = data.current_time;
+
+              // Update buses
+              const frameContainer = document.querySelector('.frame');
+              frameContainer.innerHTML = ''; // Clear the current content
+
+              // Populate buses dynamically
+              data.buses.forEach(bus => {
+                  const busDiv = document.createElement('div');
+                  busDiv.className = `frame-1 ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled' : ''}`;
+                  
+                  busDiv.innerHTML = `
+                      <div class="button">
+                          <span class="frame-2">${bus.route_id}</span>
+                      </div>
+                      <div class="frame-3">
+                          <span class="direction">Ouest</span>
+                          <span class="location">Henri-Bourassa / du Bois-de-Boulogne</span>
+                      </div>
+                      <div class="frame-4">
+                          <span class="time-remaining ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled-text' : ''}">
+                              ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'Annulé' : `${bus.arrival_time} min`}
+                          </span>
+                          ${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `
+                              <div class="group">
+                                  <div class="rss-feed"></div>
+                              </div>
+                          ` : ''}
+                      </div>
+                  `;
+                  frameContainer.appendChild(busDiv);
+              });
+
+              // Update next train
+              if (data.next_train) {
+                  const trainDiv = document.createElement('div');
+                  trainDiv.className = 'frame-1';
+                  trainDiv.innerHTML = `
+                      <div class="button" style="background: #ebc977;">
+                          <span class="frame-2">${data.next_train.route_id}</span>
+                      </div>
+                      <div class="frame-3">
+                          <span class="direction">Saint-Jérôme</span>
+                          <span class="location">Gare Bois-de-Boulogne</span>
+                      </div>
+                      <div class="frame-4">
+                          <span class="time-remaining">${data.next_train.arrival_time} min</span>
+                          <div class="group">
+                              <div class="rss-feed"></div>
+                          </div>
+                      </div>
+                  `;
+                  frameContainer.appendChild(trainDiv);
+              }
+          } catch (error) {
+              console.error('Error fetching data:', error);
+          }
+      }
+
+      // Refresh data every 30 seconds
+      setInterval(refreshData, 30000);
+
+      // Initial load
+      document.addEventListener('DOMContentLoaded', refreshData);
+  </script>
+</head>
+<body>
     <div class="main-container">
-      <div class="rectangle">
-        <div class="map-maker"></div>
-      </div>
-      <div class="flex-column-e">
-        <span class="time">{{ current_time }}</span>
-        {% for bus in buses %}
-        <div class="frame">
-          <button class="button">
-            <span class="number">{{ bus.route_id }}</span>
-          </button>
-          <div class="frame-1">
-            <span class="direction">{{ bus.direction }}</span>
-            <span class="henri-bourassa-du-bois-de-boulogne">{{ bus.stop_name }}</span>
-          </div>
-          <div class="frame-2">
-            <span class="min">{{ bus.arrival_time | time_difference }} min</span>
-          </div>
+        <!-- Left Column: Information -->
+        <div class="info-column">
+            <span class="time">{{ current_time }}</span>
+            <div class="frame">
+                {% for bus in buses %}
+                <div class="frame-1 {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled{% endif %}">
+                    <div class="button">
+                        <span class="frame-2">{{ bus.route_id }}</span>
+                    </div>
+                    <div class="frame-3">
+                        <span class="direction">Ouest</span>
+                        <span class="location">Henri-Bourassa / du Bois-de-Boulogne</span>
+                    </div>
+                    <div class="frame-4">
+                        <span class="time-remaining {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled-text{% endif %}">
+                            {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}
+                                Annulé
+                            {% else %}
+                                {{ bus.arrival_time }} min
+                            {% endif %}
+                        </span>
+                        {% if bus.arrival_time != 'Unavailable (Route Canceled)' %}
+                        <div class="group">
+                            <div class="rss-feed"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if next_train %}
+                <div class="frame-1">
+                    <div class="button" style="background: #ebc977;">
+                        <span class="frame-2">{{ next_train.route_id }}</span>
+                    </div>
+                    <div class="frame-3">
+                        <span class="direction">Saint-Jérôme</span>
+                        <span class="location">Gare Bois-de-Boulogne</span>
+                    </div>
+                    <div class="frame-4">
+                        <span class="time-remaining">{{ next_train.arrival_time }} min</span>
+                        <div class="group">
+                            <div class="rss-feed"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endfor %}
-        {% if not buses %}
-        <div class="no-buses">No bus information available at this time.</div>
-        {% endif %}
-      </div>
+
+        <!-- Right Column: Map -->
+        <div class="map-column">
+            <img src="/static/assets/images/map.png" alt="Map showing Gare Bois-de-Boulogne" class="map-image">
+        </div>
     </div>
-  </body>
+    
+</body>
 </html>

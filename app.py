@@ -1,58 +1,159 @@
-from flask import Flask, render_template
+import os
 import requests
+import gtfs_realtime_pb2
 import time
-import gtfs_realtime_pb2  # Import the generated GTFS-Realtime Protobuf module
+import csv
+from flask import Flask, render_template
+from datetime import datetime
 
 app = Flask(__name__)
 
-# STM API credentials
+# STM API Credentials
 STM_API_KEY = "l719ebd45028394df8a685460891da2772"
 STM_REALTIME_ENDPOINT = "https://api.stm.info/pub/od/gtfs-rt/ic/v2/tripUpdates"
 
-# List of desired bus routes
-DESIRED_ROUTES = ["171", "164", "180"]
+# Dynamically construct paths for GTFS files
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-def get_bus_data():
-    headers = {"apikey": STM_API_KEY}
+stop_times_path = os.path.join(script_dir, "Exo", "Train", "stop_times.txt")
+trips_path = os.path.join(script_dir, "Exo", "Train", "trips.txt")
+stops_path = os.path.join(script_dir, "Exo", "Train", "stops.txt")
+
+# Load static GTFS trips for validation
+def load_gtfs_trips(filepath):
+    trips_data = {}
+    with open(filepath, mode="r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            trips_data[row["trip_id"]] = row["route_id"]
+    return trips_data
+
+# Validate trip_id and route_id from the static file
+def validate_trip(trip_id, route_id, gtfs_trips):
+    return gtfs_trips.get(trip_id) == route_id
+
+# Fetch real-time data from STM API
+def fetch_realtime_data():
+    headers = {
+        "accept": "application/x-protobuf",
+        "apiKey": STM_API_KEY,
+    }
     response = requests.get(STM_REALTIME_ENDPOINT, headers=headers)
     if response.status_code == 200:
-        # Parse Protobuf data
+        print("API Fetch Success")
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.ParseFromString(response.content)
-        buses = []
-        for entity in feed.entity:
-            if entity.HasField("trip_update"):
-                trip = entity.trip_update.trip
-                stop_time_updates = entity.trip_update.stop_time_update
-                route_id = trip.route_id
-                if route_id in DESIRED_ROUTES and stop_time_updates:
-                    buses.append({
-                        "route_id": route_id,
-                        "direction": "Ouest",  # Static for now, update with real data if needed
-                        "stop_name": "Henri-Bourassa / du Bois-de-Boulogne",  # Static, update dynamically if possible
-                        "arrival_time": int(stop_time_updates[0].departure.time)
-                    })
-        return buses
+        return feed.entity
     else:
-        print(f"Error: {response.status_code}, {response.text}")
+        print(f"API Error: {response.status_code} - {response.text}")
         return []
 
+# Process real-time data for buses
+def process_trip_updates(entities, gtfs_trips):
+    buses = []
+    desired_routes = ["171", "180", "164"]
+    closest_buses = {route: None for route in desired_routes}
 
+    for entity in entities:
+        if entity.HasField("trip_update"):
+            trip = entity.trip_update.trip
+            stop_time_updates = entity.trip_update.stop_time_update
+            route_id = trip.route_id
+            trip_id = trip.trip_id
 
-@app.template_filter('time_difference')
-def time_difference_filter(epoch_time):
-    current_time = int(time.time())
-    difference = epoch_time - current_time
-    return max(difference // 60, 0)  # Convert seconds to minutes
+            if route_id in desired_routes and validate_trip(trip_id, route_id, gtfs_trips):
+                for stop_time in stop_time_updates:
+                    if stop_time.stop_id == "50270":
+                        arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
+                        minutes_to_arrival = (arrival_time - int(time.time())) // 60 if arrival_time else None
+
+                        if minutes_to_arrival is not None:
+                            if closest_buses[route_id] is None or minutes_to_arrival < closest_buses[route_id]["arrival_time"]:
+                                closest_buses[route_id] = {
+                                    "route_id": route_id,
+                                    "trip_id": trip_id,
+                                    "stop_id": "50270",
+                                    "arrival_time": minutes_to_arrival,
+                                }
+
+    for route in desired_routes:
+        if closest_buses[route] is None:
+            closest_buses[route] = {
+                "route_id": route,
+                "trip_id": "N/A",
+                "stop_id": "50270",
+                "arrival_time": "Unavailable (Route Canceled)",
+            }
+
+    buses = [bus for bus in closest_buses.values()]
+    return buses
+
+# Process static data for the Saint-Jérôme train
+def process_train_data():
+    train_stop_id = "MTL7D"  # Saint-Jérôme train stop ID
+    saint_jerome_route_id = "4"  # Route ID for Saint-Jérôme train
+
+    train_schedule = []
+    current_time = datetime.now()
+
+    # Map trip IDs to their route IDs
+    trip_to_route = {}
+    with open(trips_path, "r") as trips_file:
+        reader = csv.DictReader(trips_file)
+        for row in reader:
+            if row["route_id"] == saint_jerome_route_id:
+                trip_to_route[row["trip_id"]] = row["route_id"]
+
+    # Read stop times
+    with open(stop_times_path, "r") as stop_times_file:
+        reader = csv.DictReader(stop_times_file)
+        for row in reader:
+            if row["stop_id"] == train_stop_id and row["trip_id"] in trip_to_route:
+                arrival_time_str = row["arrival_time"]
+                arrival_time = datetime.strptime(arrival_time_str, "%H:%M:%S").replace(
+                    year=current_time.year, month=current_time.month, day=current_time.day
+                )
+                if arrival_time < current_time:
+                    continue  # Skip trains that have already departed
+                minutes_to_arrival = int((arrival_time - current_time).total_seconds() // 60)
+                train_schedule.append({
+                    "route_id": saint_jerome_route_id,
+                    "trip_id": row["trip_id"],
+                    "stop_id": train_stop_id,
+                    "arrival_time": minutes_to_arrival,
+                })
+
+    # Sort the train schedule by the closest arrival times and return only the next one
+    train_schedule.sort(key=lambda x: x["arrival_time"])
+    return train_schedule[0] if train_schedule else None
+
+# Load trips data from GTFS static file
+gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
 
 @app.route("/")
 def index():
-    buses = get_bus_data()
-    # Limit to only the first 3 items
-    buses = buses[:3]
-    current_time = time.strftime('%H:%M')  # Format current time as HH:MM
-    return render_template("index.html", buses=buses, current_time=current_time)
+    entities = fetch_realtime_data()
+    buses = process_trip_updates(entities, gtfs_trips)
+    next_train = process_train_data()  # Only the next train
+    current_time = time.strftime("%I:%M:%S %p")
 
+    return render_template(
+        "index.html",
+        buses=buses,
+        next_train=next_train,
+        current_time=current_time
+    )
+
+@app.route("/api/data")
+def api_data():
+    entities = fetch_realtime_data()
+    buses = process_trip_updates(entities, gtfs_trips)
+    next_train = process_train_data()
+    return {
+        "buses": buses,
+        "next_train": next_train,
+        "current_time": time.strftime("%I:%M:%S %p")
+    }
 
 if __name__ == "__main__":
     app.run(debug=True)

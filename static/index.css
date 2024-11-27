@@ -1,3 +1,28 @@
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .info-column {
+      width: 100%; /* Full width on smaller screens */
+  }
+
+  .map-column {
+      width: 100%; /* Stack the map below the info column */
+      margin-top: 20px;
+  }
+
+  .main-container {
+      flex-direction: column; /* Stack both columns vertically */
+  }
+}
+
+@media (max-width: 768px) {
+  .frame {
+      font-size: 0.9rem; /* Adjust font size for smaller screens */
+  }
+
+  .map-image {
+      width: 90%; /* Reduce map image size */
+  }
+}
 :root {
   --default-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Ubuntu, "Helvetica Neue", Helvetica, Arial, "PingFang SC",
@@ -29,38 +54,31 @@ button {
   background: #ffffff;
   overflow: hidden;
 }
-.rectangle {
+.map-maker {
   position: absolute;
-  width: 690px;
+  width: 687px;
   height: 1080px;
   top: 0;
-  left: 1230px;
-  background: #d9d9d9;
-}
-.map-maker {
-  position: relative;
-  width: 688px;
-  height: 1080px;
-  margin: 0 0 0 0;
-  background: url(./assets/images/ea0483a2-acf0-42f1-b3c5-080327e1fc34.png)
+  left: 1308px;
+  background: url(./assets/images/ed7535f2-5e36-4b4b-9f32-181f4e47b024.png)
     no-repeat center;
   background-size: cover;
-  z-index: 43;
+  z-index: 60;
 }
-.flex-column-e {
+.flex-column {
   position: absolute;
-  width: 1204px;
+  width: 1310px;
   height: 978.949px;
   top: 148px;
   left: -62px;
   font-size: 0px;
-  z-index: 44;
+  z-index: 59;
 }
 .time {
   display: block;
   position: relative;
   height: 48px;
-  margin: 0 0 0 149px;
+  margin: 0 0 0 50px;
   color: #000000;
   font-family: Atlas Grotesk, var(--default-font-family);
   font-size: 40px;
@@ -68,17 +86,27 @@ button {
   line-height: 48px;
   text-align: left;
   white-space: nowrap;
-  z-index: 42;
+  z-index: 58;
 }
 .frame {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 62px;
+  position: relative;
+  width: 1188px;
+  margin: 79px 0 0 50px;
+}
+.frame-1 {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   gap: 39px;
   position: relative;
-  width: 1054px;
-  margin: 62px 0 0 149px;
+  min-width: 0;
   z-index: 1;
+  margin-bottom: 10px; /* Default spacing between all items */
 }
 .button {
   display: flex;
@@ -95,7 +123,7 @@ button {
   border: none;
   z-index: 2;
 }
-.number {
+.frame-2 {
   flex-shrink: 0;
   flex-basis: auto;
   position: relative;
@@ -109,7 +137,7 @@ button {
   white-space: nowrap;
   z-index: 3;
 }
-.frame-1 {
+.frame-3 {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -135,7 +163,7 @@ button {
   white-space: nowrap;
   z-index: 5;
 }
-.henri-bourassa-du-bois-de-boulogne {
+.location {
   align-self: stretch;
   flex-shrink: 0;
   flex-basis: auto;
@@ -151,7 +179,7 @@ button {
   white-space: nowrap;
   z-index: 6;
 }
-.frame-2 {
+.frame-4 {
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -163,7 +191,7 @@ button {
   padding: 10px 12px 10px 12px;
   z-index: 7;
 }
-.min {
+.time-remaining {
   flex-shrink: 0;
   flex-basis: auto;
   position: relative;
@@ -190,22 +218,106 @@ button {
   height: 100%;
   top: 0;
   left: 0;
-  background: url(./assets/images/8020723d-7727-49cd-99b1-a6af26a4b977.png)
+  background: url(./assets/images/f27b2601-95b5-4619-8201-ab06d1f1d196.png)
     no-repeat center;
   background-size: 100% 100%;
   z-index: 10;
 }
-.frame-3 {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 39px;
+.group-5 {
+  flex-shrink: 0;
   position: relative;
-  width: 1054px;
-  margin: 62px 0 0 149px;
+  width: 74px;
+  height: 24px;
   z-index: 11;
 }
-.button-4 {
+.icons-person {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  left: 0;
+  z-index: 12;
+  overflow: hidden;
+}
+.vector {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/d40bef35-580a-490c-b3e9-506de62804b8.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 13;
+}
+.icons-person-6 {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 14;
+  overflow: hidden;
+}
+.vector-7 {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/86bf2f28-eea5-4acd-bf37-5f874b439768.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 15;
+}
+.icons-person-8 {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  left: 25px;
+  z-index: 16;
+  overflow: hidden;
+}
+.vector-9 {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/87a619c1-60be-4ec6-be82-6072b90f0d27.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 17;
+}
+.icons-person-a {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  left: 50px;
+  z-index: 18;
+  overflow: hidden;
+}
+.vector-b {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/82a0a732-ce64-4e06-967d-73074857340e.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 19;
+}
+.frame-c {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 39px;
+  position: relative;
+  min-width: 0;
+  z-index: 20;
+}
+.frame-d {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,14 +325,14 @@ button {
   flex-shrink: 0;
   gap: 10px;
   position: relative;
-  width: 115px;
+  width: 116px;
   padding: 20px 25px 20px 25px;
   cursor: pointer;
   background: #469bda;
   border: none;
-  z-index: 12;
+  z-index: 21;
 }
-.number-164 {
+.frame-e {
   flex-shrink: 0;
   flex-basis: auto;
   position: relative;
@@ -232,9 +344,9 @@ button {
   line-height: 43px;
   text-align: left;
   white-space: nowrap;
-  z-index: 13;
+  z-index: 22;
 }
-.frame-5 {
+.frame-f {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -242,7 +354,7 @@ button {
   flex-shrink: 0;
   position: relative;
   width: 691px;
-  z-index: 14;
+  z-index: 23;
 }
 .ouest {
   align-self: stretch;
@@ -258,9 +370,9 @@ button {
   line-height: 43px;
   text-align: left;
   white-space: nowrap;
-  z-index: 15;
+  z-index: 24;
 }
-.henri-bourassa-du-bois-de-boulogne-6 {
+.henri-bourassa-du-bois-de-boulogne {
   align-self: stretch;
   flex-shrink: 0;
   flex-basis: auto;
@@ -274,9 +386,9 @@ button {
   line-height: 43px;
   text-align: left;
   white-space: nowrap;
-  z-index: 16;
+  z-index: 25;
 }
-.frame-7 {
+.frame-10 {
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -286,9 +398,9 @@ button {
   position: relative;
   width: 170px;
   padding: 10px 12px 10px 12px;
-  z-index: 17;
+  z-index: 26;
 }
-.min-8 {
+.min {
   flex-shrink: 0;
   flex-basis: auto;
   position: relative;
@@ -298,3 +410,447 @@ button {
   font-size: 36px;
   font-weight: 500;
   line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 27;
+}
+.group-11 {
+  flex-shrink: 0;
+  position: relative;
+  width: 24px;
+  height: 24px;
+  z-index: 28;
+}
+.rss-feed-12 {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: url(./assets/images/b5349860-abf5-48a0-8bcc-c12391dc5a05.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 29;
+}
+.group-13 {
+  flex-shrink: 0;
+  position: relative;
+  width: 74px;
+  height: 24px;
+  z-index: 30;
+}
+.icons-person-14 {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  left: 0;
+  z-index: 31;
+  overflow: hidden;
+}
+.vector-15 {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/7c015cc9-a0b4-4712-b94c-eb97db00d1ac.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 32;
+}
+.icons-person-16 {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 33;
+  overflow: hidden;
+}
+.vector-17 {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/9b4d33ec-b474-409d-ab47-a87a735184d1.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 34;
+}
+.icons-person-18 {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  left: 25px;
+  z-index: 35;
+  overflow: hidden;
+}
+.vector-19 {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/4634598d-6245-4e54-93a7-f18a8d8f614f.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 36;
+}
+.icons-person-1a {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  left: 50px;
+  z-index: 37;
+  overflow: hidden;
+}
+.vector-1b {
+  position: relative;
+  width: 18px;
+  height: 21px;
+  margin: 1.5px 0 0 3px;
+  background: url(./assets/images/03c7c78b-e9b2-4af1-a944-6f2bc3799e7d.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 38;
+}
+.frame-1c {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 39px;
+  position: relative;
+  min-width: 0;
+  z-index: 39;
+}
+.button-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 10px;
+  position: relative;
+  width: 115px;
+  padding: 20px 25px 20px 25px;
+  cursor: pointer;
+  background: #469bda;
+  border: none;
+  opacity: 0.7;
+  z-index: 40;
+}
+.span {
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  height: 43px;
+  color: #ffffff;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 41;
+}
+.frame-1d {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  width: 691px;
+  opacity: 0.7;
+  z-index: 42;
+}
+.span-ouest {
+  align-self: stretch;
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  min-width: 0;
+  height: 43px;
+  color: #000000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 43;
+}
+.span-henri-bourassa-du {
+  align-self: stretch;
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  min-width: 0;
+  height: 43px;
+  color: #000000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 44;
+}
+.frame-1e {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 5px;
+  position: relative;
+  width: 151px;
+  padding: 10px 12px 10px 12px;
+  z-index: 45;
+}
+.text-d {
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  height: 43px;
+  color: #f40000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 46;
+}
+.frame-1f {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 39px;
+  position: relative;
+  width: 1054px;
+  margin: 79px 0 0 122px;
+  z-index: 47;
+}
+.button-20 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 10px;
+  position: relative;
+  width: 115px;
+  padding: 20px 25px 20px 25px;
+  cursor: pointer;
+  background: #ebc977;
+  border: none;
+  z-index: 48;
+}
+.span-21 {
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  height: 43px;
+  color: #000000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 49;
+}
+.frame-22 {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  width: 691px;
+  z-index: 50;
+}
+.span-23 {
+  align-self: stretch;
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  min-width: 0;
+  height: 43px;
+  color: #000000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 51;
+}
+.span-24 {
+  align-self: stretch;
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  min-width: 0;
+  height: 43px;
+  color: #000000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 52;
+}
+.frame-25 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 5px;
+  position: relative;
+  width: 155px;
+  padding: 10px 12px 10px 12px;
+  z-index: 53;
+}
+.span-26 {
+  flex-shrink: 0;
+  flex-basis: auto;
+  position: relative;
+  height: 43px;
+  color: #3dc341;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 43px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 54;
+}
+.div {
+  flex-shrink: 0;
+  position: relative;
+  width: 24px;
+  height: 24px;
+  z-index: 55;
+}
+.div-27 {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: url(./assets/images/7d2838af-7182-4bfc-9d7d-3c0bf1f198c6.png)
+    no-repeat center;
+  background-size: 100% 100%;
+  z-index: 56;
+}
+.span-28 {
+  display: block;
+  position: relative;
+  height: 24px;
+  margin: 79px 0 0 122px;
+  color: #000000;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 24px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: 59;
+}
+.div-29 {
+  position: relative;
+  width: 215px;
+  height: 202.065px;
+  margin: -0.12px 0 0 0;
+  background: url(./assets/images/c00ba1d5-34a8-42d2-946f-e84596d5a000.png)
+    no-repeat center;
+  background-size: cover;
+  z-index: 57;
+}
+.canceled {
+  opacity: 0.5; /* Optional visual cue for canceled trips */
+}
+
+.canceled-text {
+  color: red;
+}
+
+.frame-1.canceled .rss-feed {
+  display: none;
+}
+/* General Layout */
+.main-container {
+  display: flex;
+  justify-content: space-between;
+  justify-content: flex-start;
+  padding: 20px;
+  flex-wrap:nowrap;
+}
+
+/* Info Column */
+.info-column {
+  flex: 1; /* Allow the info column to take available space */
+  margin-right: 60px; /* 60px space between the info and map */
+  padding-right: 20px; /* Optional padding for spacing within the column */
+  
+}
+
+/* Map Column */
+.map-column {
+  position: fixed; /* Keeps the map column fixed to the viewport */
+  top: 0;
+  right: 0;
+  width: 35%; /* Adjust the width of the map section */
+  height: 100vh; /* Full height of the viewport */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f9f9f9; /* Optional background for clarity */
+  z-index: 100; /* Ensure it's on top of other elements */
+}
+
+
+.map-image {
+  max-width: 100%; /* Ensure the image scales within the column */
+  height: auto; /* Maintain aspect ratio */
+  border-radius: 10px; /* Optional styling */
+}
+
+/* Canceled Trip Styling */
+.canceled {
+  opacity: 0.5;
+}
+
+.canceled-text {
+  color: red;
+}
+
+.frame-1.canceled .rss-feed {
+  display: none;
+}
+.frame-1:nth-child(3) {
+  margin-bottom: 82px;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.rss-feed {
+  animation: blink 1.5s infinite;
+}
