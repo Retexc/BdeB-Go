@@ -21,26 +21,20 @@
                 frameContainer.innerHTML = ''; // Clear the current content
 
                 // Populate buses dynamically
-                data.buses.forEach(bus => {
+                data.buses.forEach((bus) => {
                     const busDiv = document.createElement('div');
                     busDiv.className = `frame-1 ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled' : ''}`;
-
-                    let displayTime;
-                    if (bus.arrival_time === 'Unavailable (Route Canceled)') {
-                        displayTime = 'Annulé';
-                    } else if (bus.arrival_time > 60) {
-                        // Calculate the passage time
-                        const currentDate = new Date(); // Current date and time
-                        const arrivalDate = new Date(currentDate.getTime() + bus.arrival_time * 60000); // Convert minutes to milliseconds
-                        const hours = arrivalDate.getHours().toString().padStart(2, '0');
-                        const minutes = arrivalDate.getMinutes().toString().padStart(2, '0');
-                        displayTime = `${hours}:${minutes}`;
-                    } else {
-                        displayTime = `${bus.arrival_time} min`;
+                    
+                    // Apply dynamic route-specific styles
+                    let buttonColorClass = '';
+                    if (bus.route_id === '180') {
+                        buttonColorClass = 'route-180';
+                    } else if (bus.route_id === '164') {
+                        buttonColorClass = 'route-164';
                     }
-
+                    
                     busDiv.innerHTML = `
-                        <div class="button">
+                        <div class="button ${buttonColorClass}">
                             <span class="frame-2">${bus.route_id}</span>
                         </div>
                         <div class="frame-3">
@@ -49,17 +43,18 @@
                         </div>
                         <div class="frame-4">
                             <span class="time-remaining ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled-text' : ''}">
-                                ${displayTime}
+                                ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'Annulé' : `${bus.arrival_time} min`}
                             </span>
                             ${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `
                                 <div class="group">
-                                    <div class="rss-feed"></div>
+                                    <div class="rss-feed blinking-icon"></div>
                                 </div>
                             ` : ''}
                         </div>
                     `;
                     frameContainer.appendChild(busDiv);
                 });
+
 
                 // Update trains
                 const trainContainer = document.querySelector('.train-frame');
@@ -71,8 +66,8 @@
                     const trainDirection = train.stop_id === 'MTL7B' ? 'Montreal-Ouest' :
                                            train.stop_id === 'MTL7D' ? 'Saint-Jérôme' :
                                            'Mascouche';
-                    const trainLocation = train.stop_id === 'MTL59C' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne';
-                    const trainTime = train.arrival_time < 60 ? `${train.arrival_time} min` : `${Math.floor(train.arrival_time / 60)} h`;
+                    const trainLocation = train.stop_id === 'MTL59A' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne';
+                    const trainTime = train.scheduled_time;
 
                     trainDiv.innerHTML = `
                         <div class="button" style="background: ${train.route_id === '4' ? '#ebc977' : '#6e2379'}">
@@ -102,69 +97,60 @@
 </head>
 <body>
     <div class="main-container">
-        <!-- Left Column: Information -->
-        <div class="info-column">
-            <span class="time">{{ current_time }}</span>
-            <div class="frame">
-                {% for bus in buses %}
-                <div class="frame-1 {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled{% endif %}">
-                    <div class="button">
-                        <span class="frame-2">{{ bus.route_id }}</span>
-                    </div>
-                    <div class="frame-3">
-                        <span class="direction">Ouest</span>
-                        <span class="location">Henri-Bourassa / du Bois-de-Boulogne</span>
-                    </div>
-                    <div class="frame-4">
-                        <span class="time-remaining {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled-text{% endif %}">
-                            {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}
-                                Annulé
-                            {% else %}
-                                {{ bus.arrival_time }} min
-                            {% endif %}
-                        </span>
-                        {% if bus.arrival_time != 'Unavailable (Route Canceled)' %}
-                        <div class="group">
-                            <div class="rss-feed"></div>
-                        </div>
+        <span class="time">{{ current_time }}</span>
+        <div class="frame">
+            {% for bus in buses %}
+            <div class="frame-1 {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled{% endif %}">
+                <div class="button">
+                    <span class="frame-2">{{ bus.route_id }}</span>
+                </div>
+                <div class="frame-3">
+                    <span class="direction">Ouest</span>
+                    <span class="location">Henri-Bourassa / du Bois-de-Boulogne</span>
+                </div>
+                <div class="frame-4">
+                    <span class="time-remaining {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled-text{% endif %}">
+                        {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}
+                            Annulé
+                        {% else %}
+                            {{ bus.arrival_time }} min
                         {% endif %}
+                    </span>
+                    {% if bus.arrival_time != 'Unavailable (Route Canceled)' %}
+                    <div class="group">
+                        <div class="rss-feed blinking-icon"></div>
                     </div>
+                    {% endif %}
                 </div>
-                {% endfor %}
             </div>
-
-            <div class="train-frame">
-                {% for train in next_trains %}
-                <div class="frame-1">
-                    <div class="button" style="background: {{ 'yellow' if train.route_id == '4' else 'blue' }};">
-                        <span class="frame-2">{{ train.route_id }}</span>
-                    </div>
-                    <div class="frame-3">
-                        <span class="direction">
-                            {% if train.stop_id == 'MTL7B' %} Montreal-Ouest
-                            {% elif train.stop_id == 'MTL7D' %} Saint-Jérôme
-                            {% elif train.stop_id == 'MTL59C' %} Mascouche
-                            {% endif %}
-                        </span>
-                        <span class="location">
-                            {% if train.stop_id == 'MTL59C' %} Gare Ahuntsic
-                            {% else %} Gare Bois-de-Boulogne
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="frame-4">
-                        <span class="time-remaining">
-                            {{ train.arrival_time if train.arrival_time < 60 else train.arrival_time // 60 ~ 'h' }}
-                        </span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            {% endfor %}
         </div>
-
-        <!-- Right Column: Map -->
-        <div class="map-column">
-            <img src="/static/assets/images/map.png" alt="Map showing Gare Bois-de-Boulogne" class="map-image">
+        <div class="train-frame">
+            {% for train in next_trains %}
+            <div class="frame-1">
+                <div class="button" style="background: {{ 'yellow' if train.route_id == '4' else 'blue' }};">
+                    <span class="frame-2">{{ train.route_id }}</span>
+                </div>
+                <div class="frame-3">
+                    <span class="direction">
+                        {% if train.stop_id == 'MTL7B' %} Montreal-Ouest
+                        {% elif train.stop_id == 'MTL7D' %} Saint-Jérôme
+                        {% elif train.stop_id == 'MTL59A' %} Mascouche
+                        {% endif %}
+                    </span>
+                    <span class="location">
+                        {% if train.stop_id == 'MTL59A' %} Gare Ahuntsic
+                        {% else %} Gare Bois-de-Boulogne
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="frame-4">
+                    <span class="time-remaining">
+                        {{ train.real_time if train.real_time else train.scheduled_time }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 </body>
