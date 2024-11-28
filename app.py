@@ -89,7 +89,8 @@ def process_trip_updates(entities, gtfs_trips):
     return buses
 
 # Process static data for the Saint-Jérôme train
-def process_train_data():
+# Process real-time data for trains
+def process_train_data(entities, gtfs_trips):
     train_stops = {
         "MTL7B": "4",  # Gare Bois-de-Boulogne, direction Saint-Jérôme
         "MTL7D": "4",  # Gare Bois-de-Boulogne, direction Montreal-Ouest
@@ -98,6 +99,7 @@ def process_train_data():
     current_time = datetime.now()
     train_schedule = []
 
+    # Map trip IDs to route IDs
     trip_to_route = {}
     with open(trips_path, "r") as trips_file:
         reader = csv.DictReader(trips_file)
@@ -105,6 +107,7 @@ def process_train_data():
             if row["route_id"] in train_stops.values():
                 trip_to_route[row["trip_id"]] = row["route_id"]
 
+    # Read stop times and construct initial schedule
     with open(stop_times_path, "r") as stop_times_file:
         reader = csv.DictReader(stop_times_file)
         for row in reader:
@@ -126,76 +129,41 @@ def process_train_data():
                     "real_time": None,  # Placeholder for real-time data
                 })
 
-    train_schedule.sort(key=lambda x: datetime.strptime(x["scheduled_time"], "%I:%M %p"))
-    
-    
-    # Deduplicate by direction (Saint-Jérôme, Montreal-Ouest, Mascouche)
+    # Integrate real-time data
+    for entity in entities:
+        if entity.HasField("trip_update"):
+            trip = entity.trip_update.trip
+            stop_time_updates = entity.trip_update.stop_time_update
+            route_id = trip.route_id
+            trip_id = trip.trip_id
+
+            # Process only desired trains
+            if route_id in train_stops.values():
+                for stop_time in stop_time_updates:
+                    if stop_time.stop_id in train_stops:
+                        real_time_arrival = stop_time.arrival.time if stop_time.HasField("arrival") else None
+                        if real_time_arrival:
+                            real_time_arrival_datetime = datetime.fromtimestamp(real_time_arrival)
+                            for train in train_schedule:
+                                if train["trip_id"] == trip_id and train["stop_id"] == stop_time.stop_id:
+                                    train["real_time"] = real_time_arrival_datetime.strftime("%I:%M %p")
+
+    # Sort by closest arrival time, prioritizing real-time over scheduled
+    train_schedule.sort(
+        key=lambda x: datetime.strptime(x["real_time"] or x["scheduled_time"], "%I:%M %p")
+    )
+
+    # Deduplicate by stop_id
     unique_trains = []
-    seen_directions = set()
+    seen_stops = set()
     for train in train_schedule:
-        direction_key = train["stop_id"]
-        if direction_key not in seen_directions:
+        if train["stop_id"] not in seen_stops:
             unique_trains.append(train)
-            seen_directions.add(direction_key)
-        if len(unique_trains) == 3:  # Limit to 3 unique trains
+            seen_stops.add(train["stop_id"])
+        if len(unique_trains) == 3:
             break
 
     return unique_trains
-
-
-
-
-def test_fetch_scheduled_times():
-    train_stops = {
-        "MTL7D": "4",  # Gare Bois-de-Boulogne, direction Montreal-Ouest
-        "MTL7B": "4",  # Gare Bois-de-Boulogne, direction Saint-Jérôme
-        "MTL59A": "6",  # Gare Ahuntsic, direction Mascouche
-    }
-    current_time = datetime.now()
-    train_schedule = []
-
-    # Map trip IDs to their route IDs
-    trip_to_route = {}
-    with open(trips_path, "r") as trips_file:
-        reader = csv.DictReader(trips_file)
-        for row in reader:
-            if row["route_id"] in train_stops.values():
-                trip_to_route[row["trip_id"]] = row["route_id"]
-
-    # Read stop times for each train stop
-    with open(stop_times_path, "r") as stop_times_file:
-        reader = csv.DictReader(stop_times_file)
-        for row in reader:
-            stop_id = row["stop_id"]
-            trip_id = row["trip_id"]
-            if stop_id in train_stops and trip_id in trip_to_route:
-                arrival_time_str = row["arrival_time"]
-                arrival_time = datetime.strptime(arrival_time_str, "%H:%M:%S").replace(
-                    year=current_time.year, month=current_time.month, day=current_time.day
-                )
-
-                # Format time for display
-                formatted_time = arrival_time.strftime("%I:%M %p")
-
-                # Add to the train schedule
-                train_schedule.append({
-                    "route_id": trip_to_route[trip_id],
-                    "stop_id": stop_id,
-                    "trip_id": trip_id,
-                    "scheduled_time": formatted_time,
-                })
-
-    # Sort by scheduled time
-    train_schedule.sort(key=lambda x: datetime.strptime(x["scheduled_time"], "%I:%M %p"))
-
-    # Print results to check the data
-    print("Test Fetch Scheduled Times:")
-    for train in train_schedule[:5]:  # Print the next 5 trains
-        print(train)
-
-
-# Call the function to test
-test_fetch_scheduled_times()
 
 
 
@@ -205,28 +173,29 @@ gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
 
 @app.route("/")
 def index():
-    entities = fetch_realtime_data()
-    buses = process_trip_updates(entities, gtfs_trips)
-    next_train = process_train_data()  # Only the next train
+    entities = fetch_realtime_data()  # Fetch real-time data
+    buses = process_trip_updates(entities, gtfs_trips)  # Process buses
+    next_trains = process_train_data(entities, gtfs_trips)  # Process trains
     current_time = time.strftime("%I:%M:%S %p")
 
     return render_template(
         "index.html",
         buses=buses,
-        next_train=next_train,
+        next_trains=next_trains,
         current_time=current_time
     )
 
 @app.route("/api/data")
 def api_data():
-    entities = fetch_realtime_data()
-    buses = process_trip_updates(entities, gtfs_trips)
-    next_trains = process_train_data()  # Return all relevant train directions
+    entities = fetch_realtime_data()  # Fetch real-time data
+    buses = process_trip_updates(entities, gtfs_trips)  # Process buses
+    next_trains = process_train_data(entities, gtfs_trips)  # Process trains
     return {
         "buses": buses,
         "next_trains": next_trains,
         "current_time": time.strftime("%I:%M:%S %p")
     }
+
 
 
 if __name__ == "__main__":

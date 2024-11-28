@@ -63,8 +63,8 @@
                 data.next_trains.forEach(train => {
                     const trainDiv = document.createElement('div');
                     trainDiv.className = 'frame-1';
-                    const trainDirection = train.stop_id === 'MTL7B' ? 'Montreal-Ouest' :
-                                           train.stop_id === 'MTL7D' ? 'Saint-Jérôme' :
+                    const trainDirection = train.stop_id === 'MTL7B' ? 'Saint-Jérôme' :
+                                           train.stop_id === 'MTL7D' ? 'Montreal-Ouest' :
                                            'Mascouche';
                     const trainLocation = train.stop_id === 'MTL59A' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne';
                     const trainTime = train.scheduled_time;
@@ -133,8 +133,8 @@
                 </div>
                 <div class="frame-3">
                     <span class="direction">
-                        {% if train.stop_id == 'MTL7B' %} Montreal-Ouest
-                        {% elif train.stop_id == 'MTL7D' %} Saint-Jérôme
+                        {% if train.stop_id == 'MTL7B' %} Saint-Jérôme
+                        {% elif train.stop_id == 'MTL7D' %} Montreal-Ouest
                         {% elif train.stop_id == 'MTL59A' %} Mascouche
                         {% endif %}
                     </span>
@@ -152,6 +152,9 @@
             </div>
             {% endfor %}
         </div>
+        
+        
+        
     </div>
 </body>
 </html>
