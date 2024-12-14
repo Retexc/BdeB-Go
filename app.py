@@ -88,8 +88,7 @@ def process_trip_updates(entities, gtfs_trips):
     buses = [bus for bus in closest_buses.values()]
     return buses
 
-# Process static data for the Saint-Jérôme train
-# Process real-time data for trains
+# Process static and real-time data for trains
 def process_train_data(entities, gtfs_trips):
     train_stops = {
         "MTL7B": "4",  # Gare Bois-de-Boulogne, direction Saint-Jérôme
@@ -97,6 +96,16 @@ def process_train_data(entities, gtfs_trips):
         "MTL59A": "6",  # Gare Ahuntsic, direction Mascouche
     }
     current_time = datetime.now()
+
+    # Check if it's the weekend
+    if current_time.weekday() in [5, 6]:  # Saturday or Sunday
+        return [
+            {"route_id": "4", "stop_id": "MTL7B", "trip_id": "N/A", "scheduled_time": "Aucun passage", "real_time": None, "no_passage": True},
+            {"route_id": "4", "stop_id": "MTL7D", "trip_id": "N/A", "scheduled_time": "Aucun passage", "real_time": None, "no_passage": True},
+            {"route_id": "6", "stop_id": "MTL59A", "trip_id": "N/A", "scheduled_time": "Aucun passage", "real_time": None, "no_passage": True},
+        ]
+
+
     train_schedule = []
 
     # Map trip IDs to route IDs
@@ -137,7 +146,6 @@ def process_train_data(entities, gtfs_trips):
             route_id = trip.route_id
             trip_id = trip.trip_id
 
-            # Process only desired trains
             if route_id in train_stops.values():
                 for stop_time in stop_time_updates:
                     if stop_time.stop_id in train_stops:
@@ -164,9 +172,6 @@ def process_train_data(entities, gtfs_trips):
             break
 
     return unique_trains
-
-
-
 
 # Load trips data from GTFS static file
 gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
@@ -195,8 +200,6 @@ def api_data():
         "next_trains": next_trains,
         "current_time": time.strftime("%I:%M:%S %p")
     }
-
-
 
 if __name__ == "__main__":
     app.run(debug=True)

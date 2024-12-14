@@ -881,3 +881,10 @@ button {
 .route-164 {
   background-color: #469BDA; /* Same blue color */
 }
+
+.no-passage {
+  color: gray;
+  font-style: italic; /* Optional: Make it italic for emphasis */
+  font-size: 28px; /* Adjust size if needed */
+  text-align: center;
+}

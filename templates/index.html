@@ -10,16 +10,16 @@
             try {
                 const response = await fetch('/api/data'); // Call the API endpoint
                 const data = await response.json();
-
+    
                 // Update the current time without seconds
                 const timeElement = document.querySelector('.time');
                 const currentTimeParts = data.current_time.split(':'); // Split the time string
                 timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`; // Keep hours and minutes, add AM/PM
-
+    
                 // Update buses
                 const frameContainer = document.querySelector('.frame');
                 frameContainer.innerHTML = ''; // Clear the current content
-
+    
                 // Populate buses dynamically
                 data.buses.forEach((bus) => {
                     const busDiv = document.createElement('div');
@@ -54,21 +54,25 @@
                     `;
                     frameContainer.appendChild(busDiv);
                 });
-
-
+    
                 // Update trains
                 const trainContainer = document.querySelector('.train-frame');
                 trainContainer.innerHTML = ''; // Clear train content
-
+    
                 data.next_trains.forEach(train => {
                     const trainDiv = document.createElement('div');
                     trainDiv.className = 'frame-1';
+    
                     const trainDirection = train.stop_id === 'MTL7B' ? 'Saint-Jérôme' :
                                            train.stop_id === 'MTL7D' ? 'Montreal-Ouest' :
                                            'Mascouche';
                     const trainLocation = train.stop_id === 'MTL59A' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne';
-                    const trainTime = train.scheduled_time;
-
+    
+                    // Use gray color for "Aucun passage"
+                    const trainTime = train.scheduled_time === "Aucun passage"
+                        ? `<span class="time-remaining no-passage">${train.scheduled_time}</span>`
+                        : `<span class="time-remaining">${train.real_time || train.scheduled_time}</span>`;
+    
                     trainDiv.innerHTML = `
                         <div class="button" style="background: ${train.route_id === '4' ? '#ebc977' : '#6e2379'}">
                             <span class="frame-2">${train.route_id}</span>
@@ -78,7 +82,7 @@
                             <span class="location">${trainLocation}</span>
                         </div>
                         <div class="frame-4">
-                            <span class="time-remaining">${trainTime}</span>
+                            ${trainTime}
                         </div>
                     `;
                     trainContainer.appendChild(trainDiv);
@@ -87,13 +91,14 @@
                 console.error('Error fetching data:', error);
             }
         }
-
+    
         // Refresh data every 30 seconds
         setInterval(refreshData, 30000);
-
+    
         // Initial load
         document.addEventListener('DOMContentLoaded', refreshData);
     </script>
+    
 </head>
 <body>
     <div class="main-container">
@@ -145,13 +150,15 @@
                     </span>
                 </div>
                 <div class="frame-4">
-                    <span class="time-remaining">
-                        {{ train.real_time if train.real_time else train.scheduled_time }}
+                    <span class="time-remaining {% if train.scheduled_time == 'Aucun passage' %}no-passage{% endif %}">
+                        {{ train.scheduled_time }}
                     </span>
+                                    
                 </div>
             </div>
             {% endfor %}
         </div>
+        
         
         
         
