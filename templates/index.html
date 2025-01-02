@@ -10,79 +10,100 @@
             try {
                 const response = await fetch('/api/data'); // Call the API endpoint
                 const data = await response.json();
-    
-                // Update the current time without seconds
+
+                // Update current time
                 const timeElement = document.querySelector('.time');
-                const currentTimeParts = data.current_time.split(':'); // Split the time string
-                timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`; // Keep hours and minutes, add AM/PM
-    
+                const currentTimeParts = data.current_time.split(':');
+                timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`;
+
                 // Update buses
                 const frameContainer = document.querySelector('.frame');
-                frameContainer.innerHTML = ''; // Clear the current content
-    
-                // Populate buses dynamically
+                frameContainer.innerHTML = ''; // Clear old content
+
                 data.buses.forEach((bus) => {
                     const busDiv = document.createElement('div');
                     busDiv.className = `frame-1 ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled' : ''}`;
-                    
-                    // Apply dynamic route-specific styles
-                    let buttonColorClass = '';
-                    if (bus.route_id === '180') {
-                        buttonColorClass = 'route-180';
-                    } else if (bus.route_id === '164') {
-                        buttonColorClass = 'route-164';
+
+                    // Occupancy icons
+                    let occupancyIcons;
+                    if (bus.occupancy === "Near_Empty") {
+                        occupancyIcons = `
+                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                        `;
+                    } else if (bus.occupancy === "Light") {
+                        occupancyIcons = `
+                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                        `;
+                    } else if (bus.occupancy === "Medium") {
+                        occupancyIcons = `
+                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                        `;
+                    } else if (bus.occupancy === "Full") {
+                        occupancyIcons = `
+                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                        `;                        
+                    } else {
+                        // Default to unknown occupancy (all gray)
+                        occupancyIcons = `
+                            <img src="/static/assets/icons/invisible-person.png" alt="Full occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/invisible-person.png" alt="Full occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/invisible-person.png" alt="Full occupancy" class="occupancy-icon">
+                            <img src="/static/assets/icons/invisible-person.png" alt="Full occupancy" class="occupancy-icon">
+                        `;
                     }
-                    
+
+                    // Real-time signal
+                    const signal = bus.arrival_time !== "Unavailable (Route Canceled)" ? '<img src="/static/assets/icons/signal.png" class="blinking-icon">' : '';
+
                     busDiv.innerHTML = `
-                        <div class="button ${buttonColorClass}">
+                        <div class="button">
                             <span class="frame-2">${bus.route_id}</span>
                         </div>
                         <div class="frame-3">
-                            <span class="direction">Ouest</span>
-                            <span class="location">Henri-Bourassa / du Bois-de-Boulogne</span>
+                            <span class="direction">${bus.direction}</span>
+                            <span class="location">${bus.location}</span>
                         </div>
                         <div class="frame-4">
-                            <span class="time-remaining ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled-text' : ''}">
-                                ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'Annulé' : `${bus.arrival_time} min`}
-                            </span>
-                            ${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `
-                                <div class="group">
-                                    <div class="rss-feed blinking-icon"></div>
-                                </div>
-                            ` : ''}
+                            <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
+                            ${signal}
+                            <div class="occupancy-group">
+                                ${occupancyIcons}
+                            </div>
                         </div>
                     `;
                     frameContainer.appendChild(busDiv);
                 });
-    
+
                 // Update trains
                 const trainContainer = document.querySelector('.train-frame');
-                trainContainer.innerHTML = ''; // Clear train content
-    
-                data.next_trains.forEach(train => {
+                trainContainer.innerHTML = '';
+
+                data.next_trains.forEach((train) => {
                     const trainDiv = document.createElement('div');
                     trainDiv.className = 'frame-1';
-    
-                    const trainDirection = train.stop_id === 'MTL7B' ? 'Saint-Jérôme' :
-                                           train.stop_id === 'MTL7D' ? 'Montreal-Ouest' :
-                                           'Mascouche';
-                    const trainLocation = train.stop_id === 'MTL59A' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne';
-    
-                    // Use gray color for "Aucun passage"
-                    const trainTime = train.scheduled_time === "Aucun passage"
-                        ? `<span class="time-remaining no-passage">${train.scheduled_time}</span>`
-                        : `<span class="time-remaining">${train.real_time || train.scheduled_time}</span>`;
-    
+
                     trainDiv.innerHTML = `
                         <div class="button" style="background: ${train.route_id === '4' ? '#ebc977' : '#6e2379'}">
                             <span class="frame-2">${train.route_id}</span>
                         </div>
                         <div class="frame-3">
-                            <span class="direction">${trainDirection}</span>
-                            <span class="location">${trainLocation}</span>
+                            <span class="direction">${train.stop_id === 'MTL7B' ? 'Saint-Jérôme' : train.stop_id === 'MTL7D' ? 'Montreal-Ouest' : 'Mascouche'}</span>
+                            <span class="location">${train.stop_id === 'MTL59A' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne'}</span>
                         </div>
                         <div class="frame-4">
-                            ${trainTime}
+                            <span class="time-remaining">${train.real_time || train.scheduled_time}</span>
                         </div>
                     `;
                     trainContainer.appendChild(trainDiv);
@@ -91,77 +112,17 @@
                 console.error('Error fetching data:', error);
             }
         }
-    
+
         // Refresh data every 30 seconds
         setInterval(refreshData, 30000);
-    
-        // Initial load
         document.addEventListener('DOMContentLoaded', refreshData);
     </script>
-    
 </head>
 <body>
     <div class="main-container">
         <span class="time">{{ current_time }}</span>
-        <div class="frame">
-            {% for bus in buses %}
-            <div class="frame-1 {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled{% endif %}">
-                <div class="button">
-                    <span class="frame-2">{{ bus.route_id }}</span>
-                </div>
-                <div class="frame-3">
-                    <span class="direction">Ouest</span>
-                    <span class="location">Henri-Bourassa / du Bois-de-Boulogne</span>
-                </div>
-                <div class="frame-4">
-                    <span class="time-remaining {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}canceled-text{% endif %}">
-                        {% if bus.arrival_time == 'Unavailable (Route Canceled)' %}
-                            Annulé
-                        {% else %}
-                            {{ bus.arrival_time }} min
-                        {% endif %}
-                    </span>
-                    {% if bus.arrival_time != 'Unavailable (Route Canceled)' %}
-                    <div class="group">
-                        <div class="rss-feed blinking-icon"></div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="train-frame">
-            {% for train in next_trains %}
-            <div class="frame-1">
-                <div class="button" style="background: {{ 'yellow' if train.route_id == '4' else 'blue' }};">
-                    <span class="frame-2">{{ train.route_id }}</span>
-                </div>
-                <div class="frame-3">
-                    <span class="direction">
-                        {% if train.stop_id == 'MTL7B' %} Saint-Jérôme
-                        {% elif train.stop_id == 'MTL7D' %} Montreal-Ouest
-                        {% elif train.stop_id == 'MTL59A' %} Mascouche
-                        {% endif %}
-                    </span>
-                    <span class="location">
-                        {% if train.stop_id == 'MTL59A' %} Gare Ahuntsic
-                        {% else %} Gare Bois-de-Boulogne
-                        {% endif %}
-                    </span>
-                </div>
-                <div class="frame-4">
-                    <span class="time-remaining {% if train.scheduled_time == 'Aucun passage' %}no-passage{% endif %}">
-                        {{ train.scheduled_time }}
-                    </span>
-                                    
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        
-        
-        
-        
+        <div class="frame"></div>
+        <div class="train-frame"></div>
     </div>
 </body>
 </html>
