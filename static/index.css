@@ -859,6 +859,16 @@ button {
   margin-left: 10px; /* Space between time and icon */
 }
 
+.blinking-icon_train {
+  animation: blink-animation 1s steps(5, start) infinite;
+  background: url('/static/assets/icons/signal.png') no-repeat center center;
+  background-size: contain;
+  width: 28px;
+  height: 28px;
+  display: inline-block;
+  margin-left: 30px; /* Space between time and icon */
+}
+
 @keyframes blink-animation {
   50% {
       opacity: 0;
@@ -908,3 +918,43 @@ button {
   height: 24px;
 }
 
+.logo-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 100; /* Keep it above other elements */
+  margin: 0; /* Remove any potential default margins */
+  padding: 0; /* Remove any default padding */
+}
+
+.logo-container img {
+  width: 354px; /* Adjust the size of the image as needed */
+  height: 332.7px; /* Maintain the aspect ratio */
+  opacity: 0.8; /* Slight transparency, adjust if needed */
+  display: block;
+}
+
+.direction-icon {
+  width: 40px; /* Adjust size as needed */
+  height: 40px; /* Adjust size as needed */
+  vertical-align: middle; /* Aligns icon with the text */
+  margin-right: 5px; /* Adds some space between the icon and the text */
+}
+
+.footer-text {
+  font-size: 20px; /* Adjust size as needed */
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-weight: 900;
+  color: #000; /* Adjust color as needed */
+  text-align: left; /* Align the text to the left */
+  margin-top: 10px; /* Adds spacing above the footer text */
+  padding-left: 70px; /* Matches alignment with other content */
+}
+
+
+.train-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
