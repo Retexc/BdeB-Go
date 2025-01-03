@@ -129,6 +129,54 @@ button {
   border: none;
   z-index: 2;
 }
+
+.buttonSJ {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 10px;
+  position: relative;
+  width: 115px;
+  padding: 20px 25px 20px 25px;
+  cursor: pointer;
+  background: #EBC977;
+  border: none;
+  z-index: 2;
+}
+
+.buttonMA {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 10px;
+  position: relative;
+  width: 115px;
+  padding: 20px 25px 20px 25px;
+  cursor: pointer;
+  background: #F74E8F;
+  border: none;
+  z-index: 2;
+}
+
+.buttonBlueBuses {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 10px;
+  position: relative;
+  width: 115px;
+  padding: 20px 25px 20px 25px;
+  cursor: pointer;
+  background: #469BDA;
+  border: none;
+  z-index: 2;
+}
 .frame-2 {
   flex-shrink: 0;
   flex-basis: auto;
@@ -856,7 +904,7 @@ button {
   width: 28px;
   height: 28px;
   display: inline-block;
-  margin-left: 10px; /* Space between time and icon */
+  margin-left: 2px; /* Space between time and icon */
 }
 
 .blinking-icon_train {

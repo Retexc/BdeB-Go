@@ -136,22 +136,12 @@ def map_occupancy_status(status):
 
 
 # Process static and real-time data for trains
-def process_train_data(entities, gtfs_trips):
+def process_train_data(trip_entities, vehicle_entities, gtfs_trips):
     train_stops = {
         "MTL7B": "4",  # Gare Bois-de-Boulogne, direction Saint-Jérôme
         "MTL7D": "4",  # Gare Bois-de-Boulogne, direction Montreal-Ouest
         "MTL59A": "6",  # Gare Ahuntsic, direction Mascouche
     }
-    current_time = datetime.now()
-
-    # Check if it's the weekend
-    if current_time.weekday() in [5, 6]:  # Saturday or Sunday
-        return [
-            {"route_id": "4", "stop_id": "MTL7B", "trip_id": "N/A", "scheduled_time": "Aucun passage", "real_time": None, "no_passage": True},
-            {"route_id": "4", "stop_id": "MTL7D", "trip_id": "N/A", "scheduled_time": "Aucun passage", "real_time": None, "no_passage": True},
-            {"route_id": "6", "stop_id": "MTL59A", "trip_id": "N/A", "scheduled_time": "Aucun passage", "real_time": None, "no_passage": True},
-        ]
-
 
     train_schedule = []
 
@@ -163,30 +153,11 @@ def process_train_data(entities, gtfs_trips):
             if row["route_id"] in train_stops.values():
                 trip_to_route[row["trip_id"]] = row["route_id"]
 
-    # Read stop times and construct initial schedule
-    with open(stop_times_path, "r") as stop_times_file:
-        reader = csv.DictReader(stop_times_file)
-        for row in reader:
-            stop_id = row["stop_id"]
-            trip_id = row["trip_id"]
-            if stop_id in train_stops and trip_id in trip_to_route:
-                arrival_time_str = row["arrival_time"]
-                arrival_time = datetime.strptime(arrival_time_str, "%H:%M:%S").replace(
-                    year=current_time.year, month=current_time.month, day=current_time.day
-                )
-                if arrival_time < current_time:
-                    continue  # Skip past trains
+    # Add vehicle positions for occupancy
+    vehicle_data = process_vehicle_positions(vehicle_entities)
 
-                train_schedule.append({
-                    "route_id": trip_to_route[trip_id],
-                    "stop_id": stop_id,
-                    "trip_id": trip_id,
-                    "scheduled_time": arrival_time.strftime("%I:%M %p"),
-                    "real_time": None,  # Placeholder for real-time data
-                })
-
-    # Integrate real-time data
-    for entity in entities:
+    # Process trip updates for trains
+    for entity in trip_entities:
         if entity.HasField("trip_update"):
             trip = entity.trip_update.trip
             stop_time_updates = entity.trip_update.stop_time_update
@@ -198,27 +169,21 @@ def process_train_data(entities, gtfs_trips):
                     if stop_time.stop_id in train_stops:
                         real_time_arrival = stop_time.arrival.time if stop_time.HasField("arrival") else None
                         if real_time_arrival:
-                            real_time_arrival_datetime = datetime.fromtimestamp(real_time_arrival)
-                            for train in train_schedule:
-                                if train["trip_id"] == trip_id and train["stop_id"] == stop_time.stop_id:
-                                    train["real_time"] = real_time_arrival_datetime.strftime("%I:%M %p")
+                            train_schedule.append({
+                                "route_id": route_id,
+                                "trip_id": trip_id,
+                                "stop_id": stop_time.stop_id,
+                                "real_time": datetime.fromtimestamp(real_time_arrival).strftime("%I:%M %p"),
+                                "occupancy": next((v["occupancy"] for v in vehicle_data if v["trip_id"] == trip_id), "Unknown"),
+                            })
 
-    # Sort by closest arrival time, prioritizing real-time over scheduled
-    train_schedule.sort(
-        key=lambda x: datetime.strptime(x["real_time"] or x["scheduled_time"], "%I:%M %p")
-    )
+    print("Train Schedule:", train_schedule)
 
-    # Deduplicate by stop_id
-    unique_trains = []
-    seen_stops = set()
-    for train in train_schedule:
-        if train["stop_id"] not in seen_stops:
-            unique_trains.append(train)
-            seen_stops.add(train["stop_id"])
-        if len(unique_trains) == 3:
-            break
+    # Deduplicate and sort by arrival time
+    train_schedule = list({t["trip_id"]: t for t in train_schedule}.values())
+    train_schedule.sort(key=lambda x: x["real_time"])
+    return train_schedule[:3]
 
-    return unique_trains
 
 # Load trips data from GTFS static file
 gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
@@ -226,8 +191,9 @@ gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
 @app.route("/")
 def index():
     entities = fetch_realtime_data()  # Fetch real-time data
+    vehicle_entities = fetch_vehicle_positions()  # Fetch real-time vehicle positions
+    next_trains = process_train_data(entities, vehicle_entities, gtfs_trips)  # Process trains
     buses = process_trip_updates(entities, gtfs_trips)  # Process buses
-    next_trains = process_train_data(entities, gtfs_trips)  # Process trains
     current_time = time.strftime("%I:%M:%S %p")
 
     return render_template(
@@ -254,7 +220,8 @@ def api_data():
                 bus["occupancy"] = vehicle["occupancy"]  # Update occupancy
                 break  # Exit the loop once matched
 
-    next_trains = process_train_data(trip_entities, gtfs_trips)  # Process trains
+    next_trains = process_train_data(trip_entities, vehicle_entities, gtfs_trips)  # Process trains
+
     
     # Return JSON response
     return {

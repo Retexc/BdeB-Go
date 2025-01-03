@@ -68,7 +68,7 @@
                     const signal = bus.arrival_time !== "Unavailable (Route Canceled)" ? '<img src="/static/assets/icons/signal.png" class="blinking-icon">' : '';
 
                     busDiv.innerHTML = `
-                        <div class="button">
+                        <div class="buttonBlueBuses">
                             <span class="frame-2">${bus.route_id}</span>
                         </div>
                         <div class="frame-3">
@@ -78,7 +78,6 @@
                             </span>
                             <span class="location">${bus.location}</span>
                         </div>
-
                         <div class="frame-4">
                             <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
                             ${signal}
@@ -89,77 +88,6 @@
                     `;
                     frameContainer.appendChild(busDiv);
                 });
-
-                // Update trains
-                const trainContainer = document.querySelector('.train-frame');
-                trainContainer.innerHTML = '';
-
-                data.next_trains.forEach((train) => {
-                    const trainDiv = document.createElement('div');
-                    trainDiv.className = 'frame-1';
-
-                    // Occupancy icons logic for trains
-                    let occupancyIcons;
-                    if (train.occupancy === "Near_Empty") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (train.occupancy === "Light") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (train.occupancy === "Medium") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (train.occupancy === "Full") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                        `;
-                    } else {
-                        // Default to unknown occupancy (all gray)
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        `;
-                    }
-
-                    // Real-time signal (optional)
-                    const signal = '<img src="/static/assets/icons/signal.png" class="blinking-icon_train">';
-
-                    trainDiv.innerHTML = `
-                        <div class="button" style="background: ${train.route_id === '4' ? '#ebc977' : '#6e2379'}">
-                            <span class="frame-2">${train.route_id}</span>
-                        </div>
-                        <div class="frame-3">
-                            <span class="direction">${train.stop_id === 'MTL7B' ? 'Saint-Jérôme' : train.stop_id === 'MTL7D' ? 'Montreal-Ouest' : 'Mascouche'}</span>
-                            <span class="location">${train.stop_id === 'MTL59A' ? 'Gare Ahuntsic' : 'Gare Bois-de-Boulogne'}</span>
-                        </div>
-                        <div class="frame-4">
-                            <span class="time-remaining">${train.real_time || train.scheduled_time}</span>
-                            ${signal}
-                            <div class="occupancy-group">
-                                ${occupancyIcons}
-                            </div>
-                        </div>
-                    `;
-                    trainContainer.appendChild(trainDiv);
-                });
-
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
@@ -174,15 +102,77 @@
     <div class="main-container">
         <span class="time">{{ current_time }}</span>
         <div class="frame"></div>
-        <div class="train-frame"></div>
+        
+        <!-- Static Train Section -->
+        <div class="train-frame">
+            <div class="frame-1">
+                <div class="buttonSJ route-12">
+                    <span class="frame-2">12</span>
+                </div>
+                <div class="frame-3">
+                    <span class="direction">
+                        <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
+                        Lucien L'allier
+                    </span>
+                    <span class="location">Gare Bois-de-Boulogne</span>
+                </div>
+                <div class="frame-4">
+                    <span class="time-remaining">0 min</span>
+                    <div class="occupancy-group">
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                    </div>
+                </div>
+            </div>
+            <div class="frame-1">
+                <div class="buttonSJ route-12">
+                    <span class="frame-2">12</span>
+                </div>
+                <div class="frame-3">
+                    <span class="direction">
+                        <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
+                        Saint-Jérôme
+                    </span>
+                    <span class="location">Gare Bois-de-Boulogne</span>
+                </div>
+                <div class="frame-4">
+                    <span class="time-remaining">0 min</span>
+                    <div class="occupancy-group">
+                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                    </div>
+                </div>
+            </div>
+            <div class="frame-1">
+                <div class="buttonMA route-15">
+                    <span class="frame-2">15</span>
+                </div>
+                <div class="frame-3">
+                    <span class="direction">
+                        <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
+                        Mascouche
+                    </span>
+                    <span class="location">Gare Ahuntsic</span>
+                </div>
+                <div class="frame-4">
+                    <span class="time-remaining">0 min</span>
+                    <div class="occupancy-group">
+                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="footer-text">
             Données fournies par la STM et Exo
         </div>
-        
     </div>
     <div class="logo-container">
         <img src="/static/assets/images/B.png" alt="Transport Logos">
     </div>
-    
 </body>
 </html>
