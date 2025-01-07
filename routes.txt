@@ -207,8 +207,6 @@ route_id,agency_id,route_short_name,route_long_name,route_type,route_url,route_c
 496,STM,496,Express Victoria,3,http://www.stm.info/fr/infos/reseaux/bus,781B7D,FFFFFF
 711,STM,711,Parc-du-Mont-Royal / Oratoire,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
 747,STM,747,YUL Aéroport  / Centre-Ville,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
-767,STM,767,La Ronde / Station Jean-Drapeau,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
-769,STM,769,La Ronde / Station Papineau,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
 777,STM,777,Jean-Drapeau / Casino / Bonaventure,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
 811,STM,811,Navette Services santé,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
 822,STM,822,Navette Longue-Pointe,3,http://www.stm.info/fr/infos/reseaux/bus,009EE0,FFFFFF
