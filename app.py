@@ -9,7 +9,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # STM API Credentials
-STM_API_KEY = "l719ebd45028394df8a685460891da2772"
+STM_API_KEY = "l71d29e015f26e423ea8fe728229d220bc"
 STM_REALTIME_ENDPOINT = "https://api.stm.info/pub/od/gtfs-rt/ic/v2/tripUpdates"
 STM_VEHICLE_POSITIONS_ENDPOINT = "https://api.stm.info/pub/od/gtfs-rt/ic/v2/vehiclePositions"
 
