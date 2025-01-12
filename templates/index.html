@@ -96,8 +96,6 @@
                     const trainDiv = document.createElement('div');
                     trainDiv.className = "frame-1";
 
-                    
-
                     // Conditionally assign the button style
                     let buttonClass = "";
                     if (train.route_id === "12") {
@@ -108,7 +106,7 @@
                         buttonClass = "defaultButton"; // Fallback, if needed
                     }
 
-                    // Occupancy icons
+                    // Occupancy icons logic
                     let occupancyIcons;
                     if (train.occupancy === "Near_Empty") {
                         occupancyIcons = `
@@ -139,7 +137,6 @@
                             <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
                         `;
                     } else {
-                        // Default to unknown occupancy (all gray)
                         occupancyIcons = `
                             <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
@@ -169,6 +166,7 @@
                     `;
                     trainContainer.appendChild(trainDiv);
                 });
+
 
             } catch (error) {
                 console.error('Error fetching data:', error);

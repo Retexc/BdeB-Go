@@ -1,6 +1,8 @@
 stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_code,wheelchair_boarding
 MTL5D,Gare Centrale,,  45.500002, -73.566668,1,11010,1
 MTL5B,Gare Centrale,,  45.500002, -73.566668,1,11010,1
+MTL3A,Gare Lucien-L'Allier,,  45.494771, -73.570807,1,11150,0
+MTL3C,Gare Lucien-L'Allier,,  45.494771, -73.570807,1,11150,0
 MTL2A,Gare Vendôme,,  45.473771, -73.603101,1,11160,0
 MTL2C,Gare Vendôme,,  45.473771, -73.603101,1,11160,0
 MTL1A,Gare Montréal-Ouest,,  45.453681, -73.641740,1,11170,0
