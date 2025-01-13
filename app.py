@@ -178,7 +178,8 @@ def stm_map_occupancy_status(status):
         1: "Near_Empty",
         2: "Light",
         3: "Medium",
-        4: "Full",  
+        4: "Null",
+        5: "Full",  
 
     }
     return mapping.get(status, "Unknown")
@@ -473,6 +474,10 @@ def api_data():
             if bus["trip_id"] == vehicle["trip_id"]:  # Match trip IDs
                 bus["occupancy"] = vehicle["occupancy"]  # Update occupancy
                 break
+
+    for bus in buses:
+        if bus["route_id"] == "171":  # Filter for route 171
+            print(f"Route 171 Occupancy: {bus.get('occupancy', 'Unknown')}")  # Log the occupancy            
 
     # Fetch real-time data for Exo trains
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
