@@ -91,81 +91,86 @@
                 // Update trains
                 const trainContainer = document.querySelector('.train-frame');
                 trainContainer.innerHTML = ''; // Clear old content
+                
+                const logoDiv = document.createElement('div');
+                logoDiv.className = "exo-logo-container";
+                logoDiv.innerHTML = `<img src="/static/assets/images/exo.png" alt="Exo logo" class="exo-logo">`;
+                trainContainer.appendChild(logoDiv);
 
                 data.next_trains.forEach((train) => {
-                    const trainDiv = document.createElement('div');
-                    trainDiv.className = "frame-1";
+                const trainDiv = document.createElement('div');
+                trainDiv.className = "frame-1";
 
-                    // Conditionally assign the button style
-                    let buttonClass = "";
-                    if (train.route_id === "12") {
-                        buttonClass = "buttonSJ"; // Yellow for Saint-Jérôme
-                    } else if (train.route_id === "15") {
-                        buttonClass = "buttonMA"; // Pink for Mascouche
-                    } else {
-                        buttonClass = "defaultButton"; // Fallback, if needed
-                    }
+                let buttonClass = "";
+                if (train.route_id === "12") {
+                    buttonClass = "buttonSJ"; // Yellow for Saint-Jérôme
+                } else if (train.route_id === "15") {
+                    buttonClass = "buttonMA"; // Pink for Mascouche
+                } else {
+                    buttonClass = "defaultButton";
+                }
 
-                    // Occupancy icons logic
-                    let occupancyIcons;
-                    if (train.occupancy === "Near_Empty") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (train.occupancy === "Light") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (train.occupancy === "Medium") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (train.occupancy === "Full") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                        `;
-                    } else {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        `;
-                    }
-
-                    trainDiv.innerHTML = `
-                        <div class="${buttonClass}">
-                            <span class="frame-2-black">${train.route_id}</span>
-                        </div>
-                        <div class="frame-3">
-                            <span class="direction">
-                                <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
-                                ${train.direction || "Unknown"}
-                            </span>
-                            <span class="location">${train.location || "Unknown"}</span>
-                        </div>
-                        <div class="frame-4">
-                            <span class="time-remaining">${train.arrival_time}</span>
-                            <img src="/static/assets/icons/signal.png" class="blinking-icon">
-                            <div class="occupancy-group">
-                                ${occupancyIcons}
-                            </div>
-                        </div>
+                let occupancyIcons;
+                if (train.occupancy === "Near_Empty") {
+                    occupancyIcons = `
+                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                     `;
-                    trainContainer.appendChild(trainDiv);
-                });
+                } else if (train.occupancy === "Light") {
+                    occupancyIcons = `
+                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                    `;
+                } else if (train.occupancy === "Medium") {
+                    occupancyIcons = `
+                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
+                    `;
+                } else if (train.occupancy === "Full") {
+                    occupancyIcons = `
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+                    `;
+                } else {
+                    occupancyIcons = `
+                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                    `;
+                }
+
+                trainDiv.innerHTML = `
+                    <div class="${buttonClass}">
+                        <span class="frame-2-black">${train.route_id}</span>
+                    </div>
+                    <div class="frame-3">
+                        <span class="direction">
+                            <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
+                            ${train.direction || "Unknown"}
+                        </span>
+                        <span class="location">${train.location || "Unknown"}</span>
+                    </div>
+                    <div class="frame-4">
+                        <span class="time-remaining">${train.arrival_time || "Unknown"}</span>
+                        <img src="/static/assets/icons/signal.png" class="blinking-icon">
+                        <div class="occupancy-group">
+                            ${occupancyIcons}
+                        </div>
+                    </div>
+                `;
+                trainContainer.appendChild(trainDiv);
+            });
+
+
 
 
             } catch (error) {
@@ -180,8 +185,14 @@
 <body>
     <div class="main-container">
         <span class="time">{{ current_time }}</span>
+    
         <div class="frame"></div>
-        <div class="train-frame"></div> <!-- Dynamic Train Section -->
+        <div class="train-frame">
+            <div class="exo-logo-container">
+                <img src="/static/assets/images/exo.png" alt="Exo logo" class="exo-logo">
+            </div>
+        </div>
+    
         <div class="footer-text">
             Données fournies par la STM et Exo
         </div>
@@ -189,5 +200,7 @@
     <div class="logo-container">
         <img src="/static/assets/images/B.png" alt="Transport Logos">
     </div>
+    
+    
 </body>
 </html>

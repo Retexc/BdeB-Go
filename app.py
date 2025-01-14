@@ -204,7 +204,7 @@ def fetch_exo_realtime_data():
         print(f"Exo API Error: {trip_updates_response.status_code}, {vehicle_positions_response.status_code}")
         return [], []
     
-# Simulate "real-time" schedule in minutes using static data
+#  NEED TO GET OUT Simulate "real-time" schedule in minutes using static data
 def get_exo_train_schedule(stop_times, stop_id, current_time, trips_data):
     schedule = []
     current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second  # Current time in seconds

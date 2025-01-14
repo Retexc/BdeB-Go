@@ -913,9 +913,7 @@ button {
 .frame-1.canceled .rss-feed {
   display: none;
 }
-.frame-1:nth-child(3) {
-  margin-bottom: 82px;
-}
+
 
 .blinking-icon {
   animation: blink-animation 1s steps(5, start) infinite;
@@ -1022,8 +1020,25 @@ button {
 
 
 .train-frame {
+  margin-top: 80px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
+
+
+
+.exo-logo-container {
+  position: absolute; /* Makes the logo container float */
+  top: 0; /* Aligns it to the top of its parent container *//* Adjust as needed to align with the desired position */
+  z-index: 1000; /* Ensures the logo stays above other elements */
+  top: -70px;
+}
+
+.exo-logo {
+  width: 136.71px; /* Adjust the size as needed */
+  height: auto;
+  height: auto;
+}
+
