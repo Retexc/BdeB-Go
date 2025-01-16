@@ -43,8 +43,6 @@ stop_id_map = {
 }
 
 
-
-
 # Load STM GTFS trips
 def load_stm_gtfs_trips(filepath):
     trips_data = {}
@@ -114,7 +112,6 @@ def fetch_stm_realtime_data():
         print(f"API Error: {response.status_code} - {response.text}")
         return []
 
-# Process real-time data for buses
 # Process real-time data for buses with occupancy status
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
@@ -204,36 +201,6 @@ def fetch_exo_realtime_data():
         print(f"Exo API Error: {trip_updates_response.status_code}, {vehicle_positions_response.status_code}")
         return [], []
     
-#  NEED TO GET OUT Simulate "real-time" schedule in minutes using static data
-def get_exo_train_schedule(stop_times, stop_id, current_time, trips_data):
-    schedule = []
-    current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second  # Current time in seconds
-    for stop_time in stop_times:
-        if stop_time["stop_id"] == stop_id:
-            trip_id = stop_time["trip_id"]
-            route_id = trips_data.get(trip_id, "Unknown")  # Get route_id from trips data
-            arrival_time_str = stop_time["arrival_time"]
-            h, m, s = map(int, arrival_time_str.split(":"))  # Parse the arrival time
-            arrival_time_seconds = h * 3600 + m * 60 + s  # Convert time to seconds
-
-            # Handle day rollover: if arrival_time_seconds < current_seconds, add 24 hours to arrival time
-            if arrival_time_seconds < current_seconds:
-                arrival_time_seconds += 24 * 3600
-
-            # Add only upcoming trains
-            if arrival_time_seconds > current_seconds:
-                minutes_remaining = (arrival_time_seconds - current_seconds) // 60
-                schedule.append({
-                    "trip_id": trip_id,
-                    "route_id": route_id,
-                    "arrival_time": f"{h:02}:{m:02}:{s:02}",  # Format as hh:mm:ss
-                    "minutes_remaining": minutes_remaining,
-                })
-
-    return sorted(schedule, key=lambda x: x["minutes_remaining"])  # Sort by nearest train
-
-
-
 
 # Map trip details to route and direction
 def exo_map_train_details(schedule, trips_data, stop_id_map):
@@ -241,7 +208,7 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
     for train in schedule:
         trip_id = train["trip_id"]
         route_id = train["route_id"]
-        stop_id = train["stop_id"]  # Add this if stop_id is available in the schedule
+        stop_id = train["stop_id"]
         direction_id = trips_data.get(trip_id, {}).get("direction_id", "0")
         
         # Determine the direction based on route_id and direction_id
@@ -253,19 +220,22 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         # Logic to display time based on minutes remaining
         minutes_remaining = train["minutes_remaining"]
         if minutes_remaining <= 30:
-            display_time = f"{minutes_remaining} min"  # Display minutes remaining
+            display_time = f"{minutes_remaining} min"
         else:
-            h, m, _ = map(int, train["arrival_time"].split(":"))  # Strip out the seconds
-            display_time = f"{h:02}h{m:02}"  # Display only hours and minutes
+            h, m, _ = map(int, train["arrival_time"].split(":"))
+            display_time = f"{h:02}h{m:02}"
 
+        # Include occupancy in the mapped_train
         mapped_train = {
             "route_id": "12" if route_id == "4" else "15" if route_id == "6" else route_id,
-            "arrival_time": display_time,  # Display the formatted time
+            "arrival_time": display_time,
             "direction": direction,
-            "location": stop_name,  # Use the mapped stop name
+            "location": stop_name,
+            "occupancy": train.get("occupancy", "Unknown"),  # Add occupancy
         }
         mapped_schedule.append(mapped_train)
     return mapped_schedule
+
 
 
 def exo_map_occupancy_status(status):
@@ -333,8 +303,6 @@ def process_exo_vehicle_positions(entities, stop_times):
 
     print("Filtered Exo Vehicle Positions with Stop IDs:", filtered_vehicles)  # Debugging
     return filtered_vehicles
-
-
 
 
 
@@ -408,26 +376,22 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
     print("Final Exo Train Schedule with Occupancy:", prioritized_schedule)  # Debugging
     return prioritized_schedule
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def process_vehicle_positions(entities):
+    vehicle_data = []
+    for entity in entities:
+        if entity.HasField("vehicle"):
+            vehicle = entity.vehicle
+            trip_id = vehicle.trip.trip_id
+            route_id = vehicle.trip.route_id
+            occupancy_status = vehicle.occupancy_status if vehicle.HasField("occupancy_status") else "UNKNOWN"
+            
+            vehicle_data.append({
+                "trip_id": trip_id,
+                "route_id": route_id,
+                "occupancy": stm_map_occupancy_status(occupancy_status),  # Map to readable format
+            })
+            
+    return vehicle_data
     
 # Load trips data from GTFS static file
 #gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
@@ -440,11 +404,6 @@ stm_trips = load_stm_gtfs_trips(stm_trips_path)
 exo_trips = load_exo_gtfs_trips(exo_trips_path)
 exo_stop_times = load_exo_stop_times(exo_stop_times_path)
 
-
-# Debug to confirm data is loaded correctly
-#print("Loaded STM Trips:", stm_trips)
-#print("Loaded Exo Trips:", exo_trips)
-#print("Loaded Exo Stop Times:", exo_stop_times)
 
 @app.route("/")
 def index():
@@ -484,8 +443,6 @@ def api_data():
     processed_vehicle_positions = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
     exo_trains = process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, processed_vehicle_positions)
 
-    # Debugging
-    print("Final Exo Trains with Occupancy:", exo_trains)
 
     # Return JSON response
     return {
@@ -493,23 +450,6 @@ def api_data():
         "next_trains": exo_trains,  # Ensure each train includes an "occupancy" field
         "current_time": time.strftime("%I:%M:%S %p"),
     }
-
-def process_vehicle_positions(entities):
-    vehicle_data = []
-    for entity in entities:
-        if entity.HasField("vehicle"):
-            vehicle = entity.vehicle
-            trip_id = vehicle.trip.trip_id
-            route_id = vehicle.trip.route_id
-            occupancy_status = vehicle.occupancy_status if vehicle.HasField("occupancy_status") else "UNKNOWN"
-            
-            vehicle_data.append({
-                "trip_id": trip_id,
-                "route_id": route_id,
-                "occupancy": stm_map_occupancy_status(occupancy_status),  # Map to readable format
-            })
-            
-    return vehicle_data
 
 
 

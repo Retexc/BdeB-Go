@@ -20,6 +20,11 @@
                 const frameContainer = document.querySelector('.frame');
                 frameContainer.innerHTML = ''; // Clear old content
 
+                const stmLogoDiv = document.createElement('div');
+                stmLogoDiv.className = "stm-logo-container";
+                stmLogoDiv.innerHTML = `<img src="/static/assets/images/STM.png" alt="STM logo" class="stm-logo">`;
+                frameContainer.appendChild(stmLogoDiv);
+                
                 data.buses.forEach((bus) => {
                     const busDiv = document.createElement('div');
                     busDiv.className = `frame-1 ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled' : ''}`;
@@ -67,7 +72,7 @@
                     const signal = bus.arrival_time !== "Unavailable (Route Canceled)" ? '<img src="/static/assets/icons/signal.png" class="blinking-icon">' : '';
 
                     busDiv.innerHTML = `
-                        <div class="buttonBlueBuses">
+                        <div class="buttonBlueBuses">                            
                             <span class="frame-2">${bus.route_id}</span>
                         </div>
                         <div class="frame-3">
@@ -185,8 +190,11 @@
 <body>
     <div class="main-container">
         <span class="time">{{ current_time }}</span>
-    
-        <div class="frame"></div>
+        <div class="frame">
+            <div class="stm-logo-container">
+                <img src="/static/assets/images/STM.png" alt="STM logo" class="stm-logo">
+            </div>
+        </div>
         <div class="train-frame">
             <div class="exo-logo-container">
                 <img src="/static/assets/images/exo.png" alt="Exo logo" class="exo-logo">

@@ -97,11 +97,12 @@ button {
   z-index: 58;
 }
 .frame {
+  position: relative; /* Makes it a positioning reference for its children, like .stm-logo-container */
+  padding-top: 90px; /* Creates space for the STM logo */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 20px; /* Add spacing between bus and train sections */
-  width: 100%; /* Ensure it spans full width for alignment */
+  align-items: flex-start; /* Align content to the left */
+  gap: 20px; /* Adds spacing between bus items */
 }
 .frame-1 {
   display: flex;
@@ -1025,6 +1026,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 20px;
 }
 
 
@@ -1039,6 +1041,17 @@ button {
 .exo-logo {
   width: 136.71px; /* Adjust the size as needed */
   height: auto;
-  height: auto;
 }
 
+.stm-logo-container {
+  position: absolute; /* Ensures the logo is positioned relative to the .frame */
+  top: 0; /* Aligns to the top of the .frame */
+  left: 0; /* Aligns to the left of the .frame */
+  z-index: 1000; /* Keeps the logo above other elements */
+}
+
+
+.stm-logo {
+  width: 136.71px; /* Adjust the size as needed */
+  height: auto;
+}
