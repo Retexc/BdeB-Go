@@ -77,7 +77,7 @@
                         </div>
                         <div class="frame-3">
                             <span class="direction">
-                                <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
+                                <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
                                 ${bus.direction}
                             </span>
                             <span class="location">${bus.location}</span>
@@ -99,7 +99,7 @@
                 
                 const logoDiv = document.createElement('div');
                 logoDiv.className = "exo-logo-container";
-                logoDiv.innerHTML = `<img src="/static/assets/images/exo.png" alt="Exo logo" class="exo-logo">`;
+                logoDiv.innerHTML = `<img src="/static/assets/images/exo_white.png" alt="Exo logo" class="exo-logo">`;
                 trainContainer.appendChild(logoDiv);
 
                 data.next_trains.forEach((train) => {
@@ -159,7 +159,7 @@
                     </div>
                     <div class="frame-3">
                         <span class="direction">
-                            <img src="/static/assets/icons/arrow_circle.png" alt="Direction Icon" class="direction-icon">
+                            <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
                             ${train.direction || "Unknown"}
                         </span>
                         <span class="location">${train.location || "Unknown"}</span>
@@ -197,7 +197,7 @@
         </div>
         <div class="train-frame">
             <div class="exo-logo-container">
-                <img src="/static/assets/images/exo.png" alt="Exo logo" class="exo-logo">
+                <img src="/static/assets/images/exo_white.png" alt="Exo logo" class="exo-logo">
             </div>
         </div>
     

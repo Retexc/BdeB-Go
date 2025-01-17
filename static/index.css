@@ -36,7 +36,7 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #E9E1E1;
+  background-color: #080913;
 }
 .main-container {
   overflow: hidden;
@@ -87,7 +87,7 @@ button {
   position: relative;
   height: 48px;
   margin: 0 0 0 50px;
-  color: #000000;
+  color: #ffffff;
   font-family: Atlas Grotesk, var(--default-font-family);
   font-size: 40px;
   font-weight: 900;
@@ -229,7 +229,7 @@ button {
   position: relative;
   min-width: 0;
   height: 43px;
-  color: #000000;
+  color: #ffffff;
   font-family: Atlas Grotesk, var(--default-font-family);
   font-size: 36px;
   font-weight: 900;
@@ -245,7 +245,7 @@ button {
   position: relative;
   min-width: 0;
   height: 43px;
-  color: #000000;
+  color: #ffffff;
   font-family: Atlas Grotesk, var(--default-font-family);
   font-size: 36px;
   font-weight: 500;
@@ -458,7 +458,7 @@ button {
   position: relative;
   min-width: 0;
   height: 43px;
-  color: #000000;
+  color: #ffffff;
   font-family: Atlas Grotesk, var(--default-font-family);
   font-size: 36px;
   font-weight: 500;
@@ -1013,7 +1013,7 @@ button {
   font-size: 20px; /* Adjust size as needed */
   font-family: Atlas Grotesk, var(--default-font-family);
   font-weight: 900;
-  color: #000; /* Adjust color as needed */
+  color: #ffffff; /* Adjust color as needed */
   text-align: left; /* Align the text to the left */
   margin-top: 10px; /* Adds spacing above the footer text */
   padding-left: 70px; /* Matches alignment with other content */
