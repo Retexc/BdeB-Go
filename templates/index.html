@@ -171,14 +171,19 @@
                     <span class="location">${train.location || "Unknown"}</span>
                 </div>
                 <div class="frame-4">
-                    ${train.delayed_text ? `<span class="delayed-text">En retard (prévu à <span class="line-through">${train.original_arrival_time}</span>)</span>` : ''}
-                    <div class="time-group">
-                        <span class="time-remaining">${train.arrival_time || "Unknown"}</span>
-                        <img src="/static/assets/icons/signal.png" class="blinking-icon">
-                    </div>
-                    <div class="occupancy-group">
-                        ${occupancyIcons}
-                    </div>
+                ${train.delayed_text ? `
+                    <span class="delayed-text">${train.delayed_text}</span>
+                ` : ''}
+                ${train.early_text ? `
+                    <span class="early-text">${train.early_text}</span>
+                ` : ''}
+                <div class="time-group">
+                    <span class="time-remaining">${train.arrival_time || "Unknown"}</span>
+                    <img src="/static/assets/icons/signal.png" class="blinking-icon">
+                </div>
+                <div class="occupancy-group">
+                    ${occupancyIcons}
+                </div>
                 </div>
             `;
 

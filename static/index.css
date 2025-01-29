@@ -1095,3 +1095,14 @@ button {
   width: 136.71px; /* Adjust the size as needed */
   height: auto;
 }
+
+.early-text {
+  color: rgb(58, 133, 204);
+  font-weight: 500;
+  margin-left: 5px;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 25px;
+  white-space: nowrap; /* Prevents text from wrapping */
+  display: inline-block; /* Ensures proper inline behavior */
+  grid-column: 1;
+}
