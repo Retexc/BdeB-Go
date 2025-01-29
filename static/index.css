@@ -113,7 +113,8 @@ button {
   position: relative;
   min-width: 0;
   z-index: 1;
-  margin-bottom: 10px; /* Default spacing between all items */
+  margin-bottom: 10px;
+  width: 100%;
 }
 .button {
   display: flex;
@@ -255,15 +256,17 @@ button {
   z-index: 6;
 }
 .frame-4 {
-  display: flex;
+  display: grid;
   flex-direction: row; /* Stack time and occupancy */
-  align-items: center; /* Center align in the column */
+  align-items: baseline; /* Center align in the column */
   justify-content: center;
   flex-shrink: 0;
-  gap: 10px; /* Add spacing between the time and icons */
+  gap: 30px; /* Add spacing between the time and icons */
   position: relative;
-  width: 170px;
-  padding: 10px 12px 10px 12px;
+  width: 670px;
+  padding: 10px 12px ;
+  display: grid;
+  grid-template-columns: minmax(350px, auto) minmax(105px, 1fr) auto;
 }
 
 .time-remaining {
@@ -283,7 +286,25 @@ button {
   width: 100%; /* Ensure it spans the column width */
   text-align: right; /* Align text to the right */
   flex-shrink: 0; /* Prevent shrinking */
+  grid-column: 3;
 }
+
+.delayed-text {
+  color: red;
+  font-weight: 500;
+  margin-left: 5px;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 25px;
+  white-space: nowrap; /* Prevents text from wrapping */
+  display: inline-block; /* Ensures proper inline behavior */
+  grid-column: 1;
+  
+}
+
+.late_text {
+  color: gray;
+}
+
 .group {
   flex-shrink: 0;
   position: relative;
@@ -925,6 +946,7 @@ button {
   display: inline-block;
   margin-left: 1px; /* Space between time and icon */
   margin-top: -25px;
+  grid-column: 2;
 }
 
 .blinking-icon_train {
@@ -943,14 +965,23 @@ button {
   }
 }
 
-
+.time-group {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
 
 .occupancy-icon {
-  display: inline-block;
+  display: flex;
   margin-left: 10px; /* Space between time and icon */
   vertical-align: middle;
   width: 20px; /* Adjust size to fit your design */
   height: 20px;
+  grid-column: 4;
+  align-items: center;
+  gap: 2px;
 }
 
 .occupancy-icon img {
@@ -974,10 +1005,19 @@ button {
 }
 
 .occupancy-group {
+  grid-column: 3;
   display: flex;
   gap: 5px;
-  justify-content: center; /* Center the icons */
-  width: 100%; /* Ensure alignment in the column */
+  justify-content: flex-end;
+  min-width: 120px; /* Ensure consistent width for occupancy icons */
+  justify-content: flex-end;
+  padding-left: 20px; /* Add padding to separate from time group */
+}
+
+/* For bus specific adjustments */
+.buttonBlueBuses {
+  grid-column: 1;
+  width: 115px; /* Keep original button size */
 }
 
 

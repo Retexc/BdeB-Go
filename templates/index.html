@@ -83,8 +83,10 @@
                             <span class="location">${bus.location}</span>
                         </div>
                         <div class="frame-4">
+                            <div class="time-group">
                             <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
                             ${signal}
+                            </div>
                             <div class="occupancy-group">
                                 ${occupancyIcons}
                             </div>
@@ -146,32 +148,40 @@
                     `;
                 } else {
                     occupancyIcons = `
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Unknown occupancy" class="occupancy-icon">
+                        <img src="/static/assets/icons/red-person.png" alt="Unknown occupancy" class="occupancy-icon">
                     `;
                 }
+                const delayedText = train.delayed_text ? `
+                <span class="delayed-text">
+                    En retard (<span class="late_text">prévu à ${train.original_arrival_time}</span>)
+                </span>` : '';
 
                 trainDiv.innerHTML = `
-                    <div class="${buttonClass}">
-                        <span class="frame-2-black">${train.route_id}</span>
-                    </div>
-                    <div class="frame-3">
-                        <span class="direction">
-                            <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
-                            ${train.direction || "Unknown"}
-                        </span>
-                        <span class="location">${train.location || "Unknown"}</span>
-                    </div>
-                    <div class="frame-4">
+                <div class="${buttonClass}">
+                    <span class="frame-2-black">${train.route_id}</span>
+                </div>
+                <div class="frame-3">
+                    <span class="direction">
+                        <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+                        ${train.direction || "Unknown"}
+                    </span>
+                    <span class="location">${train.location || "Unknown"}</span>
+                </div>
+                <div class="frame-4">
+                    ${train.delayed_text ? `<span class="delayed-text">En retard (prévu à <span class="line-through">${train.original_arrival_time}</span>)</span>` : ''}
+                    <div class="time-group">
                         <span class="time-remaining">${train.arrival_time || "Unknown"}</span>
                         <img src="/static/assets/icons/signal.png" class="blinking-icon">
-                        <div class="occupancy-group">
-                            ${occupancyIcons}
-                        </div>
                     </div>
-                `;
+                    <div class="occupancy-group">
+                        ${occupancyIcons}
+                    </div>
+                </div>
+            `;
+
                 trainContainer.appendChild(trainDiv);
             });
 

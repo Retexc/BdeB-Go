@@ -4,8 +4,7 @@ import gtfs_realtime_pb2
 import time
 import csv
 from flask import Flask, render_template
-from datetime import datetime
-
+from datetime import datetime, timedelta
 app = Flask(__name__)
 
 # STM API Credentials
@@ -18,6 +17,10 @@ EXO_TOKEN = "JX0ZCLTPDE"
 EXO_BASE_URL = "https://opendata.exo.quebec/ServiceGTFSR"
 EXO_TRIP_UPDATE_URL = f"{EXO_BASE_URL}/TripUpdate.pb?token={EXO_TOKEN}"
 EXO_VEHICLE_POSITION_URL = f"{EXO_BASE_URL}/VehiclePosition.pb?token={EXO_TOKEN}"
+
+# Global delay configuration
+GLOBAL_DELAY_MINUTES = 5
+
 
 # Dynamically construct paths for GTFS files
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -216,25 +219,21 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         
         # Get stop name from the map
         stop_name = stop_id_map.get(stop_id, "Unknown")
-        
-        # Logic to display time based on minutes remaining
-        minutes_remaining = train["minutes_remaining"]
-        if minutes_remaining <= 30:
-            display_time = f"{minutes_remaining} min"
-        else:
-            h, m, _ = map(int, train["arrival_time"].split(":"))
-            display_time = f"{h:02}h{m:02}"
 
-        # Include occupancy in the mapped_train
+        # Include both original and delayed arrival times
         mapped_train = {
             "route_id": "12" if route_id == "4" else "15" if route_id == "6" else route_id,
-            "arrival_time": display_time,
+            "arrival_time": train.get("arrival_time", "Unknown"),
+            "original_arrival_time": train.get("original_arrival_time", "Unknown"),
             "direction": direction,
             "location": stop_name,
             "occupancy": train.get("occupancy", "Unknown"),  # Add occupancy
+            "delayed_text": train.get("delayed_text", None),  # Delayed text
         }
         mapped_schedule.append(mapped_train)
     return mapped_schedule
+
+
 
 
 
@@ -304,10 +303,60 @@ def process_exo_vehicle_positions(entities, stop_times):
     print("Filtered Exo Vehicle Positions with Stop IDs:", filtered_vehicles)  # Debugging
     return filtered_vehicles
 
+def add_simulated_delay_by_stop(stop_times, target_stop_id, delay_minutes=7):
+    """
+    Add a simulated delay to trains stopping at a specific stop ID.
 
+    Args:
+        stop_times (list): List of stop time dictionaries.
+        target_stop_id (str): The stop ID to filter trains for adding the delay.
+        delay_minutes (int): Number of minutes to delay the arrival time.
+
+    Returns:
+        list: Updated stop times with delays applied.
+    """
+    updated_stop_times = []
+    for stop in stop_times:
+        # Check if the stop_id matches the target_stop_id
+        if stop["stop_id"] == target_stop_id:
+            # Parse the arrival time
+            arrival_time = stop["arrival_time"]
+            h, m, s = map(int, arrival_time.split(":"))
+            
+            # Add the delay
+            new_time = datetime(2000, 1, 1, h, m, s) + timedelta(minutes=delay_minutes)
+            stop["arrival_time"] = new_time.strftime("%H:%M:%S")
+        
+        updated_stop_times.append(stop)
+    
+    return updated_stop_times
+
+    
 
 
 # Modify process_exo_train_schedule to include occupancy
+# Modify process_exo_train_schedule_with_occupancy
+def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle_positions):
+    current_time = datetime.now()
+    current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+
+    # Stop and direction mapping
+    stop_id_map = {
+        "MTL7B": "Gare Bois-de-Boulogne",
+        "MTL7D": "Gare Bois-de-Boulogne",
+        "MTL59A": "Gare Ahuntsic",
+    }
+    direction_map = {
+        "4": {"0": "Lucien-L'allier", "1": "Saint-Jérôme"},
+        "6": {"1": "Mascouche"},
+    }
+
+    # Only these stops should be processed
+    desired_stops = {"MTL7D", "MTL7B", "MTL59A"}
+
+    # Initialize a dictionary to store the closest train for each stop
+    closest_trains = {stop: None for stop in desired_stops}
+
 def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle_positions):
     current_time = datetime.now()
     current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
@@ -338,35 +387,50 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
             direction_id = trip_data.get("direction_id")
 
             if route_id in direction_map and direction_id in direction_map[route_id]:
-                arrival_time_str = stop_time["arrival_time"]
-                h, m, s = map(int, arrival_time_str.split(":"))
-                arrival_time_seconds = h * 3600 + m * 60 + s
+                # Parse the original departure time
+                original_time_str = stop_time["departure_time"]
+                original_datetime = datetime.strptime(original_time_str, "%H:%M:%S")
 
+                # Calculate the delayed arrival time by adding the delay
+                delayed_datetime = original_datetime + timedelta(minutes=GLOBAL_DELAY_MINUTES)
+
+                # Format both times as HH:MM
+                original_arrival_time = original_datetime.strftime("%H:%M")
+                delayed_arrival_time = delayed_datetime.strftime("%H:%M")
+
+                # Calculate minutes remaining
+                arrival_time_seconds = original_datetime.hour * 3600 + original_datetime.minute * 60
                 if arrival_time_seconds < current_seconds:
                     arrival_time_seconds += 24 * 3600
-
                 minutes_remaining = (arrival_time_seconds - current_seconds) // 60
-                exo_occupancy_status = "Unknown"  # Default occupancy status
 
-                # Match vehicle positions for occupancy
+                # Determine occupancy
+                exo_occupancy_status = "Unknown"
                 for vehicle in vehicle_positions:
                     if trip_id == vehicle["trip_id"]:
                         exo_occupancy_status = vehicle.get("occupancy", "Unknown")
                         break
 
+                # Build the train info
                 train_info = {
                     "stop_id": stop_id,
                     "trip_id": trip_id,
                     "route_id": route_id,
                     "direction": direction_map[route_id][direction_id],
-                    "arrival_time": arrival_time_str,
+                    "arrival_time": delayed_arrival_time,  # Delayed time
+                    "original_arrival_time": original_arrival_time,  # Original departure time
                     "minutes_remaining": minutes_remaining,
-                    "occupancy": exo_occupancy_status,  # Add occupancy to the train info
+                    "occupancy": exo_occupancy_status,
+                    "delayed_text": f"En retard ({original_arrival_time})"
+                    if GLOBAL_DELAY_MINUTES > 0 and stop_id == "MTL7D"
+                    else None,
                 }
 
                 # Update the closest train for the stop
-                if (closest_trains[stop_id] is None or
-                        minutes_remaining < closest_trains[stop_id]["minutes_remaining"]):
+                if (
+                    closest_trains[stop_id] is None
+                    or minutes_remaining < closest_trains[stop_id]["minutes_remaining"]
+                ):
                     closest_trains[stop_id] = train_info
 
     # Prepare the final list
@@ -375,6 +439,13 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
 
     print("Final Exo Train Schedule with Occupancy:", prioritized_schedule)  # Debugging
     return prioritized_schedule
+
+
+
+
+
+
+
 
 def process_vehicle_positions(entities):
     vehicle_data = []
@@ -393,21 +464,38 @@ def process_vehicle_positions(entities):
             
     return vehicle_data
     
-# Load trips data from GTFS static file
-#gtfs_trips = load_gtfs_trips(os.path.join(script_dir, "trips.txt"))
-#stop_times = load_stop_times(stop_times_path)
 
 # Load STM data
 stm_trips = load_stm_gtfs_trips(stm_trips_path)
 
 # Load Exo data
 exo_trips = load_exo_gtfs_trips(exo_trips_path)
-exo_stop_times = load_exo_stop_times(exo_stop_times_path)
+def prepare_exo_stop_times(delay_minutes=None, target_stop_id=None):
+    """
+    Reload and prepare Exo stop times with a simulated delay.
+    
+    Args:
+        delay_minutes (int): Number of minutes to delay arrival times.
+        target_stop_id (str): Specific stop ID to apply the delay.
+    
+    Returns:
+        list: Updated stop times with delays applied.
+    """
+    if delay_minutes is None:
+        delay_minutes = GLOBAL_DELAY_MINUTES  # Use the global delay if not specified
+    
+    stop_times = load_exo_stop_times(exo_stop_times_path)
+    if target_stop_id:
+        stop_times = add_simulated_delay_by_stop(stop_times, target_stop_id=target_stop_id, delay_minutes=delay_minutes)
+    return stop_times
+
+
 
 
 @app.route("/")
 def index():
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
+    exo_stop_times = prepare_exo_stop_times(target_stop_id="MTL7D")
     processed_vehicle_positions = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
     exo_trains = process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, processed_vehicle_positions)
     current_time = time.strftime("%I:%M:%S %p")
@@ -440,16 +528,28 @@ def api_data():
 
     # Fetch real-time data for Exo trains
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
+    # Reload and apply delay to stop times
+    exo_stop_times = prepare_exo_stop_times(target_stop_id="MTL7D")
+
+
     processed_vehicle_positions = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
     exo_trains = process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, processed_vehicle_positions)
+
 
 
     # Return JSON response
     return {
         "buses": buses,
-        "next_trains": exo_trains,  # Ensure each train includes an "occupancy" field
+        "next_trains": [
+            {
+                **train,
+                "delayed_text": train.get("delayed_text", None)  # Ensure delayed_text is included
+            }
+            for train in exo_trains
+        ],
         "current_time": time.strftime("%I:%M:%S %p"),
     }
+
 
 
 
