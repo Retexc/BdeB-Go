@@ -29,9 +29,10 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # STM GTFS file paths
-stm_routes_path = os.path.join(script_dir, "routes.txt")
-stm_stops_path = os.path.join(script_dir, "stops.txt")
-stm_trips_path = os.path.join(script_dir, "trips.txt")
+stm_base_dir = os.path.join(script_dir, "STM")
+stm_routes_path = os.path.join(stm_base_dir, "routes.txt")
+stm_stops_path = os.path.join(stm_base_dir, "stops.txt")
+stm_trips_path = os.path.join(stm_base_dir, "trips.txt")
 
 # Exo GTFS file paths
 exo_base_dir = os.path.join(script_dir, "Exo", "Train")
@@ -204,26 +205,26 @@ def fetch_exo_realtime_data():
         print(f"Exo API Error: {trip_updates_response.status_code}, {vehicle_positions_response.status_code}")
         return [], []
     
-
+def load_no_service_days(filepath="no_service_days.txt"):
+    """Load no-service days from a text file."""
+    no_service_dates = set()
+    if os.path.exists(filepath):
+        with open(filepath, "r") as file:
+            for line in file:
+                date_str = line.strip()
+                try:
+                    no_service_dates.add(datetime.strptime(date_str, "%Y-%m-%d").date())
+                except ValueError:
+                    print(f"Skipping invalid date format in no_service_days.txt: {date_str}")
+    return no_service_dates
+    
 def is_service_unavailable():
-    today = datetime.today()
-    # Check weekend
-    if today.weekday() >= 5:  # 5=Saturday, 6=Sunday
-        return True
-    # List of holidays with "aucun service" (adjust dates as needed)
-    holidays = [
-        datetime(2024, 3, 29),   # Vendredi saint
-        datetime(2024, 5, 20),   # Journée des Patriotes
-        datetime(2024, 6, 24),   # Fête nationale du Québec
-        datetime(2024, 7, 1),    # Fête du Canada
-        datetime(2024, 9, 2),    # Fête du Travail
-        datetime(2024, 10, 14),  # Action de grâce
-        datetime(2024, 12, 25),  # Noël
-        datetime(2024, 12, 26),  # Lendemain de Noël
-        datetime(2025, 1, 1),    # Jour de l'An
-        datetime(2025, 1, 2),    # Lendemain du jour de l'An
-    ]
-    return any(today.date() == h.date() for h in holidays)
+    """Check if today is a no-service day."""
+    today = datetime.today().date()
+    no_service_dates = load_no_service_days()
+    
+    # Check if today is a weekend or a no-service holiday
+    return today.weekday() >= 5 or today in no_service_dates
 
 # Map trip details to route and direction
 def exo_map_train_details(schedule, trips_data, stop_id_map):
@@ -558,6 +559,7 @@ def api_data():
             train["arrival_time"] = "N/A"
             train["delayed_text"] = None
             train["early_text"] = None
+
 
     # Return JSON response
     return {

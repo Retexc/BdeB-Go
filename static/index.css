@@ -256,17 +256,18 @@ button {
   z-index: 6;
 }
 .frame-4 {
-  display: grid;
-  flex-direction: row; /* Stack time and occupancy */
-  align-items: baseline; /* Center align in the column */
-  justify-content: center;
-  flex-shrink: 0;
-  gap: 30px; /* Add spacing between the time and icons */
-  position: relative;
-  width: 670px;
-  padding: 10px 12px ;
-  display: grid;
-  grid-template-columns: minmax(350px, auto) minmax(105px, 1fr) auto;
+
+      flex-direction: row;
+      align-items: baseline;
+      justify-content: end;
+      flex-shrink: 0;
+      gap: 41px;
+      position: relative;
+      width: 670px;
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: minmax(350px, auto) minmax(105px, 1fr) auto;
+      justify-items: start;
 }
 
 .time-remaining {
@@ -1007,7 +1008,7 @@ button {
 .occupancy-group {
   grid-column: 3;
   display: flex;
-  gap: 5px;
+  gap: 17px;
   justify-content: flex-end;
   min-width: 120px; /* Ensure consistent width for occupancy icons */
   justify-content: flex-end;
@@ -1111,6 +1112,10 @@ button {
   color: #ff4444;
   font-weight: bold;
   margin: 10px 0;
+  margin-right: 23px;
   font-family: Atlas Grotesk, var(--default-font-family);
   font-size: 25px;
+  grid-column: 2;
+  white-space: nowrap; /* Prevents text from wrapping */
+  display: inline-block; /* Ensures proper inline behavior */
 }
