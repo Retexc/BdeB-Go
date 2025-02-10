@@ -205,6 +205,26 @@ def fetch_exo_realtime_data():
         return [], []
     
 
+def is_service_unavailable():
+    today = datetime.today()
+    # Check weekend
+    if today.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        return True
+    # List of holidays with "aucun service" (adjust dates as needed)
+    holidays = [
+        datetime(2024, 3, 29),   # Vendredi saint
+        datetime(2024, 5, 20),   # Journée des Patriotes
+        datetime(2024, 6, 24),   # Fête nationale du Québec
+        datetime(2024, 7, 1),    # Fête du Canada
+        datetime(2024, 9, 2),    # Fête du Travail
+        datetime(2024, 10, 14),  # Action de grâce
+        datetime(2024, 12, 25),  # Noël
+        datetime(2024, 12, 26),  # Lendemain de Noël
+        datetime(2025, 1, 1),    # Jour de l'An
+        datetime(2025, 1, 2),    # Lendemain du jour de l'An
+    ]
+    return any(today.date() == h.date() for h in holidays)
+
 # Map trip details to route and direction
 def exo_map_train_details(schedule, trips_data, stop_id_map):
     mapped_schedule = []
@@ -532,7 +552,12 @@ def api_data():
         exo_trip_updates  # Crucial argument for real delays
     )
 
-
+    if is_service_unavailable():
+        for train in exo_trains:
+            train["no_service_text"] = "Aucun service aujourd'hui"
+            train["arrival_time"] = "N/A"
+            train["delayed_text"] = None
+            train["early_text"] = None
 
     # Return JSON response
     return {

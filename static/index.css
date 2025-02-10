@@ -1106,3 +1106,11 @@ button {
   display: inline-block; /* Ensures proper inline behavior */
   grid-column: 1;
 }
+
+.no-service-text {
+  color: #ff4444;
+  font-weight: bold;
+  margin: 10px 0;
+  font-family: Atlas Grotesk, var(--default-font-family);
+  font-size: 25px;
+}
