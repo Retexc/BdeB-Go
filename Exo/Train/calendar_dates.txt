@@ -1,5 +1,3 @@
-service_id,date,exception_type
-TRAIN-H25-TRKPI-Semaine-02,20250418,2
-TRAIN-H25-TRKPI-Semaine-02,20250519,2
-TRAIN-H25-TRKPI-Fête-1-01,20250418,1
-TRAIN-H25-TRKPI-Fête-1-01,20250519,1
+version https://git-lfs.github.com/spec/v1
+oid sha256:2cb07b1af33bdfb2a1b74e8b9713498e171e6ee9be601fe98f2dc8ad7a51eac6
+size 188

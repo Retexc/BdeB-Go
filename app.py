@@ -33,6 +33,7 @@ stm_base_dir = os.path.join(script_dir, "STM")
 stm_routes_path = os.path.join(stm_base_dir, "routes.txt")
 stm_stops_path = os.path.join(stm_base_dir, "stops.txt")
 stm_trips_path = os.path.join(stm_base_dir, "trips.txt")
+stm_stop_times_path = os.path.join(stm_base_dir, "stop_times.txt")
 
 # Exo GTFS file paths
 exo_base_dir = os.path.join(script_dir, "Exo", "Train")
@@ -67,6 +68,16 @@ def load_exo_gtfs_trips(filepath):
                 "direction_id": row.get("direction_id", "0"),  # Default to "0" if direction_id is missing
             }
     return trips_data
+
+def load_stm_stop_times(filepath):
+    stop_times = {}
+    with open(filepath, mode="r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            key = (row["trip_id"], row["stop_id"])
+            stop_times[key] = row["arrival_time"]
+    return stop_times
+
 
 
 # Load Exo GTFS stop times
@@ -128,7 +139,6 @@ def process_stm_trip_updates(entities, stm_trips):
         "164": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
     }
 
-
     for entity in entities:
         if entity.HasField("trip_update") or entity.HasField("vehicle"):
             trip = entity.trip_update.trip if entity.HasField("trip_update") else None
@@ -138,12 +148,28 @@ def process_stm_trip_updates(entities, stm_trips):
             route_id = trip.route_id if trip else vehicle.trip.route_id
             trip_id = trip.trip_id if trip else vehicle.trip.trip_id
             occupancy_status = vehicle.occupancy_status if vehicle and vehicle.HasField("occupancy_status") else "UNKNOWN"
-            
 
             if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
                 for stop_time in stop_time_updates:
                     if stop_time.stop_id == "50270":
+                        # Get scheduled arrival time from static data
+                        scheduled_arrival_str = stm_stop_times.get((trip_id, "50270"), None)
                         arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
+                        delay_minutes = 0
+
+                        if scheduled_arrival_str and arrival_time:
+                            # Convert scheduled time to timestamp
+                            h, m, s = map(int, scheduled_arrival_str.split(":"))
+                            scheduled_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
+                            delay_seconds = arrival_time - scheduled_ts
+                            delay_minutes = delay_seconds // 60
+
+                        # Generate status texts
+                        delay_minutes_int = int(delay_minutes)  # Convert delay to integer
+                        delayed_text = f"En retard (+{delay_minutes_int}min)" if delay_minutes > 0 else None
+                        early_text = f"En avance ({abs(delay_minutes_int)}min)" if delay_minutes < 0 else None
+
+                        # Calculate minutes to arrival
                         minutes_to_arrival = (arrival_time - int(time.time())) // 60 if arrival_time else None
 
                         if minutes_to_arrival is not None:
@@ -153,11 +179,14 @@ def process_stm_trip_updates(entities, stm_trips):
                                     "trip_id": trip_id,
                                     "stop_id": "50270",
                                     "arrival_time": minutes_to_arrival,
-                                    "occupancy": stm_map_occupancy_status(occupancy_status),  # Map occupancy status
+                                    "occupancy": stm_map_occupancy_status(occupancy_status),
                                     "direction": route_metadata.get(route_id, {}).get("direction", "Unknown"),
                                     "location": route_metadata.get(route_id, {}).get("location", "Unknown"),
+                                    "delayed_text": delayed_text,
+                                    "early_text": early_text,
                                 }
 
+    # Handle cases where no buses are found for a route
     for route in desired_routes:
         if closest_buses[route] is None:
             closest_buses[route] = {
@@ -168,10 +197,13 @@ def process_stm_trip_updates(entities, stm_trips):
                 "occupancy": "Unknown",
                 "direction": route_metadata.get(route, {}).get("direction", "Unknown"),
                 "location": route_metadata.get(route, {}).get("location", "Unknown"),
+                "delayed_text": None,
+                "early_text": None,
             }
 
     buses = [bus for bus in closest_buses.values()]
     return buses
+
 
 # Map occupancy status to a readable format
 def stm_map_occupancy_status(status):
@@ -490,6 +522,8 @@ def process_vehicle_positions(entities):
 
 # Load STM data
 stm_trips = load_stm_gtfs_trips(stm_trips_path)
+stm_stop_times = load_stm_stop_times(stm_stop_times_path)
+
 
 # Load Exo data
 exo_trips = load_exo_gtfs_trips(exo_trips_path)

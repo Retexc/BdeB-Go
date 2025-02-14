@@ -72,26 +72,28 @@
                     const signal = bus.arrival_time !== "Unavailable (Route Canceled)" ? '<img src="/static/assets/icons/signal.png" class="blinking-icon">' : '';
 
                     busDiv.innerHTML = `
-                        <div class="buttonBlueBuses">                            
-                            <span class="frame-2">${bus.route_id}</span>
-                        </div>
-                        <div class="frame-3">
-                            <span class="direction">
-                                <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
-                                ${bus.direction}
-                            </span>
-                            <span class="location">${bus.location}</span>
-                        </div>
-                        <div class="frame-4">
-                            <div class="time-group">
+                    <div class="buttonBlueBuses">                            
+                        <span class="frame-2">${bus.route_id}</span>
+                    </div>
+                    <div class="frame-3">
+                        <span class="direction">
+                            <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+                            ${bus.direction}
+                        </span>
+                        <span class="location">${bus.location}</span>
+                    </div>
+                    <div class="frame-4">
+                        ${bus.delayed_text ? `<span class="delayed-text">${bus.delayed_text}</span>` : ''}
+                        ${bus.early_text ? `<span class="early-text">${bus.early_text}</span>` : ''}
+                        <div class="time-group">
                             <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
                             ${signal}
-                            </div>
-                            <div class="occupancy-group">
-                                ${occupancyIcons}
-                            </div>
                         </div>
-                    `;
+                        <div class="occupancy-group">
+                            ${occupancyIcons}
+                        </div>
+                    </div>
+                `;
                     frameContainer.appendChild(busDiv);
                 });
 
