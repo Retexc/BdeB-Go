@@ -120,14 +120,14 @@
                     
                     // Combine all alerts into a single scrolling text
                     const allAlerts = data.alerts.map(a => {
-                        if (a.routes) {
-                            // STM alert (includes route numbers)
-                            return `Ligne(s) ${a.routes}: ${a.header} - ${a.description}`;
-                        } else {
-                            // EXO alert (includes route name)
-                            return `Train ${a.route}: ${a.header} - ${a.description}`;
-                        }
-                    }).join(' ••• ');
+                    if (a.routes) {
+                        // STM alert (includes route numbers and stop name)
+                        return `Ligne(s) ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
+                    } else {
+                        // EXO alert (includes route name)
+                        return `Train ${a.route}: ${a.header} - ${a.description}`;
+                    }
+                }).join(' ••• ');
                     
                     alertText.textContent = allAlerts;
                 } else {

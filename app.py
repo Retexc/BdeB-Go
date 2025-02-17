@@ -150,6 +150,7 @@ def process_alerts(alerts_data):
         # Track which routes are affected by this alert
         affected_routes = set()
         direction_match = False
+        stop_match = False  # Track if the alert affects stop 50270
         
         for entity in alert.get('informed_entities', []):
             # Check if the route is 171, 164, or 180
@@ -158,9 +159,12 @@ def process_alerts(alerts_data):
             # Check if the direction is East (assuming 'E' for East)
             if entity.get('direction_id') == 'E':  # E = East/Est
                 direction_match = True
+            # Check if the stop_code is 50270
+            if entity.get('stop_code') == '50270':
+                stop_match = True
         
-        # Only include alerts for the specified routes and direction
-        if affected_routes and direction_match:
+        # Only include alerts for the specified routes, direction, and stop
+        if affected_routes and direction_match and stop_match:
             # Get French text
             fr_text = next((t['text'] for t in alert['header_texts'] if t['language'] == 'fr'), '')
             fr_desc = next((t['text'] for t in alert['description_texts'] if t['language'] == 'fr'), '')
@@ -171,10 +175,10 @@ def process_alerts(alerts_data):
                 'header': fr_text,
                 'description': fr_desc,
                 'severity': alert.get('effect', 'alert'),
-                'routes': route_numbers  # Add the route numbers
+                'routes': route_numbers,
+                'stop': "Collège de Bois-de-Boulogne"  # Add the stop name
             })
     return filtered_alerts
-
 # Process real-time data for buses with occupancy status
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
