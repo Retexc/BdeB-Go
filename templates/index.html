@@ -110,6 +110,31 @@
                 const trainDiv = document.createElement('div');
                 trainDiv.className = "frame-1";
 
+                // Inside refreshData(), after updating trains:
+                const alertContainer = document.getElementById('alertContainer');
+                const alertText = document.querySelector('.alert-text');
+
+                if (data.alerts && data.alerts.length > 0) {
+                    // Show the alert banner
+                    alertContainer.style.display = 'block';
+                    
+                    // Combine all alerts into a single scrolling text
+                    const allAlerts = data.alerts.map(a => {
+                        if (a.routes) {
+                            // STM alert (includes route numbers)
+                            return `Ligne(s) ${a.routes}: ${a.header} - ${a.description}`;
+                        } else {
+                            // EXO alert (includes route name)
+                            return `Train ${a.route}: ${a.header} - ${a.description}`;
+                        }
+                    }).join(' ••• ');
+                    
+                    alertText.textContent = allAlerts;
+                } else {
+                    // Hide the alert banner if there are no alerts
+                    alertContainer.style.display = 'none';
+                }        
+
                 let buttonClass = "";
                 if (train.route_id === "12") {
                     buttonClass = "buttonSJ"; // Yellow for Saint-Jérôme
@@ -225,7 +250,12 @@
     <div class="logo-container">
         <img src="/static/assets/images/B.png" alt="Transport Logos">
     </div>
-    
+    <div id="alertContainer" class="alert-banner" style="display: none;">
+        <div class="alert-marquee">
+            <img src="/static/assets/icons/warning.png" class="alert-icon" alt="Alert">
+            <span class="alert-text"></span>
+        </div>
+    </div>  
     
 </body>
 </html>

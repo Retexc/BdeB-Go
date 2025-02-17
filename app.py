@@ -11,12 +11,15 @@ app = Flask(__name__)
 STM_API_KEY = "l71d29e015f26e423ea8fe728229d220bc"
 STM_REALTIME_ENDPOINT = "https://api.stm.info/pub/od/gtfs-rt/ic/v2/tripUpdates"
 STM_VEHICLE_POSITIONS_ENDPOINT = "https://api.stm.info/pub/od/gtfs-rt/ic/v2/vehiclePositions"
+STM_ALERTS_ENDPOINT = "https://api.stm.info/pub/od/i3/v2/messages/etatservice"
 
 # Exo API Information
 EXO_TOKEN = "JX0ZCLTPDE"
 EXO_BASE_URL = "https://opendata.exo.quebec/ServiceGTFSR"
 EXO_TRIP_UPDATE_URL = f"{EXO_BASE_URL}/TripUpdate.pb?token={EXO_TOKEN}"
 EXO_VEHICLE_POSITION_URL = f"{EXO_BASE_URL}/VehiclePosition.pb?token={EXO_TOKEN}"
+EXO_ALERTS_URL = f"{EXO_BASE_URL}/Alert.pb?token={EXO_TOKEN}"
+
 
 # Global delay configuration
 GLOBAL_DELAY_MINUTES = 0
@@ -127,6 +130,51 @@ def fetch_stm_realtime_data():
         print(f"API Error: {response.status_code} - {response.text}")
         return []
 
+def fetch_stm_alerts():
+    headers = {
+        "accept": "application/json",
+        "apiKey": STM_API_KEY,
+    }
+    try:
+        response = requests.get(STM_ALERTS_ENDPOINT, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception as e:
+        print(f"Error fetching alerts: {str(e)}")
+        return None
+
+def process_alerts(alerts_data):
+    filtered_alerts = []
+    for alert in alerts_data.get('alerts', []):
+        # Track which routes are affected by this alert
+        affected_routes = set()
+        direction_match = False
+        
+        for entity in alert.get('informed_entities', []):
+            # Check if the route is 171, 164, or 180
+            if entity.get('route_short_name') in ['171', '164', '180']:
+                affected_routes.add(entity.get('route_short_name'))
+            # Check if the direction is East (assuming 'E' for East)
+            if entity.get('direction_id') == 'E':  # E = East/Est
+                direction_match = True
+        
+        # Only include alerts for the specified routes and direction
+        if affected_routes and direction_match:
+            # Get French text
+            fr_text = next((t['text'] for t in alert['header_texts'] if t['language'] == 'fr'), '')
+            fr_desc = next((t['text'] for t in alert['description_texts'] if t['language'] == 'fr'), '')
+            
+            # Include the affected route numbers in the alert
+            route_numbers = ", ".join(sorted(affected_routes))  # e.g., "164, 171, 180"
+            filtered_alerts.append({
+                'header': fr_text,
+                'description': fr_desc,
+                'severity': alert.get('effect', 'alert'),
+                'routes': route_numbers  # Add the route numbers
+            })
+    return filtered_alerts
+
 # Process real-time data for buses with occupancy status
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
@@ -217,6 +265,61 @@ def stm_map_occupancy_status(status):
     }
     return mapping.get(status, "Unknown")
 
+def fetch_exo_alerts():
+    headers = {
+        "accept": "application/x-protobuf",
+    }
+    try:
+        response = requests.get(EXO_ALERTS_URL, headers=headers)
+        if response.status_code == 200:
+            feed = gtfs_realtime_pb2.FeedMessage()
+            feed.ParseFromString(response.content)
+            return feed.entity
+        return []
+    except Exception as e:
+        print(f"Error fetching EXO alerts: {str(e)}")
+        return []
+    
+def process_exo_alerts(entities):
+    filtered_alerts = []
+    for entity in entities:
+        if entity.HasField('alert'):
+            alert = entity.alert
+            
+            # Check if the alert affects the specified stations and directions
+            affects_station = False
+            affects_direction = False
+            
+            for informed_entity in alert.informed_entity:
+                # Check for stations: Collège de Bois-de-Boulogne and Gare Ahuntsic
+                if informed_entity.HasField('stop_id'):
+                    if informed_entity.stop_id in ["MTL7B", "MTL7D", "MTL59A"]:
+                        affects_station = True
+                
+                # Check for directions: Saint-Jérôme, Lucien-L'allier, Mascouche
+                if informed_entity.HasField('trip'):
+                    route_id = informed_entity.trip.route_id
+                    direction_id = informed_entity.trip.direction_id
+                    if (route_id == "4" and direction_id == 1) or (route_id == "4" and direction_id == 0) or (route_id == "6"):
+                        affects_direction = True
+            
+            if affects_station and affects_direction:
+                # Get French text
+                fr_header = next((t.text for t in alert.header_text if t.language == 'fr'), '')
+                fr_description = next((t.text for t in alert.description_text if t.language == 'fr'), '')
+                
+                # Map route IDs to train names
+                route_name = "Saint-Jérôme" if route_id == "4" and direction_id == 1 else \
+                             "Lucien-L'allier" if route_id == "4" and direction_id == 0 else \
+                             "Mascouche" if route_id == "6" else "Unknown"
+                
+                filtered_alerts.append({
+                    'header': fr_header,
+                    'description': fr_description,
+                    'severity': alert.effect,
+                    'route': route_name  # Add the route name
+                })
+    return filtered_alerts    
 
 # Fetch real-time data from Exo API
 def fetch_exo_realtime_data():
@@ -557,24 +660,28 @@ def index():
 
 @app.route("/api/data")
 def api_data():
-    # Fetch real-time data for STM
-    trip_entities = fetch_stm_realtime_data()  # Fetch STM trip updates
-    vehicle_entities = fetch_stm_vehicle_positions()  # Fetch STM vehicle positions
-
-    # Process STM buses
+    # Fetch STM alerts
+    stm_alerts_data = fetch_stm_alerts()
+    processed_stm_alerts = process_alerts(stm_alerts_data) if stm_alerts_data else []
+    
+    # Fetch EXO alerts
+    exo_alerts_entities = fetch_exo_alerts()
+    processed_exo_alerts = process_exo_alerts(exo_alerts_entities)
+    
+    # Combine STM and EXO alerts
+    all_alerts = processed_stm_alerts + processed_exo_alerts
+    
+    # Fetch and process STM and EXO real-time data (existing code)
+    trip_entities = fetch_stm_realtime_data()
+    vehicle_entities = fetch_stm_vehicle_positions()
     buses = process_stm_trip_updates(trip_entities, stm_trips)
     vehicle_data = process_vehicle_positions(vehicle_entities)
     
-    # Match STM buses with occupancy
     for bus in buses:
         for vehicle in vehicle_data:
-            if bus["trip_id"] == vehicle["trip_id"]:  # Match trip IDs
-                bus["occupancy"] = vehicle["occupancy"]  # Update occupancy
+            if bus["trip_id"] == vehicle["trip_id"]:
+                bus["occupancy"] = vehicle["occupancy"]
                 break
-
-    for bus in buses:
-        if bus["route_id"] == "171":  # Filter for route 171
-            print(f"Route 171 Occupancy: {bus.get('occupancy', 'Unknown')}")  # Log the occupancy            
 
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
     exo_stop_times = prepare_exo_stop_times()
@@ -584,7 +691,7 @@ def api_data():
         exo_stop_times, 
         exo_trips, 
         processed_vehicle_positions,
-        exo_trip_updates  # Crucial argument for real delays
+        exo_trip_updates
     )
 
     if is_service_unavailable():
@@ -594,19 +701,18 @@ def api_data():
             train["delayed_text"] = None
             train["early_text"] = None
 
-
-    # Return JSON response
     return {
         "buses": buses,
         "next_trains": [
             {
                 **train,
                 "delayed_text": train.get("delayed_text", None),
-                "early_text": train.get("early_text", None)  # Add this line
+                "early_text": train.get("early_text", None)
             }
             for train in exo_trains
         ],
         "current_time": time.strftime("%I:%M:%S %p"),
+        "alerts": all_alerts  # Include combined alerts
     }
 
 
