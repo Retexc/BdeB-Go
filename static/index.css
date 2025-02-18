@@ -1138,13 +1138,13 @@ button {
 
 .alert-marquee {
   display: inline-block;
-  animation: marquee 15s linear infinite;
+  animation: marquee 35s linear infinite;
   padding-left: 100%;
 }
 
 .alert-marquee {
   display: inline-block;
-  animation: marquee 25s linear infinite;
+  animation: marquee 35s linear infinite;
   padding-left: 100%;
 }
 

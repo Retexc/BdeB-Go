@@ -50,6 +50,8 @@ stop_id_map = {
     "MTL7D": "Gare Bois-de-Boulogne",
     "MTL59A": "Gare Ahuntsic",
     "MTL59C": "Gare Ahuntsic",
+    "50270": "Collège de Bois-de-Boulogne",
+    "62374": "Henri-Bourassa/du Bois-de-Boulogne",
 }
 
 
@@ -220,16 +222,17 @@ filtered_alerts = process_alerts(alerts_data)
 print("Filtered Alerts:", filtered_alerts)
 
 
-# Process real-time data for buses with occupancy status
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
-    desired_routes = ["171", "180", "164"]
+    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]
     closest_buses = {route: None for route in desired_routes}
 
     route_metadata = {
         "171": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
         "180": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
         "164": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
+        "171_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
+        "180_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
     }
 
     for entity in entities:
@@ -244,50 +247,57 @@ def process_stm_trip_updates(entities, stm_trips):
 
             if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
                 for stop_time in stop_time_updates:
-                    if stop_time.stop_id == "50270":
-                        # Get scheduled arrival time from static data
-                        scheduled_arrival_str = stm_stop_times.get((trip_id, "50270"), None)
+                    if stop_time.stop_id == "50270" or stop_time.stop_id == "62374":
+                        scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id), None)
                         arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
-                        delay_minutes = 0
+                        delay_minutes = None
+                        scheduled_formatted = "Inconnu"
 
                         if scheduled_arrival_str and arrival_time:
-                            # Convert scheduled time to timestamp
                             try:
                                 h, m, s = map(int, scheduled_arrival_str.split(":"))
-                                
-                                if h >= 24:  # Ensure the hour is valid
-                                    print(f"⚠️ Invalid hour detected: {h} in scheduled_arrival_str={scheduled_arrival_str}. Converting 24:XX:XX to 00:XX:XX.")
-                                    h = 0  # Convert 24:XX:XX to 00:XX:XX (midnight)
-                                
+                                if h >= 24:
+                                    h = 0  # Fix invalid hour
                                 scheduled_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
 
+                                # Format scheduled time for display (hh:mm)
+                                scheduled_formatted = f"{h:02d}:{m:02d}"
+
+                                # Calculate delay
+                                delay_seconds = arrival_time - scheduled_ts
+                                delay_minutes = delay_seconds // 60  # Convert to minutes
                             except ValueError as e:
-                                print(f"❌ Error parsing scheduled arrival time: {scheduled_arrival_str} - {e}")
-                            scheduled_ts = None  # Set to None to prevent crashing
-                            scheduled_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
-                            delay_seconds = arrival_time - scheduled_ts
-                            delay_minutes = delay_seconds // 60
+                                print(f"Error parsing scheduled arrival time: {scheduled_arrival_str} - {e}")
+                                scheduled_ts = None
+                                delay_minutes = None
 
-                        # Generate status texts
-                        delay_minutes_int = int(delay_minutes)  # Convert delay to integer
-                        delayed_text = f"En retard (+{delay_minutes_int}min)" if delay_minutes > 0 else None
-                        early_text = f"En avance ({abs(delay_minutes_int)}min)" if delay_minutes < 0 else None
-
-                        # Calculate minutes to arrival
+                        # Calculate time until arrival
                         minutes_to_arrival = (arrival_time - int(time.time())) // 60 if arrival_time else None
 
+                        # Set delay format to match Chrono
+                        if delay_minutes is not None:
+                            if delay_minutes > 0:
+                                delayed_text = f"En retard (prévu à {scheduled_formatted})"
+                            elif delay_minutes < 0:
+                                delayed_text = f"En avance (prévu à {scheduled_formatted})"
+                            else:
+                                delayed_text = None  # On time
+                        else:
+                            delayed_text = None  # Default if data is missing
+
                         if minutes_to_arrival is not None:
-                            if closest_buses[route_id] is None or minutes_to_arrival < closest_buses[route_id]["arrival_time"]:
-                                closest_buses[route_id] = {
+                            route_key = f"{route_id}_Ouest" if stop_time.stop_id == "62374" else route_id
+                            if closest_buses[route_key] is None or minutes_to_arrival < closest_buses[route_key]["arrival_time"]:
+                                closest_buses[route_key] = {
                                     "route_id": route_id,
                                     "trip_id": trip_id,
-                                    "stop_id": "50270",
+                                    "stop_id": stop_time.stop_id,
                                     "arrival_time": minutes_to_arrival,
                                     "occupancy": stm_map_occupancy_status(occupancy_status),
-                                    "direction": route_metadata.get(route_id, {}).get("direction", "Unknown"),
-                                    "location": route_metadata.get(route_id, {}).get("location", "Unknown"),
+                                    "direction": route_metadata.get(route_key, {}).get("direction", "Unknown"),
+                                    "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
                                     "delayed_text": delayed_text,
-                                    "early_text": early_text,
+                                    "early_text": None,  # Not needed with Chrono format
                                 }
 
     # Handle cases where no buses are found for a route
@@ -296,8 +306,8 @@ def process_stm_trip_updates(entities, stm_trips):
             closest_buses[route] = {
                 "route_id": route,
                 "trip_id": "N/A",
-                "stop_id": "50270",
-                "arrival_time": "Unavailable (Route Canceled)",
+                "stop_id": "50270" if "Ouest" not in route else "62374",
+                "arrival_time": "Indisponible (Route annulée)",
                 "occupancy": "Unknown",
                 "direction": route_metadata.get(route, {}).get("direction", "Unknown"),
                 "location": route_metadata.get(route, {}).get("location", "Unknown"),
@@ -307,6 +317,7 @@ def process_stm_trip_updates(entities, stm_trips):
 
     buses = [bus for bus in closest_buses.values()]
     return buses
+
 
 
 # Map occupancy status to a readable format
