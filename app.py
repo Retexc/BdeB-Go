@@ -5,6 +5,7 @@ import time
 import csv
 from flask import Flask, render_template
 from datetime import datetime, timedelta
+import xml.etree.ElementTree as ET
 app = Flask(__name__)
 
 # STM API Credentials
@@ -47,7 +48,8 @@ exo_routes_path = os.path.join(exo_base_dir, "routes.txt")
 stop_id_map = {
     "MTL7B": "Gare Bois-de-Boulogne",
     "MTL7D": "Gare Bois-de-Boulogne",
-    "MTL59A": "Gare Ahuntsic"
+    "MTL59A": "Gare Ahuntsic",
+    "MTL59C": "Gare Ahuntsic",
 }
 
 
@@ -143,42 +145,81 @@ def fetch_stm_alerts():
     except Exception as e:
         print(f"Error fetching alerts: {str(e)}")
         return None
+    
+def get_weather_alerts():
+    api_key = "8c3e9fd5e6a445feb48114525251702"  # Replace with your actual API key
+    url = f"http://api.weatherapi.com/v1/alerts.json?key={api_key}&q=Montreal"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return response.json().get('alerts', [])
+    except requests.exceptions.HTTPError as err:
+        print(f"Error fetching weather alerts: {err}")
+        return []
+    except requests.exceptions.RequestException as err:
+        print(f"Error fetching weather alerts: {err}")
+        return []
+
 
 def process_alerts(alerts_data):
     filtered_alerts = []
+    weather_alerts = get_weather_alerts()  # Fetch weather alerts, no parameters needed
+
     for alert in alerts_data.get('alerts', []):
-        # Track which routes are affected by this alert
         affected_routes = set()
         direction_match = False
-        stop_match = False  # Track if the alert affects stop 50270
+        stop_match = False
         
         for entity in alert.get('informed_entities', []):
-            # Check if the route is 171, 164, or 180
             if entity.get('route_short_name') in ['171', '164', '180']:
                 affected_routes.add(entity.get('route_short_name'))
-            # Check if the direction is East (assuming 'E' for East)
-            if entity.get('direction_id') == 'E':  # E = East/Est
+            if entity.get('direction_id') == 'E':  
                 direction_match = True
-            # Check if the stop_code is 50270
             if entity.get('stop_code') == '50270':
                 stop_match = True
         
-        # Only include alerts for the specified routes, direction, and stop
         if affected_routes and direction_match and stop_match:
-            # Get French text
             fr_text = next((t['text'] for t in alert['header_texts'] if t['language'] == 'fr'), '')
             fr_desc = next((t['text'] for t in alert['description_texts'] if t['language'] == 'fr'), '')
-            
-            # Include the affected route numbers in the alert
-            route_numbers = ", ".join(sorted(affected_routes))  # e.g., "164, 171, 180"
+
+            route_numbers = ", ".join(sorted(affected_routes))  
             filtered_alerts.append({
                 'header': fr_text,
                 'description': fr_desc,
                 'severity': alert.get('effect', 'alert'),
                 'routes': route_numbers,
-                'stop': "Collège de Bois-de-Boulogne"  # Add the stop name
+                'stop': "Collège de Bois-de-Boulogne"
             })
+
+    # Add weather alerts if they exist
+    for weather_alert in weather_alerts:
+        weather_message = "En raison des conditions météorologiques extrêmes, les bus et trains peuvent subir des retards. Faites attention en sortant et prévoyez suffisamment de temps pour vos déplacements. Veuillez vérifier les horaires avant de partir" 
+        filtered_alerts.append({
+            'header': "🚨 Avertissement météorologique",
+            'description': weather_message,  # Direct weather message
+            'severity': "weather_alert",
+            'routes': "Tous le réseaux",
+            'stop': "STM et Exo"
+        })
+    
     return filtered_alerts
+
+# Example usage
+alerts_data = {
+    'alerts': [
+        {
+            'informed_entities': [{'route_short_name': '171', 'direction_id': 'E', 'stop_code': '50270'}],
+            'header_texts': [{'language': 'fr', 'text': 'Attention!'}],
+            'description_texts': [{'language': 'fr', 'text': 'There is an alert due to weather conditions.'}],
+            'effect': 'alert'
+        }
+    ]
+}
+filtered_alerts = process_alerts(alerts_data)
+print("Filtered Alerts:", filtered_alerts)
+
+
 # Process real-time data for buses with occupancy status
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
@@ -211,7 +252,18 @@ def process_stm_trip_updates(entities, stm_trips):
 
                         if scheduled_arrival_str and arrival_time:
                             # Convert scheduled time to timestamp
-                            h, m, s = map(int, scheduled_arrival_str.split(":"))
+                            try:
+                                h, m, s = map(int, scheduled_arrival_str.split(":"))
+                                
+                                if h >= 24:  # Ensure the hour is valid
+                                    print(f"⚠️ Invalid hour detected: {h} in scheduled_arrival_str={scheduled_arrival_str}. Converting 24:XX:XX to 00:XX:XX.")
+                                    h = 0  # Convert 24:XX:XX to 00:XX:XX (midnight)
+                                
+                                scheduled_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
+
+                            except ValueError as e:
+                                print(f"❌ Error parsing scheduled arrival time: {scheduled_arrival_str} - {e}")
+                            scheduled_ts = None  # Set to None to prevent crashing
                             scheduled_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
                             delay_seconds = arrival_time - scheduled_ts
                             delay_minutes = delay_seconds // 60
@@ -286,44 +338,65 @@ def fetch_exo_alerts():
     
 def process_exo_alerts(entities):
     filtered_alerts = []
+    
+    # Mapping stop_id to train direction names
+    stop_id_to_route = {
+        "MTL7D": "Dir Lucien l'Allier",
+        "MTL7B": "Saint-Jérôme",
+        "MTL59A": "Mascouche"
+    }
+    
+    # List of stop_ids to filter
+    valid_stop_ids = set(stop_id_to_route.keys())
+    
     for entity in entities:
         if entity.HasField('alert'):
             alert = entity.alert
-            
-            # Check if the alert affects the specified stations and directions
-            affects_station = False
-            affects_direction = False
+            print(f"Alert data: {alert}")  # Debug log to inspect alert
             
             for informed_entity in alert.informed_entity:
-                # Check for stations: Collège de Bois-de-Boulogne and Gare Ahuntsic
+                print(f"Informed entity: {informed_entity}")  # Debug log to inspect informed_entity
+                
                 if informed_entity.HasField('stop_id'):
-                    if informed_entity.stop_id in ["MTL7B", "MTL7D", "MTL59A"]:
-                        affects_station = True
-                
-                # Check for directions: Saint-Jérôme, Lucien-L'allier, Mascouche
-                if informed_entity.HasField('trip'):
-                    route_id = informed_entity.trip.route_id
-                    direction_id = informed_entity.trip.direction_id
-                    if (route_id == "4" and direction_id == 1) or (route_id == "4" and direction_id == 0) or (route_id == "6"):
-                        affects_direction = True
-            
-            if affects_station and affects_direction:
-                # Get French text
-                fr_header = next((t.text for t in alert.header_text if t.language == 'fr'), '')
-                fr_description = next((t.text for t in alert.description_text if t.language == 'fr'), '')
-                
-                # Map route IDs to train names
-                route_name = "Saint-Jérôme" if route_id == "4" and direction_id == 1 else \
-                             "Lucien-L'allier" if route_id == "4" and direction_id == 0 else \
-                             "Mascouche" if route_id == "6" else "Unknown"
-                
-                filtered_alerts.append({
-                    'header': fr_header,
-                    'description': fr_description,
-                    'severity': alert.effect,
-                    'route': route_name  # Add the route name
-                })
-    return filtered_alerts    
+                    stop_id = informed_entity.stop_id
+                    print(f"Stop ID: {stop_id}")  # Debug log to check stop_id
+                    
+                    if stop_id in valid_stop_ids:
+                        # Retrieve the corresponding train direction name
+                        train_route = stop_id_to_route.get(stop_id, "Train inconnu")
+                        print(f"Mapped Train Route: {train_route}")  # Debug log
+
+                        # Get the description in French
+                        fr_description = ''
+                        for translation in alert.description_text.translation:
+                            if translation.language == 'fr':
+                                fr_description = translation.text
+                                break
+                        if not fr_description:
+                            fr_description = 'Description non disponible en français'
+                        
+                        # Add the filtered alert with relevant details
+                        alert_data = {
+                            'header': f"🚨🚊 Info Train",
+                            'description': fr_description,
+                            'severity': alert.effect,
+                            'stop_id': stop_id,
+                            'train_route': train_route
+                        }
+                        print(f"Final Alert Data: {alert_data}")  # Debug log before adding
+                        filtered_alerts.append(alert_data)
+    
+    return filtered_alerts
+
+
+# Test fetching and processing EXO alerts
+exo_alerts = fetch_exo_alerts()
+if exo_alerts:
+    processed_alerts = process_exo_alerts(exo_alerts)
+    print(f"Processed EXO Alerts: {processed_alerts}")
+else:
+    print("No EXO alerts found.")
+  
 
 # Fetch real-time data from Exo API
 def fetch_exo_realtime_data():
@@ -375,7 +448,13 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         direction_id = trips_data.get(trip_id, {}).get("direction_id", "0")
         
         # Determine the direction based on route_id and direction_id
-        direction = "Saint-Jérôme" if route_id == "4" and direction_id == "1" else "Lucien-L'allier" if route_id == "4" and direction_id == "0" else "Mascouche" if route_id == "6" else "Unknown"
+        direction = (
+        "Saint-Jérôme" if route_id == "4" and direction_id == "1"
+        else "Lucien-L'allier" if route_id == "4" and direction_id == "0"
+        else "Mascouche" if route_id == "6" and direction_id == "1"
+        else "Gare Centrale" if route_id == "6" and direction_id == "0"
+        else "Unknown"
+    )
         
         # Get stop name from the map
         stop_name = stop_id_map.get(stop_id, "Unknown")
@@ -506,14 +585,15 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
         "MTL7B": "Gare Bois-de-Boulogne",
         "MTL7D": "Gare Bois-de-Boulogne",
         "MTL59A": "Gare Ahuntsic",
+        "MTL59C": "Gare Ahuntsic",
     }
     direction_map = {
         "4": {"0": "Lucien-L'allier", "1": "Saint-Jérôme"},
-        "6": {"1": "Mascouche"},
+        "6": {"0": "Gare centrale", "1": "Mascouche"},
     }
 
     # Only these stops should be processed
-    desired_stops = {"MTL7D", "MTL7B", "MTL59A"}
+    desired_stops = {"MTL7D", "MTL7B", "MTL59A", "MTL59C"}
 
     # Initialize a dictionary to store the closest train for each stop
     closest_trains = {stop: None for stop in desired_stops}
@@ -536,10 +616,10 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
     # Stop and direction mapping
     direction_map = {
         "4": {"0": "Lucien-L'allier", "1": "Saint-Jérôme"},
-        "6": {"1": "Mascouche"},
+        "6": {"0": "Gare centrale", "1": "Mascouche"},
     }
 
-    desired_stops = {"MTL7D", "MTL7B", "MTL59A"}
+    desired_stops = {"MTL7D", "MTL7B", "MTL59A", "MTL59C"}
     closest_trains = {stop: None for stop in desired_stops}
 
     for stop_time in exo_stop_times:
@@ -705,6 +785,7 @@ def api_data():
             train["delayed_text"] = None
             train["early_text"] = None
 
+    # Return the data with alerts included
     return {
         "buses": buses,
         "next_trains": [
@@ -716,8 +797,9 @@ def api_data():
             for train in exo_trains
         ],
         "current_time": time.strftime("%I:%M:%S %p"),
-        "alerts": all_alerts  # Include combined alerts
+        "alerts": all_alerts  # Include combined alerts, including weather alerts
     }
+
 
 
 
