@@ -29,6 +29,10 @@
                     const busDiv = document.createElement('div');
                     busDiv.className = `frame-1 ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled' : ''}`;
 
+                    const atStopIcon = bus.at_stop
+                    ? '<img src="/static/assets/icons/bus.png" class="blinking-bus">'
+                    : ''; // Show blinking icon only if at stop                    
+
                     // Occupancy icons
                     let occupancyIcons;
                     if (bus.occupancy === "Near_Empty") {
@@ -85,15 +89,13 @@
                     <div class="frame-4">
                         ${bus.delayed_text ? `<span class="delayed-text">${bus.delayed_text}</span>` : ''}
                         ${bus.early_text ? `<span class="early-text">${bus.early_text}</span>` : ''}
-                        <div class="time-group">
-                            <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
-                            ${signal}
-                        </div>
-                        <div class="occupancy-group">
-                            ${occupancyIcons}
-                        </div>
+                    <div class="time-group">
+                        <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
+                        ${signal}
+                        ${bus.at_stop ? `<img src="/static/assets/icons/bus.png" class="blinking-bus">` : ''}
                     </div>
-                `;
+                    </div>
+                    `;
                     frameContainer.appendChild(busDiv);
                 });
 
@@ -114,27 +116,7 @@
                 const alertContainer = document.getElementById('alertContainer');
                 const alertText = document.querySelector('.alert-text');
 
-                if (data.alerts && data.alerts.length > 0) {
-                    // Show the alert banner
-                    alertContainer.style.display = 'block';
-                    
-                    // Combine all alerts into a single scrolling text
-                    const allAlerts = data.alerts.map(a => {
-                    if (a.routes) {
-                        // STM alert (includes route numbers and stop name)
-                        return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
-                    } else {
-                        // EXO alert (includes route name)
-                        return `Train ${a.train_route}: ${a.header} - ${a.description}`;
-
-                    }
-                }).join(' ••• ');
-                    
-                    alertText.textContent = allAlerts;
-                } else {
-                    // Hide the alert banner if there are no alerts
-                    alertContainer.style.display = 'none';
-                }        
+                updateAlerts(data);     
 
                 let buttonClass = "";
                 if (train.route_id === "12") {
@@ -207,7 +189,9 @@
                         <div class="time-group">
                             <span class="time-remaining">${train.arrival_time || "Unknown"}</span>
                             <img src="/static/assets/icons/signal.png" class="blinking-icon">
+                            ${train.at_stop ? `<img src="/static/assets/icons/train.png" class="blinking-train">` : ''}
                         </div>
+
                         <div class="occupancy-group">
                             ${occupancyIcons}
                         </div>
@@ -225,6 +209,38 @@
                 console.error('Error fetching data:', error);
             }
         }
+
+        function updateAlerts(data) {
+        const alertContainer = document.getElementById('alertContainer');
+        const alertText = document.querySelector('.alert-text');
+        const marquee = document.querySelector('.alert-marquee');
+
+        if (data.alerts && data.alerts.length > 0) {
+            alertContainer.style.display = 'block';
+
+            // Combine all alerts into a single scrolling text
+            const allAlerts = data.alerts.map(a => {
+                if (a.routes) {
+                    return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
+                } else {
+                    return `Train ${a.train_route}: ${a.header} - ${a.description}`;
+                }
+            }).join(' ••• ');
+
+            alertText.textContent = allAlerts;
+
+            // Dynamically set animation speed based on text length
+            const baseSpeed = 20; // Base speed in seconds for a standard length
+            const minSpeed = 15;  // Minimum speed (for short messages)
+            const maxSpeed = 50;  // Maximum speed (for very long texts)
+            const textLength = allAlerts.length;
+            const duration = Math.min(maxSpeed, Math.max(minSpeed, textLength / 8)); // Adjust speed
+
+            marquee.style.animation = `marquee ${duration}s linear infinite`;
+        } else {
+            alertContainer.style.display = 'none';
+        }
+    }
 
         setInterval(refreshData, 30000); // Refresh data every 30 seconds
         document.addEventListener('DOMContentLoaded', refreshData);
