@@ -194,21 +194,18 @@ def process_alerts(alerts_data):
                 'stop': "Collège de Bois-de-Boulogne"
             })
 
-    # **Only Add Weather Alerts If They Exist**
-    if weather_alerts and weather_alerts.get("alert"):  # Check if there are alerts
-        weather_message = "En raison des conditions météorologiques extrêmes, les bus et trains peuvent subir des retards. Faites attention en sortant et prévoyez suffisamment de temps pour vos déplacements. Veuillez vérifier les horaires avant de partir."
-
+    # Add weather alerts if they exist
+    for weather_alert in weather_alerts:
+        weather_message = "En raison des conditions météorologiques extrêmes, les bus et trains peuvent subir des retards. Faites attention en sortant et prévoyez suffisamment de temps pour vos déplacements. Veuillez vérifier les horaires avant de partir" 
         filtered_alerts.append({
             'header': "🚨 Avertissement météorologique",
-            'description': weather_message,
+            'description': weather_message,  # Direct weather message
             'severity': "weather_alert",
             'routes': "Tous le réseaux",
             'stop': "STM et Exo"
         })
-
+    
     return filtered_alerts
-
-
 
 # Example usage
 alerts_data = {
@@ -222,7 +219,7 @@ alerts_data = {
     ]
 }
 filtered_alerts = process_alerts(alerts_data)
-#print("Filtered Alerts:", filtered_alerts)
+print("Filtered Alerts:", filtered_alerts)
 
 
 def process_stm_trip_updates(entities, stm_trips):
@@ -238,8 +235,6 @@ def process_stm_trip_updates(entities, stm_trips):
         "180_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
     }
 
-    stop_ids_of_interest = ["50270", "62374"]  # Stops to check for vehicle presence
-
     for entity in entities:
         if entity.HasField("trip_update") or entity.HasField("vehicle"):
             trip = entity.trip_update.trip if entity.HasField("trip_update") else None
@@ -249,11 +244,10 @@ def process_stm_trip_updates(entities, stm_trips):
             route_id = trip.route_id if trip else vehicle.trip.route_id
             trip_id = trip.trip_id if trip else vehicle.trip.trip_id
             occupancy_status = vehicle.occupancy_status if vehicle and vehicle.HasField("occupancy_status") else "UNKNOWN"
-            vehicle_stop_id = vehicle.stop_id if vehicle and vehicle.HasField("stop_id") else None  # Stop where the bus is detected
 
             if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
                 for stop_time in stop_time_updates:
-                    if stop_time.stop_id in stop_ids_of_interest:
+                    if stop_time.stop_id == "50270" or stop_time.stop_id == "62374":
                         scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id), None)
                         arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
                         delay_minutes = None
@@ -304,7 +298,6 @@ def process_stm_trip_updates(entities, stm_trips):
                                     "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
                                     "delayed_text": delayed_text,
                                     "early_text": None,  # Not needed with Chrono format
-                                    "at_stop": vehicle_stop_id == stop_time.stop_id  # True if the vehicle is detected at this stop
                                 }
 
     # Handle cases where no buses are found for a route
@@ -320,13 +313,10 @@ def process_stm_trip_updates(entities, stm_trips):
                 "location": route_metadata.get(route, {}).get("location", "Unknown"),
                 "delayed_text": None,
                 "early_text": None,
-                "at_stop": False  # No vehicle detected at stop
             }
 
     buses = [bus for bus in closest_buses.values()]
     return buses
-
-
 
 
 
@@ -373,19 +363,19 @@ def process_exo_alerts(entities):
     for entity in entities:
         if entity.HasField('alert'):
             alert = entity.alert
-            #print(f"Alert data: {alert}")  # Debug log to inspect alert
+            print(f"Alert data: {alert}")  # Debug log to inspect alert
             
             for informed_entity in alert.informed_entity:
-                #print(f"Informed entity: {informed_entity}")  # Debug log to inspect informed_entity
+                print(f"Informed entity: {informed_entity}")  # Debug log to inspect informed_entity
                 
                 if informed_entity.HasField('stop_id'):
                     stop_id = informed_entity.stop_id
-                    #print(f"Stop ID: {stop_id}")  # Debug log to check stop_id
+                    print(f"Stop ID: {stop_id}")  # Debug log to check stop_id
                     
                     if stop_id in valid_stop_ids:
                         # Retrieve the corresponding train direction name
                         train_route = stop_id_to_route.get(stop_id, "Train inconnu")
-                        #print(f"Mapped Train Route: {train_route}")  # Debug log
+                        print(f"Mapped Train Route: {train_route}")  # Debug log
 
                         # Get the description in French
                         fr_description = ''
@@ -404,7 +394,7 @@ def process_exo_alerts(entities):
                             'stop_id': stop_id,
                             'train_route': train_route
                         }
-                        #print(f"Final Alert Data: {alert_data}")  # Debug log before adding
+                        print(f"Final Alert Data: {alert_data}")  # Debug log before adding
                         filtered_alerts.append(alert_data)
     
     return filtered_alerts
@@ -718,22 +708,14 @@ def process_vehicle_positions(entities):
             trip_id = vehicle.trip.trip_id
             route_id = vehicle.trip.route_id
             occupancy_status = vehicle.occupancy_status if vehicle.HasField("occupancy_status") else "UNKNOWN"
-            latitude = vehicle.position.latitude if vehicle.HasField("position") else None
-            longitude = vehicle.position.longitude if vehicle.HasField("position") else None
-            stop_id = vehicle.stop_id if vehicle.HasField("stop_id") else None
             
             vehicle_data.append({
                 "trip_id": trip_id,
                 "route_id": route_id,
-                "occupancy": stm_map_occupancy_status(occupancy_status),
-                "latitude": latitude,
-                "longitude": longitude,
-                "stop_id": stop_id,  # Indicates if the vehicle is at a stop
-                "at_stop": stop_id is not None  # True if vehicle is at a stop
+                "occupancy": stm_map_occupancy_status(occupancy_status),  # Map to readable format
             })
             
     return vehicle_data
-
     
 
 # Load STM data

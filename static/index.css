@@ -950,17 +950,14 @@ button {
   grid-column: 2;
 }
 
-.blinking-bus, .blinking-train {
-  animation: blink-animation 1s infinite;
-  height: 18px; /* Adjust size if needed */
-  width: 18px;
-  margin-left: 5px; /* Space between time text and icon */
-}
-
-@keyframes blink-animation {
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
+.blinking-icon_train {
+  animation: blink-animation 1s steps(5, start) infinite;
+  background: url('/static/assets/icons/signal.png') no-repeat center center;
+  background-size: contain;
+  width: 28px;
+  height: 28px;
+  display: inline-block;
+  margin-left: 30px; /* Space between time and icon */
 }
 
 @keyframes blink-animation {
@@ -1139,12 +1136,15 @@ button {
   z-index: 1000;
 }
 
-
+.alert-marquee {
+  display: inline-block;
+  animation: marquee 35s linear infinite;
+  padding-left: 100%;
+}
 
 .alert-marquee {
   display: inline-block;
-  white-space: nowrap;
-  animation: marquee 20s linear infinite; /* Default speed */
+  animation: marquee 35s linear infinite;
   padding-left: 100%;
 }
 
