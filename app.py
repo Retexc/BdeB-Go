@@ -224,7 +224,7 @@ print("Filtered Alerts:", filtered_alerts)
 
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
-    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]
+    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]  # Removed "164_Ouest"
     closest_buses = {route: None for route in desired_routes}
 
     route_metadata = {
@@ -235,6 +235,8 @@ def process_stm_trip_updates(entities, stm_trips):
         "180_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
     }
 
+    stop_ids_of_interest = ["50270", "62374"]  # Stops to check for vehicle presence
+
     for entity in entities:
         if entity.HasField("trip_update") or entity.HasField("vehicle"):
             trip = entity.trip_update.trip if entity.HasField("trip_update") else None
@@ -244,10 +246,14 @@ def process_stm_trip_updates(entities, stm_trips):
             route_id = trip.route_id if trip else vehicle.trip.route_id
             trip_id = trip.trip_id if trip else vehicle.trip.trip_id
             occupancy_status = vehicle.occupancy_status if vehicle and vehicle.HasField("occupancy_status") else "UNKNOWN"
+            vehicle_stop_id = vehicle.stop_id if vehicle and vehicle.HasField("stop_id") else None  # Stop where the bus is detected
 
             if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
                 for stop_time in stop_time_updates:
-                    if stop_time.stop_id == "50270" or stop_time.stop_id == "62374":
+                    if stop_time.stop_id in stop_ids_of_interest:
+                        if route_id == "164" and stop_time.stop_id == "62374":
+                            continue  # Skip since 164 Ouest is unavailable
+
                         scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id), None)
                         arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
                         delay_minutes = None
@@ -287,7 +293,7 @@ def process_stm_trip_updates(entities, stm_trips):
 
                         if minutes_to_arrival is not None:
                             route_key = f"{route_id}_Ouest" if stop_time.stop_id == "62374" else route_id
-                            if closest_buses[route_key] is None or minutes_to_arrival < closest_buses[route_key]["arrival_time"]:
+                            if closest_buses.get(route_key) is None or minutes_to_arrival < closest_buses[route_key]["arrival_time"]:
                                 closest_buses[route_key] = {
                                     "route_id": route_id,
                                     "trip_id": trip_id,
@@ -298,11 +304,14 @@ def process_stm_trip_updates(entities, stm_trips):
                                     "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
                                     "delayed_text": delayed_text,
                                     "early_text": None,  # Not needed with Chrono format
+                                    "at_stop": vehicle_stop_id == stop_time.stop_id  # True if the vehicle is detected at this stop
                                 }
 
     # Handle cases where no buses are found for a route
     for route in desired_routes:
-        if closest_buses[route] is None:
+        if route.startswith("164") and "Ouest" in route:
+            continue  # Skip since 164 Ouest is unavailable
+        if closest_buses.get(route) is None:
             closest_buses[route] = {
                 "route_id": route,
                 "trip_id": "N/A",
@@ -313,10 +322,12 @@ def process_stm_trip_updates(entities, stm_trips):
                 "location": route_metadata.get(route, {}).get("location", "Unknown"),
                 "delayed_text": None,
                 "early_text": None,
+                "at_stop": False  # No vehicle detected at stop
             }
 
     buses = [bus for bus in closest_buses.values()]
     return buses
+
 
 
 
