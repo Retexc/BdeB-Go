@@ -227,7 +227,7 @@ filtered_alerts = process_alerts(alerts_data)
 
 def process_stm_trip_updates(entities, stm_trips):
     buses = []
-    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]
+    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]  # Removed "164_Ouest"
     closest_buses = {route: None for route in desired_routes}
 
     route_metadata = {
@@ -254,6 +254,9 @@ def process_stm_trip_updates(entities, stm_trips):
             if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
                 for stop_time in stop_time_updates:
                     if stop_time.stop_id in stop_ids_of_interest:
+                        if route_id == "164" and stop_time.stop_id == "62374":
+                            continue  # Skip since 164 Ouest is unavailable
+
                         scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id), None)
                         arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
                         delay_minutes = None
@@ -293,7 +296,7 @@ def process_stm_trip_updates(entities, stm_trips):
 
                         if minutes_to_arrival is not None:
                             route_key = f"{route_id}_Ouest" if stop_time.stop_id == "62374" else route_id
-                            if closest_buses[route_key] is None or minutes_to_arrival < closest_buses[route_key]["arrival_time"]:
+                            if closest_buses.get(route_key) is None or minutes_to_arrival < closest_buses[route_key]["arrival_time"]:
                                 closest_buses[route_key] = {
                                     "route_id": route_id,
                                     "trip_id": trip_id,
@@ -309,7 +312,9 @@ def process_stm_trip_updates(entities, stm_trips):
 
     # Handle cases where no buses are found for a route
     for route in desired_routes:
-        if closest_buses[route] is None:
+        if route.startswith("164") and "Ouest" in route:
+            continue  # Skip since 164 Ouest is unavailable
+        if closest_buses.get(route) is None:
             closest_buses[route] = {
                 "route_id": route,
                 "trip_id": "N/A",
@@ -325,6 +330,7 @@ def process_stm_trip_updates(entities, stm_trips):
 
     buses = [bus for bus in closest_buses.values()]
     return buses
+
 
 
 
