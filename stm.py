@@ -106,14 +106,67 @@ def validate_trip(trip_id, route_id, gtfs_trips):
     """
     return gtfs_trips.get(trip_id) == route_id
 
-def process_stm_trip_updates(entities, stm_trips, stm_stop_times):
+def fetch_stm_positions_dict(desired_routes, stm_trips):
     """
-    Core logic for parsing bus times, arrival predictions, occupancy, etc.
-    NOTE: Make sure to pass in stm_stop_times from your app.py so it’s available.
+    Fetch from STM_VEHICLE_POSITIONS_ENDPOINT, build dict keyed by (route_id, trip_id)
+    => { "lat": ..., "lon": ..., "occupancy": ..., "stop_id": ..., "current_status": ... } if present
     """
-    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]  # Removed "164_Ouest"
-    closest_buses = {route: None for route in desired_routes}
+    positions = {}
+    entities = fetch_stm_vehicle_positions()
+    if not entities:
+        return positions  # empty
+    
+    for entity in entities:
+        if entity.HasField("vehicle"):
+            vehicle = entity.vehicle
+            route_id = vehicle.trip.route_id
+            trip_id = vehicle.trip.trip_id
 
+            # only store if it's a route/trip we care about & is valid
+            if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
+                bus_lat = bus_lon = None
+                if vehicle.HasField("position"):
+                    bus_lat = vehicle.position.latitude
+                    bus_lon = vehicle.position.longitude
+                
+                # occupancy_status => numeric
+                occupancy_raw = None
+                if vehicle.HasField("occupancy_status"):
+                    occupancy_raw = vehicle.occupancy_status
+                
+                feed_stop_id = vehicle.stop_id if vehicle.HasField("stop_id") else None
+
+                # currentStatus => e.g. IN_TRANSIT_TO, STOPPED_AT, etc.
+                # In the proto, it might be "current_status" or "current_status_value"
+                # We'll assume it's "current_status" in the Python-generated code.
+                current_status_str = None
+                if vehicle.HasField("current_status"):
+                    current_status_str = vehicle.current_status  # This is an enum or string. Might be something like 2 => "IN_TRANSIT_TO"
+
+                # Build a positions entry
+                positions[(route_id, trip_id)] = {
+                    "lat": bus_lat,
+                    "lon": bus_lon,
+                    "occupancy": occupancy_raw,
+                    "feed_stop_id": feed_stop_id,
+                    "current_status": current_status_str,
+                }
+    return positions
+
+
+def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions_dict):
+    """
+    Combine real-time TripUpdates with lat/lon info, but set at_stop=True
+    whenever minutes_to_arrival < 2 (i.e. 1 or 0 or negative).
+    """
+    import math
+    import time
+    from datetime import datetime
+
+    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]
+    closest_buses = {r: None for r in desired_routes}
+
+    # Basic route -> direction mapping
     route_metadata = {
         "171": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
         "180": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
@@ -124,126 +177,161 @@ def process_stm_trip_updates(entities, stm_trips, stm_stop_times):
 
     stop_ids_of_interest = ["50270", "62374"]
 
-    for entity in entities:
-        if entity.HasField("trip_update") or entity.HasField("vehicle"):
-            trip = entity.trip_update.trip if entity.HasField("trip_update") else None
-            stop_time_updates = entity.trip_update.stop_time_update if entity.HasField("trip_update") else []
-            vehicle = entity.vehicle if entity.HasField("vehicle") else None
+    for entity in trip_entities:
+        if entity.HasField("trip_update"):
+            trip_update = entity.trip_update
+            route_id = trip_update.trip.route_id
+            trip_id = trip_update.trip.trip_id
 
-            route_id = trip.route_id if trip else vehicle.trip.route_id
-            trip_id = trip.trip_id if trip else vehicle.trip.trip_id
-            occupancy_status = vehicle.occupancy_status if (vehicle and vehicle.HasField("occupancy_status")) else "UNKNOWN"
-            vehicle_stop_id = vehicle.stop_id if (vehicle and vehicle.HasField("stop_id")) else None
+            # Skip if not one of our routes or invalid in static
+            if route_id not in ["171", "180", "164", "171_Ouest", "180_Ouest"]:
+                continue
+            if stm_trips.get(trip_id) != route_id:
+                continue
 
-            if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
-                for stop_time in stop_time_updates:
-                    if stop_time.stop_id in stop_ids_of_interest:
-                        # Skip 164 if it's at "62374" for some reason
-                        if route_id == "164" and stop_time.stop_id == "62374":
-                            continue
-                        
-                        scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id))
-                        arrival_time = stop_time.arrival.time if stop_time.HasField("arrival") else None
+            for stop_time in trip_update.stop_time_update:
+                if stop_time.stop_id in stop_ids_of_interest:
+                    # Optional skip if route_id=164 & stop_time=62374
+                    if route_id == "164" and stop_time.stop_id == "62374":
+                        continue
 
-                        delay_minutes = None
-                        scheduled_formatted = "Inconnu"
+                    scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id))
+                    arrival_unix = stop_time.arrival.time if stop_time.HasField("arrival") else None
+                    if not arrival_unix:
+                        continue
 
-                        if scheduled_arrival_str and arrival_time:
-                            try:
-                                h, m, s = map(int, scheduled_arrival_str.split(":"))
-                                if h >= 24:
-                                    h = 0  # fix invalid hour
-                                # Convert scheduled to a timestamp (approx. today’s date + h,m,s)
-                                scheduled_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
-                                scheduled_formatted = f"{h:02d}:{m:02d}"
-                                # Calculate difference (seconds)
-                                delay_seconds = arrival_time - scheduled_ts
-                                delay_minutes = delay_seconds // 60
-                            except ValueError as e:
-                                print(f"Error parsing scheduled arrival time: {scheduled_arrival_str} => {e}")
-                                delay_minutes = None
+                    minutes_to_arrival = (arrival_unix - time.time()) // 60
 
-                        # Time until arrival in minutes
-                        minutes_to_arrival = (arrival_time - int(time.time())) // 60 if arrival_time else None
+                    # Build delayed_text if we can
+                    delay_text = None
+                    if scheduled_arrival_str:
+                        try:
+                            h, m, s = map(int, scheduled_arrival_str.split(":"))
+                            if h >= 24:
+                                h = 0
+                            sched_ts = datetime.now().replace(
+                                hour=h, minute=m, second=s, microsecond=0
+                            ).timestamp()
+                            diff_min = (arrival_unix - sched_ts) // 60
+                            if diff_min > 0:
+                                delay_text = f"En retard (prévu à {h:02d}:{m:02d})"
+                            elif diff_min < 0:
+                                delay_text = f"En avance (prévu à {h:02d}:{m:02d})"
+                        except ValueError:
+                            pass
 
-                        # Delay text for Chrono format
-                        if delay_minutes is not None:
-                            if delay_minutes > 0:
-                                delayed_text = f"En retard (prévu à {scheduled_formatted})"
-                            elif delay_minutes < 0:
-                                delayed_text = f"En avance (prévu à {scheduled_formatted})"
-                            else:
-                                delayed_text = None
-                        else:
-                            delayed_text = None
+                    # Distinguish Ouest route
+                    route_key = route_id
+                    if stop_time.stop_id == "62374" and not route_id.endswith("_Ouest"):
+                        route_key = f"{route_id}_Ouest"
 
-                        if minutes_to_arrival is not None:
-                            route_key = f"{route_id}_Ouest" if stop_time.stop_id == "62374" else route_id
-                            if (
-                                closest_buses.get(route_key) is None
-                                or minutes_to_arrival < closest_buses[route_key]["arrival_time"]
-                            ):
-                                closest_buses[route_key] = {
-                                    "route_id": route_id,
-                                    "trip_id": trip_id,
-                                    "stop_id": stop_time.stop_id,
-                                    "arrival_time": minutes_to_arrival,
-                                    "occupancy": stm_map_occupancy_status(occupancy_status),
-                                    "direction": route_metadata.get(route_key, {}).get("direction", "Unknown"),
-                                    "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
-                                    "delayed_text": delayed_text,
-                                    "early_text": None,
-                                    "at_stop": (vehicle_stop_id == stop_time.stop_id)
-                                }
+                    # Occupancy
+                    pos_info = positions_dict.get((route_id, trip_id), {})
+                    raw_occ = pos_info.get("occupancy")
+                    occ_str = stm_map_occupancy_status(raw_occ) if raw_occ else "Unknown"
 
-    # For routes that have no bus found, fill in a default
-    for route in desired_routes:
-        if route.startswith("164") and "Ouest" in route:
-            continue  # skip 164 Ouest
-        if closest_buses.get(route) is None:
-            closest_buses[route] = {
-                "route_id": route,
+                    # If minutes_to_arrival < 2, show blinking bus
+                    at_stop_flag = (isinstance(minutes_to_arrival, (int, float)) and minutes_to_arrival < 2)
+
+                    bus_obj = {
+                        "route_id": route_id,
+                        "trip_id": trip_id,
+                        "stop_id": stop_time.stop_id,
+                        "arrival_time": minutes_to_arrival,
+                        "occupancy": occ_str,
+                        "direction": route_metadata.get(route_key, {}).get("direction", "Unknown"),
+                        "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
+                        "delayed_text": delay_text,
+                        "early_text": None,
+                        "at_stop": at_stop_flag,
+                    }
+
+                    # Keep only the earliest arrival for that route
+                    existing = closest_buses.get(route_key)
+                    if existing is None:
+                        closest_buses[route_key] = bus_obj
+                    else:
+                        # Compare times
+                        if (isinstance(existing["arrival_time"], (int, float))
+                            and isinstance(minutes_to_arrival, (int, float))
+                            and minutes_to_arrival < existing["arrival_time"]):
+                            closest_buses[route_key] = bus_obj
+
+    # Fill any missing routes with a default object
+    for r in desired_routes:
+        if r not in closest_buses or closest_buses[r] is None:
+            # For route164_Ouest skip if needed
+            if r.startswith("164") and "Ouest" in r:
+                continue
+            closest_buses[r] = {
+                "route_id": r,
                 "trip_id": "N/A",
-                "stop_id": "50270" if "Ouest" not in route else "62374",
+                "stop_id": "50270" if "Ouest" not in r else "62374",
                 "arrival_time": "Indisponible (Route annulée)",
                 "occupancy": "Unknown",
-                "direction": route_metadata.get(route, {}).get("direction", "Unknown"),
-                "location": route_metadata.get(route, {}).get("location", "Unknown"),
+                "direction": route_metadata.get(r, {}).get("direction", "Unknown"),
+                "location": route_metadata.get(r, {}).get("location", "Unknown"),
                 "delayed_text": None,
                 "early_text": None,
-                "at_stop": False
+                "at_stop": False,
             }
 
-    buses = list(closest_buses.values())
+    return list(closest_buses.values())
+
+
+
+
+
+
     return buses
 
 def debug_print_stm_occupancy_status(desired_routes, stm_trips):
     """
     Fetch the latest STM vehicle positions and print occupancyStatus
     ONLY for the bus routes we care about.
+    Also prints out latitude/longitude + currentStatus if present.
     """
-    entities = fetch_stm_vehicle_positions()  # This calls STM_VEHICLE_POSITIONS_ENDPOINT
+    entities = fetch_stm_vehicle_positions()
     
     if not entities:
         print("No STM vehicle positions found.")
         return
     
-    print("----- STM Vehicle Positions (Occupancy) -----")
+    print("----- STM Vehicle Positions (Occupancy + Position + currentStatus) -----")
     for entity in entities:
         if entity.HasField("vehicle"):
             vehicle = entity.vehicle
-            # route_id & trip_id from real-time feed
             route_id = vehicle.trip.route_id
             trip_id = vehicle.trip.trip_id
             
-            # If this route is one we care about AND it’s valid in our static file
             if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
-                # occupancy_status is a numeric field in the GTFS-RT feed
+                
+                # Occupancy
                 if vehicle.HasField("occupancy_status"):
                     raw_status = vehicle.occupancy_status
-                    mapped = stm_map_occupancy_status(raw_status)
+                    mapped_status = stm_map_occupancy_status(raw_status)
                 else:
-                    mapped = "Unknown"
+                    mapped_status = "Unknown"
                 
-                print(f"Route: {route_id}, Trip: {trip_id}, Occupancy: {mapped}")
-    print("--------------------------------------------")
+                # Position
+                lat_str = "no position"
+                lon_str = ""
+                if vehicle.HasField("position"):
+                    pos = vehicle.position
+                    lat_str = f"{pos.latitude:.6f}"
+                    lon_str = f"{pos.longitude:.6f}"
+
+                # currentStatus
+                current_stat_str = "No current_status"
+                if vehicle.HasField("current_status"):
+                    current_stat_str = str(vehicle.current_status)  # or map from numeric to string
+
+                print(
+                    f"Route={route_id}, Trip={trip_id}, "
+                    f"Occupancy={mapped_status}, "
+                    f"Lat/Lon={lat_str}{', '+lon_str if lon_str else ''}, "
+                    f"currentStatus={current_stat_str}"
+                )
+    print("--------------------------------------------------------------------------")
+
+

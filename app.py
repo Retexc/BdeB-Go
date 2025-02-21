@@ -3,22 +3,23 @@
 from flask import Flask, render_template
 import time
 
-# Local imports
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
 from stm import (
     fetch_stm_alerts,
     fetch_stm_realtime_data,
-    fetch_stm_vehicle_positions,
+    fetch_stm_positions_dict,      # new helper to get lat/lon
     load_stm_gtfs_trips,
     load_stm_stop_times,
-    process_stm_trip_updates,       
+    process_stm_trip_updates,       # merges arrival + positions
     stm_map_occupancy_status,
-    debug_print_stm_occupancy_status        
+    debug_print_stm_occupancy_status,
+    validate_trip
 )
 from exo import (
     fetch_exo_alerts,
     fetch_exo_realtime_data,
+    load_exo_gtfs_trips,
     load_exo_stop_times,
     process_exo_vehicle_positions,
     process_exo_train_schedule_with_occupancy
@@ -28,24 +29,14 @@ from alerts import (
     process_exo_alerts
 )
 
-from exo import (
-    fetch_exo_alerts,
-    fetch_exo_realtime_data,
-    load_exo_stop_times,
-    load_exo_gtfs_trips,   # <--- make sure we import from exo.py
-    process_exo_vehicle_positions,
-    process_exo_train_schedule_with_occupancy
-)
-
 app = Flask(__name__)
 
 # ====================================================================
 # Load static GTFS data once at startup
-# Adjust paths if your GTFS files live elsewhere
 # ====================================================================
 stm_trips = load_stm_gtfs_trips("STM/trips.txt")
 stm_stop_times = load_stm_stop_times("STM/stop_times.txt")
-exo_trips = load_exo_gtfs_trips("Exo/Train/trips.txt") 
+exo_trips = load_exo_gtfs_trips("Exo/Train/trips.txt")
 exo_stop_times = load_exo_stop_times("Exo/Train/stop_times.txt")
 
 @app.route("/debug-occupancy")
@@ -53,12 +44,12 @@ def debug_occupancy():
     desired = ["171", "164", "180"]
     debug_print_stm_occupancy_status(desired, stm_trips)
     return "Check your console logs for occupancy info!"
+
 # ====================================================================
 # ROUTE: Home Page
 # ====================================================================
 @app.route("/")
 def index():
-    # Fetch & process EXO real-time
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
     exo_vehicle_data = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
     
@@ -76,48 +67,53 @@ def index():
         current_time=current_time
     )
 
-
 # ====================================================================
 # ROUTE: API JSON Data
 # ====================================================================
 @app.route("/api/data")
 def api_data():
     # ========== ALERTS ==========
-    # 1) Fetch raw STM alerts -> process them (including weather)
     stm_alert_json = fetch_stm_alerts()
     processed_stm = process_stm_alerts(stm_alert_json, WEATHER_API_KEY) if stm_alert_json else []
 
-    # 2) Fetch raw EXO alerts -> process them
     exo_alert_entities = fetch_exo_alerts()
     processed_exo = process_exo_alerts(exo_alert_entities)
-
-    # Combine them
     all_alerts = processed_stm + processed_exo
 
     # ========== STM BUSES ==========
+    # 1) Trip updates
     stm_trip_entities = fetch_stm_realtime_data()
-    stm_vehicle_entities = fetch_stm_vehicle_positions()
+    # 2) Vehicle positions => positions_dict
+    positions_dict = fetch_stm_positions_dict(["171","180","164"], stm_trips)
+    # 3) Merge into final buses
+    buses = process_stm_trip_updates(
+        stm_trip_entities,
+        stm_trips,
+        stm_stop_times,
+        positions_dict
+    )
 
-    # IMPORTANT FIX:
-    # Pass `stm_stop_times` to process_stm_trip_updates, or else it can’t look up arrivals.
-    buses = process_stm_trip_updates(stm_trip_entities, stm_trips, stm_stop_times)
+    print("----- DEBUG: Final Merged STM Buses -----")
+    status_map = {0: "INCOMING_AT", 1: "STOPPED_AT", 2: "IN_TRANSIT_TO"}
 
+    for b in buses:
+        # If b["current_status"] is numeric, map it; otherwise just show whatever string is there
+        raw_stat = b.get("current_status")
+        if isinstance(raw_stat, int):
+            stat_str = status_map.get(raw_stat, f"Unknown({raw_stat})")
+        else:
+            # If it's a string like "2" or "STOPPED_AT" already, just pass it along
+            stat_str = str(raw_stat)
 
-    vehicle_data = []
-    for entity in stm_vehicle_entities:
-        if entity.HasField("vehicle"):
-            v = entity.vehicle
-            occupancy_status = v.occupancy_status if v.HasField("occupancy_status") else "UNKNOWN"
-            vehicle_data.append({
-                "trip_id": v.trip.trip_id,
-                "occupancy": stm_map_occupancy_status(occupancy_status)
-            })
+        print(
+            f"Route={b['route_id']}, Trip={b['trip_id']}, "
+            f"Stop={b['stop_id']}, ArrTime={b['arrival_time']}, "
+            f"Occupancy={b['occupancy']}, AtStop={b['at_stop']}, "
+            f"Lat={b.get('lat')}, Lon={b.get('lon')}, Dist={b.get('distance_m')}m, "
+            f"currentStatus={stat_str}"
+        )
+    print("-----------------------------------------")
 
-    for bus in buses:
-        for vd in vehicle_data:
-            if bus["trip_id"] == vd["trip_id"]:
-                bus["occupancy"] = vd["occupancy"]
-                break
 
     # ========== EXO TRAINS ==========
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
@@ -143,7 +139,6 @@ def api_data():
         "current_time": time.strftime("%I:%M:%S %p"),
         "alerts": all_alerts
     }
-
 
 if __name__ == "__main__":
     app.run(debug=True)

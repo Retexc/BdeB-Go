@@ -89,17 +89,23 @@
                     <div class="frame-4">
                         ${bus.delayed_text ? `<span class="delayed-text">${bus.delayed_text}</span>` : ''}
                         ${bus.early_text ? `<span class="early-text">${bus.early_text}</span>` : ''}
-                    <div class="time-group">
-                        <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
-                        ${signal}
+                        <div class="time-group">
+                            <span class="time-remaining">
+                                ${bus.arrival_time !== 'Unavailable (Route Canceled)' 
+                                ? `${bus.arrival_time} min` 
+                                : 'Annulé'}
+                            </span>
+                            ${signal}
+                        </div>
+                        <div class="occupancy-group">
+                        ${occupancyIcons}
+                        <!-- Always show bus icon here: -->
                         ${bus.at_stop ? `<img src="/static/assets/icons/bus.png" class="blinking-bus">` : ''}
-                    </div>
-                      <div class="occupancy-group">
-                    ${occupancyIcons}
-                    </div>
+                        </div>
                     </div>
                     `;
                     frameContainer.appendChild(busDiv);
+
                 });
 
                 // Update trains
