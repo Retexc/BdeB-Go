@@ -73,14 +73,23 @@ def load_stm_stop_times(filepath):
 
 def load_stm_gtfs_trips(filepath):
     """
-    Load STM GTFS trips => {trip_id: route_id}.
+    Load STM GTFS trips into a dict keyed by trip_id.
+    Each value is a dict: {"route_id": ..., "wheelchair_accessible": ...}.
     """
     trips_data = {}
     with open(filepath, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
-            trips_data[row["trip_id"]] = row["route_id"]
+            trip_id = row["trip_id"]
+            route_id = row["route_id"]
+            # If the CSV has a column named "wheelchair_accessible" with "1" or "2" or blank:
+            w_str = row.get("wheelchair_accessible", "0")  # default "0" if missing
+            trips_data[trip_id] = {
+                "route_id": route_id,
+                "wheelchair_accessible": w_str
+            }
     return trips_data
+
 
 def stm_map_occupancy_status(status):
     """
@@ -101,10 +110,11 @@ def stm_map_occupancy_status(status):
       
 
 def validate_trip(trip_id, route_id, gtfs_trips):
-    """
-    Check if the trip_id is valid for the given route_id according to static GTFS data.
-    """
-    return gtfs_trips.get(trip_id) == route_id
+    trip_info = gtfs_trips.get(trip_id)
+    if not trip_info:
+        return False
+    return trip_info["route_id"] == route_id
+
 
 def fetch_stm_positions_dict(desired_routes, stm_trips):
     """
@@ -156,17 +166,22 @@ def fetch_stm_positions_dict(desired_routes, stm_trips):
 
 def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions_dict):
     """
-    Combine real-time TripUpdates with lat/lon info, but set at_stop=True
-    whenever minutes_to_arrival < 2 (i.e. 1 or 0 or negative).
+    Combine real-time TripUpdates with lat/lon info and wheelchair info.
+    Return a list of bus objects with fields like:
+      route_id, trip_id, stop_id, arrival_time, occupancy, direction, location,
+      delayed_text, early_text, at_stop, wheelchair_accessible
     """
-    import math
-    import time
+
+    import math, time
     from datetime import datetime
 
+    # The routes we care about (Example)
     desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]
+
+    # Prepare a dict to hold the closest bus for each route
     closest_buses = {r: None for r in desired_routes}
 
-    # Basic route -> direction mapping
+    # Basic route -> direction/ location (Example)
     route_metadata = {
         "171": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
         "180": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
@@ -175,94 +190,109 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
         "180_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
     }
 
+    # Stop IDs we care about (Example)
     stop_ids_of_interest = ["50270", "62374"]
 
     for entity in trip_entities:
         if entity.HasField("trip_update"):
-            trip_update = entity.trip_update
-            route_id = trip_update.trip.route_id
-            trip_id = trip_update.trip.trip_id
+            t_update = entity.trip_update
+            route_id = t_update.trip.route_id
+            trip_id = t_update.trip.trip_id
 
-            # Skip if not one of our routes or invalid in static
-            if route_id not in ["171", "180", "164", "171_Ouest", "180_Ouest"]:
+            # Skip if route not in our desired list (Optional)
+            if route_id not in ["171", "180", "164"]:
+                # if route_id is "171_Ouest" or "180_Ouest" you might handle differently
+                # or you can handle them by a separate logic. Adjust as needed.
                 continue
-            if stm_trips.get(trip_id) != route_id:
+
+            # Validate that trip_id in stm_trips matches route_id
+            if not validate_trip(trip_id, route_id, stm_trips):
                 continue
 
-            for stop_time in trip_update.stop_time_update:
-                if stop_time.stop_id in stop_ids_of_interest:
-                    # Optional skip if route_id=164 & stop_time=62374
-                    if route_id == "164" and stop_time.stop_id == "62374":
-                        continue
+            # Lookup wheelchair flag from stm_trips
+            # We assume "1" means accessible; else "0" or "2" means not
+            trip_info = stm_trips.get(trip_id, {})
+            w_str = trip_info.get("wheelchair_accessible", "0")
+            wheelchair_accessible = (w_str == "1")
 
-                    scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id))
-                    arrival_unix = stop_time.arrival.time if stop_time.HasField("arrival") else None
-                    if not arrival_unix:
-                        continue
+            for stop_time in t_update.stop_time_update:
+                # Skip if stop not in interest
+                if stop_time.stop_id not in stop_ids_of_interest:
+                    continue
 
-                    minutes_to_arrival = (arrival_unix - time.time()) // 60
+                # Skip route 164 if it's at 62374 (Optional)
+                if route_id == "164" and stop_time.stop_id == "62374":
+                    continue
 
-                    # Build delayed_text if we can
-                    delay_text = None
-                    if scheduled_arrival_str:
-                        try:
-                            h, m, s = map(int, scheduled_arrival_str.split(":"))
-                            if h >= 24:
-                                h = 0
-                            sched_ts = datetime.now().replace(
-                                hour=h, minute=m, second=s, microsecond=0
-                            ).timestamp()
-                            diff_min = (arrival_unix - sched_ts) // 60
-                            if diff_min > 0:
-                                delay_text = f"En retard (prévu à {h:02d}:{m:02d})"
-                            elif diff_min < 0:
-                                delay_text = f"En avance (prévu à {h:02d}:{m:02d})"
-                        except ValueError:
-                            pass
+                # Grab scheduled arrival from stop_times
+                scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id))
+                # Grab real arrival from the feed
+                arrival_unix = stop_time.arrival.time if stop_time.HasField("arrival") else None
+                if not arrival_unix:
+                    continue
 
-                    # Distinguish Ouest route
-                    route_key = route_id
-                    if stop_time.stop_id == "62374" and not route_id.endswith("_Ouest"):
-                        route_key = f"{route_id}_Ouest"
+                # Compute minutes until arrival
+                now_ts = time.time()
+                minutes_to_arrival = (arrival_unix - now_ts) // 60
 
-                    # Occupancy
-                    pos_info = positions_dict.get((route_id, trip_id), {})
-                    raw_occ = pos_info.get("occupancy")
-                    occ_str = stm_map_occupancy_status(raw_occ) if raw_occ else "Unknown"
+                # Build a delay text if we have scheduled + real
+                delay_text = None
+                if scheduled_arrival_str:
+                    try:
+                        h, m, s = map(int, scheduled_arrival_str.split(":"))
+                        if h >= 24:
+                            h = 0
+                        sched_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
+                        diff_min = (arrival_unix - sched_ts) // 60
+                        if diff_min > 0:
+                            delay_text = f"En retard (prévu à {h:02d}:{m:02d})"
+                        elif diff_min < 0:
+                            delay_text = f"En avance (prévu à {h:02d}:{m:02d})"
+                    except ValueError:
+                        pass
 
-                    # If minutes_to_arrival < 2, show blinking bus
-                    at_stop_flag = (isinstance(minutes_to_arrival, (int, float)) and minutes_to_arrival < 2)
+                # If the stop is 62374, we might treat route as route_id+"_Ouest" (Example)
+                route_key = route_id
+                if stop_time.stop_id == "62374" and not route_id.endswith("_Ouest"):
+                    route_key = f"{route_id}_Ouest"
 
-                    bus_obj = {
-                        "route_id": route_id,
-                        "trip_id": trip_id,
-                        "stop_id": stop_time.stop_id,
-                        "arrival_time": minutes_to_arrival,
-                        "occupancy": occ_str,
-                        "direction": route_metadata.get(route_key, {}).get("direction", "Unknown"),
-                        "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
-                        "delayed_text": delay_text,
-                        "early_text": None,
-                        "at_stop": at_stop_flag,
-                    }
+                # Occupancy from positions_dict
+                pos_info = positions_dict.get((route_id, trip_id), {})
+                raw_occ = pos_info.get("occupancy")
+                occ_str = stm_map_occupancy_status(raw_occ) if raw_occ else "Unknown"
 
-                    # Keep only the earliest arrival for that route
-                    existing = closest_buses.get(route_key)
-                    if existing is None:
+                # If minutes_to_arrival < 2 => at_stop
+                at_stop_flag = isinstance(minutes_to_arrival, (int, float)) and (minutes_to_arrival < 2)
+
+                # Build the bus object
+                bus_obj = {
+                    "route_id": route_id,
+                    "trip_id": trip_id,
+                    "stop_id": stop_time.stop_id,
+                    "arrival_time": minutes_to_arrival,
+                    "occupancy": occ_str,
+                    "direction": route_metadata.get(route_key, {}).get("direction", "Unknown"),
+                    "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
+                    "delayed_text": delay_text,
+                    "early_text": None,
+                    "at_stop": at_stop_flag,
+                    "wheelchair_accessible": wheelchair_accessible  # New field
+                }
+
+                # Keep only earliest arrival for that route
+                existing = closest_buses.get(route_key)
+                if existing is None:
+                    closest_buses[route_key] = bus_obj
+                else:
+                    # Compare times if both are numeric
+                    if (isinstance(existing["arrival_time"], (int, float))
+                        and isinstance(minutes_to_arrival, (int, float))
+                        and minutes_to_arrival < existing["arrival_time"]):
                         closest_buses[route_key] = bus_obj
-                    else:
-                        # Compare times
-                        if (isinstance(existing["arrival_time"], (int, float))
-                            and isinstance(minutes_to_arrival, (int, float))
-                            and minutes_to_arrival < existing["arrival_time"]):
-                            closest_buses[route_key] = bus_obj
 
-    # Fill any missing routes with a default object
+    # Fill missing routes
     for r in desired_routes:
-        if r not in closest_buses or closest_buses[r] is None:
-            # For route164_Ouest skip if needed
-            if r.startswith("164") and "Ouest" in r:
-                continue
+        if closest_buses[r] is None:
             closest_buses[r] = {
                 "route_id": r,
                 "trip_id": "N/A",
@@ -274,9 +304,12 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
                 "delayed_text": None,
                 "early_text": None,
                 "at_stop": False,
+                "wheelchair_accessible": False  # default
             }
 
+    # Return a list of bus objects
     return list(closest_buses.values())
+
 
 
 

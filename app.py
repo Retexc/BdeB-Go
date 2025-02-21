@@ -2,6 +2,7 @@
 
 from flask import Flask, render_template
 import time
+import os, json
 
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -79,6 +80,27 @@ def api_data():
     exo_alert_entities = fetch_exo_alerts()
     processed_exo = process_exo_alerts(exo_alert_entities)
     all_alerts = processed_stm + processed_exo
+
+    # === Custom Alert Logic ===
+    custom_path = os.path.join(os.path.dirname(__file__), "custom_messages.json")
+    if os.path.exists(custom_path):
+        with open(custom_path, "r", encoding="utf-8") as f:
+            try:
+                custom_alerts = json.load(f)  # Expecting a list of alert objects
+                if not isinstance(custom_alerts, list):
+                    custom_alerts = []
+            except:
+                custom_alerts = []
+
+        # For each alert object in custom_alerts, append to all_alerts
+        for c in custom_alerts:
+            all_alerts.append({
+                "header": c.get("header", "Message"),
+                "description": c.get("description", ""),
+                "severity": c.get("severity", "alert"),
+                "routes": "Custom",
+                "stop": "Message"
+            })
 
     # ========== STM BUSES ==========
     # 1) Trip updates

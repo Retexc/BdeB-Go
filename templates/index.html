@@ -99,6 +99,7 @@
                         </div>
                         <div class="occupancy-group">
                         ${occupancyIcons}
+                        ${bus.wheelchair_accessible ? `<img src="/static/assets/icons/wheelchair.png" class="wheelchair">` : ''}
                         ${bus.at_stop ? `<img src="/static/assets/icons/bus.png" class="blinking-bus">` : ''}
                         </div>
                     </div>
@@ -221,36 +222,47 @@
         }
 
         function updateAlerts(data) {
-        const alertContainer = document.getElementById('alertContainer');
-        const alertText = document.querySelector('.alert-text');
-        const marquee = document.querySelector('.alert-marquee');
+    const alertContainer = document.getElementById('alertContainer');
+    const alertText = document.querySelector('.alert-text');
+    const marquee = document.querySelector('.alert-marquee');
 
-        if (data.alerts && data.alerts.length > 0) {
-            alertContainer.style.display = 'block';
+    if (data.alerts && data.alerts.length > 0) {
+        alertContainer.style.display = 'block';
 
-            // Combine all alerts into a single scrolling text
-            const allAlerts = data.alerts.map(a => {
-                if (a.routes) {
-                    return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
-                } else {
-                    return `Train ${a.train_route}: ${a.header} - ${a.description}`;
-                }
-            }).join(' ••• ');
-
-            alertText.textContent = allAlerts;
-
-            // Dynamically set animation speed based on text length
-            const baseSpeed = 20; // Base speed in seconds for a standard length
-            const minSpeed = 15;  // Minimum speed (for short messages)
-            const maxSpeed = 50;  // Maximum speed (for very long texts)
-            const textLength = allAlerts.length;
-            const duration = Math.min(maxSpeed, Math.max(minSpeed, textLength / 8)); // Adjust speed
-
-            marquee.style.animation = `marquee ${duration}s linear infinite`;
-        } else {
-            alertContainer.style.display = 'none';
+        // Combine all alerts into a single scrolling text
+        const allAlerts = data.alerts.map(a => {
+        // Check if this is your custom alert
+        if (a.routes === "Custom" && a.stop === "Message") {
+            // Format as just "Header - description"
+            return `${a.header}: ${a.description}`;
         }
+        else if (a.routes) {
+            // The normal STM alerts: "Ligne(s) : {routes} ({stop}): {header} - {description}"
+            return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
+        } 
+        else {
+            // The EXO "Train" alerts, e.g. "Train Mascouche: ..."
+            return `Train ${a.train_route}: ${a.header} - ${a.description}`;
+        }
+    }).join(' ••• ');
+
+        alertText.textContent = allAlerts;
+
+        // Dynamically set animation speed based on text length
+        const baseSpeed = 20;
+        const minSpeed = 15;
+        const maxSpeed = 50;
+        const textLength = allAlerts.length;
+        const duration = Math.min(maxSpeed, Math.max(minSpeed, textLength / 8));
+        marquee.style.animation = `marquee ${duration}s linear infinite`;
+
+    } else {
+        // no alerts => hide
+        alertContainer.style.display = 'none';
     }
+}
+
+
 
         setInterval(refreshData, 30000); // Refresh data every 30 seconds
         document.addEventListener('DOMContentLoaded', refreshData);

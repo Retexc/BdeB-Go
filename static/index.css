@@ -959,6 +959,14 @@ button {
   margin-left: 30px; /* Space between time and icon */
 }
 
+.wheelchair {
+  background-size: contain;
+  width: 32px;
+  height: 32px;
+  display: inline-block;
+  margin-left: 30px; /* Space between time and icon */
+}
+
 
 .blinking-bus {
   animation: blink-animation 1s steps(5, start) infinite;
@@ -1166,4 +1174,16 @@ button {
   margin-right: 10px;
   height: 54px;
   vertical-align: middle;
+}
+
+#customBanner {
+  position: fixed;
+  bottom: 60px;
+  left: 0; right: 0;
+  background: #0066cc;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  display: none;
+  z-index: 9999;
 }
