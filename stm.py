@@ -84,16 +84,21 @@ def load_stm_gtfs_trips(filepath):
 
 def stm_map_occupancy_status(status):
     """
-    Convert numeric occupancy code to a human-friendly string.
+    Convert numeric occupancy code to a human-friendly string
+    based on STM doc:
+      1 -> MANY_SEATS_AVAILABLE
+      2 -> FEW_SEATS_AVAILABLE
+      3 -> STANDING_ROOM_ONLY
+      4 -> FULL
     """
     mapping = {
-        1: "Near_Empty",
-        2: "Light",
-        3: "Medium",
-        4: "Null",
-        5: "Full",
+        1: "MANY_SEATS_AVAILABLE",
+        2: "FEW_SEATS_AVAILABLE",
+        3: "STANDING_ROOM_ONLY",
+        4: "FULL",
     }
-    return mapping.get(status, "Unknown")         
+    return mapping.get(status, "Unknown")
+      
 
 def validate_trip(trip_id, route_id, gtfs_trips):
     """
@@ -211,3 +216,34 @@ def process_stm_trip_updates(entities, stm_trips, stm_stop_times):
 
     buses = list(closest_buses.values())
     return buses
+
+def debug_print_stm_occupancy_status(desired_routes, stm_trips):
+    """
+    Fetch the latest STM vehicle positions and print occupancyStatus
+    ONLY for the bus routes we care about.
+    """
+    entities = fetch_stm_vehicle_positions()  # This calls STM_VEHICLE_POSITIONS_ENDPOINT
+    
+    if not entities:
+        print("No STM vehicle positions found.")
+        return
+    
+    print("----- STM Vehicle Positions (Occupancy) -----")
+    for entity in entities:
+        if entity.HasField("vehicle"):
+            vehicle = entity.vehicle
+            # route_id & trip_id from real-time feed
+            route_id = vehicle.trip.route_id
+            trip_id = vehicle.trip.trip_id
+            
+            # If this route is one we care about AND it’s valid in our static file
+            if route_id in desired_routes and validate_trip(trip_id, route_id, stm_trips):
+                # occupancy_status is a numeric field in the GTFS-RT feed
+                if vehicle.HasField("occupancy_status"):
+                    raw_status = vehicle.occupancy_status
+                    mapped = stm_map_occupancy_status(raw_status)
+                else:
+                    mapped = "Unknown"
+                
+                print(f"Route: {route_id}, Trip: {trip_id}, Occupancy: {mapped}")
+    print("--------------------------------------------")

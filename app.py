@@ -12,8 +12,9 @@ from stm import (
     fetch_stm_vehicle_positions,
     load_stm_gtfs_trips,
     load_stm_stop_times,
-    process_stm_trip_updates,       # We’ll slightly adjust the signature
-    stm_map_occupancy_status        # If you need it for any occupancy merging
+    process_stm_trip_updates,       
+    stm_map_occupancy_status,
+    debug_print_stm_occupancy_status        
 )
 from exo import (
     fetch_exo_alerts,
@@ -27,6 +28,15 @@ from alerts import (
     process_exo_alerts
 )
 
+from exo import (
+    fetch_exo_alerts,
+    fetch_exo_realtime_data,
+    load_exo_stop_times,
+    load_exo_gtfs_trips,   # <--- make sure we import from exo.py
+    process_exo_vehicle_positions,
+    process_exo_train_schedule_with_occupancy
+)
+
 app = Flask(__name__)
 
 # ====================================================================
@@ -35,13 +45,14 @@ app = Flask(__name__)
 # ====================================================================
 stm_trips = load_stm_gtfs_trips("STM/trips.txt")
 stm_stop_times = load_stm_stop_times("STM/stop_times.txt")
-# If you have Exo’s trip definitions in exo.py, you’d do something like
-# exo_trips = load_exo_trips("Exo/Train/trips.txt") 
-# but from your code, it looks like that’s actually inside stm.py. So:
-exo_trips = load_stm_gtfs_trips("Exo/Train/trips.txt")  # reusing that function
+exo_trips = load_exo_gtfs_trips("Exo/Train/trips.txt") 
 exo_stop_times = load_exo_stop_times("Exo/Train/stop_times.txt")
 
-
+@app.route("/debug-occupancy")
+def debug_occupancy():
+    desired = ["171", "164", "180"]
+    debug_print_stm_occupancy_status(desired, stm_trips)
+    return "Check your console logs for occupancy info!"
 # ====================================================================
 # ROUTE: Home Page
 # ====================================================================
@@ -91,8 +102,7 @@ def api_data():
     # Pass `stm_stop_times` to process_stm_trip_updates, or else it can’t look up arrivals.
     buses = process_stm_trip_updates(stm_trip_entities, stm_trips, stm_stop_times)
 
-    # If you want to merge occupancy from 'stm_vehicle_entities' into each bus item:
-    # you could do something like:
+
     vehicle_data = []
     for entity in stm_vehicle_entities:
         if entity.HasField("vehicle"):
@@ -102,7 +112,7 @@ def api_data():
                 "trip_id": v.trip.trip_id,
                 "occupancy": stm_map_occupancy_status(occupancy_status)
             })
-    # Then merge occupant data:
+
     for bus in buses:
         for vd in vehicle_data:
             if bus["trip_id"] == vd["trip_id"]:

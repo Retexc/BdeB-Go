@@ -35,28 +35,28 @@
 
                     // Occupancy icons
                     let occupancyIcons;
-                    if (bus.occupancy === "Near_Empty") {
+                    if (bus.occupancy === "MANY_SEATS_AVAILABLE") {
                         occupancyIcons = `
                             <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                             <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                             <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                         `;
-                    } else if (bus.occupancy === "Light") {
+                    } else if (bus.occupancy === "FEW_SEATS_AVAILABLE") {
                         occupancyIcons = `
                             <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                             <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                         `;
-                    } else if (bus.occupancy === "Medium") {
+                    } else if (bus.occupancy === "STANDING_ROOM_ONLY") {
                         occupancyIcons = `
                             <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
                         `;
-                    } else if (bus.occupancy === "Full") {
+                    } else if (bus.occupancy === "FULL") {
                         occupancyIcons = `
                             <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
                             <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
@@ -93,6 +93,9 @@
                         <span class="time-remaining">${bus.arrival_time !== 'Unavailable (Route Canceled)' ? `${bus.arrival_time} min` : 'Annulé'}</span>
                         ${signal}
                         ${bus.at_stop ? `<img src="/static/assets/icons/bus.png" class="blinking-bus">` : ''}
+                    </div>
+                      <div class="occupancy-group">
+                    ${occupancyIcons}
                     </div>
                     </div>
                     `;
