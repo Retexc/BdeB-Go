@@ -99,7 +99,6 @@
                         </div>
                         <div class="occupancy-group">
                         ${occupancyIcons}
-                        <!-- Always show bus icon here: -->
                         ${bus.at_stop ? `<img src="/static/assets/icons/bus.png" class="blinking-bus">` : ''}
                         </div>
                     </div>
@@ -202,8 +201,10 @@
                         </div>
 
                         <div class="occupancy-group">
-                            ${occupancyIcons}
+                        ${occupancyIcons}
+                        ${train.at_stop ? `<img src="/static/assets/icons/train.png" class="blinking-train">` : ''}
                         </div>
+                    </div>
                     `}
                 </div>
             `;

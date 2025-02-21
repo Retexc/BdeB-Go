@@ -950,15 +950,15 @@ button {
   grid-column: 2;
 }
 
-.blinking-icon_train {
+.blinking-train {
   animation: blink-animation 1s steps(5, start) infinite;
-  background: url('/static/assets/icons/signal.png') no-repeat center center;
   background-size: contain;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: inline-block;
   margin-left: 30px; /* Space between time and icon */
 }
+
 
 .blinking-bus {
   animation: blink-animation 1s steps(5, start) infinite;

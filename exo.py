@@ -168,11 +168,15 @@ def process_exo_vehicle_positions(entities, stop_times):
     return filtered_vehicles
 
 def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle_positions, exo_trip_updates):
+    """
+    Merges Exo trip updates (arrival times, real delays) with vehicle positions (occupancy)
+    and sets at_stop=True if minutes_remaining < 2.
+    """
+    from datetime import datetime, timedelta
     current_time = datetime.now()
     current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
 
     real_delays = {}
-    
     # Parse real-time delays from Exo API
     for entity in exo_trip_updates:
         if entity.HasField('trip_update'):
@@ -182,71 +186,89 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
                 delay_seconds = stop_update.arrival.delay if stop_update.HasField('arrival') else 0
                 real_delays[(trip_id, stop_id)] = delay_seconds // 60  # Convert to minutes
 
-    # Stop and direction mapping
+    # route_id=4 => Saint-Jérôme line, route_id=6 => Mascouche
     direction_map = {
         "4": {"0": "Lucien-L'allier", "1": "Saint-Jérôme"},
         "6": {"0": "Gare centrale", "1": "Mascouche"},
     }
 
+    # We'll track the closest train per stop
     desired_stops = {"MTL7D", "MTL7B", "MTL59A", "MTL59C"}
     closest_trains = {stop: None for stop in desired_stops}
 
+    # Merge static stop_times with real-time delays & occupancy
     for stop_time in exo_stop_times:
         stop_id = stop_time["stop_id"]
-        if stop_id in desired_stops:
-            trip_id = stop_time["trip_id"]
-            trip_data = exo_trips.get(trip_id, {})
-            route_id = trip_data.get("route_id")
-            direction_id = trip_data.get("direction_id")
+        if stop_id not in desired_stops:
+            continue
 
-            if route_id in direction_map and direction_id in direction_map[route_id]:
-                original_time_str = stop_time["departure_time"]
-                original_datetime = datetime.strptime(original_time_str, "%H:%M:%S")
-                
-                # Get actual delay from real-time data
-                actual_delay = real_delays.get((trip_id, stop_id), 0)
-                adjusted_datetime = original_datetime + timedelta(minutes=actual_delay)
-                original_arrival_time = original_datetime.strftime("%H:%M")
-                adjusted_arrival_time = adjusted_datetime.strftime("%H:%M")
+        trip_id = stop_time["trip_id"]
+        trip_data = exo_trips.get(trip_id, {})
+        route_id = trip_data.get("route_id")
+        direction_id = trip_data.get("direction_id")
 
-                # Calculate minutes remaining
-                arrival_time_seconds = original_datetime.hour * 3600 + original_datetime.minute * 60
-                if arrival_time_seconds < current_seconds:
-                    arrival_time_seconds += 24 * 3600
-                minutes_remaining = (arrival_time_seconds - current_seconds) // 60
+        # If it's a known route/direction
+        if route_id in direction_map and direction_id in direction_map[route_id]:
+            original_time_str = stop_time["departure_time"]
+            original_datetime = datetime.strptime(original_time_str, "%H:%M:%S")
+            
+            # Real-time delay from feed (in minutes)
+            actual_delay = real_delays.get((trip_id, stop_id), 0)
+            # Adjust scheduled time
+            adjusted_datetime = original_datetime + timedelta(minutes=actual_delay)
+            original_arrival_time = original_datetime.strftime("%H:%M")
+            adjusted_arrival_time = adjusted_datetime.strftime("%H:%M")
 
-                # Determine occupancy
-                exo_occupancy_status = "Unknown"
-                for vehicle in vehicle_positions:
-                    if trip_id == vehicle["trip_id"]:
-                        exo_occupancy_status = vehicle.get("occupancy", "Unknown")
-                        break
+            # Convert scheduled time to "seconds from midnight"
+            arrival_time_seconds = original_datetime.hour * 3600 + original_datetime.minute * 60 + original_datetime.second
+            # If it's past midnight
+            if arrival_time_seconds < current_seconds:
+                arrival_time_seconds += 24 * 3600
+            minutes_remaining = (arrival_time_seconds - current_seconds) // 60
 
-                # Create status text for all stops
-                delayed_text = None
-                early_text = None
-                if actual_delay > 0:
-                    delayed_text = f"En retard (+{actual_delay}min)"
-                elif actual_delay < 0:
-                    early_text = f"En avance ({abs(actual_delay)}min)"
+            # Occupancy from vehicle_positions
+            exo_occupancy_status = "Unknown"
+            for vehicle in vehicle_positions:
+                if trip_id == vehicle["trip_id"]:
+                    exo_occupancy_status = vehicle.get("occupancy", "Unknown")
+                    break
 
-                train_info = {
-                    "stop_id": stop_id,
-                    "trip_id": trip_id,
-                    "route_id": route_id,
-                    "direction": direction_map[route_id][direction_id],
-                    "arrival_time": adjusted_arrival_time,
-                    "original_arrival_time": original_arrival_time,
-                    "minutes_remaining": minutes_remaining,
-                    "occupancy": exo_occupancy_status,
-                    "delayed_text": delayed_text,
-                    "early_text": early_text,
-                }
+            # Build delayed/early text
+            delayed_text = None
+            early_text = None
+            if actual_delay > 0:
+                delayed_text = f"En retard (+{actual_delay}min)"
+            elif actual_delay < 0:
+                early_text = f"En avance ({abs(actual_delay)}min)"
 
-                if (closest_trains[stop_id] is None or
-                    minutes_remaining < closest_trains[stop_id]["minutes_remaining"]):
-                    closest_trains[stop_id] = train_info
+            # Decide "at_stop" if minutes_remaining < 2
+            at_stop_flag = False
+            if isinstance(minutes_remaining, (int,float)) and minutes_remaining < 2:
+                at_stop_flag = True
 
-    filtered_schedule = [train for train in closest_trains.values() if train is not None]
+            train_info = {
+                "stop_id": stop_id,
+                "trip_id": trip_id,
+                "route_id": route_id,
+                "direction": direction_map[route_id][direction_id],
+                "arrival_time": adjusted_arrival_time,
+                "original_arrival_time": original_arrival_time,
+                "minutes_remaining": minutes_remaining,
+                "occupancy": exo_occupancy_status,
+                "delayed_text": delayed_text,
+                "early_text": early_text,
+                "at_stop": at_stop_flag,    # <--- HERE is the key
+            }
+
+            # Keep only the closest arrival for each stop
+            if (closest_trains[stop_id] is None 
+                or minutes_remaining < closest_trains[stop_id]["minutes_remaining"]):
+                closest_trains[stop_id] = train_info
+
+    # We'll return them in the same format as usual
+    filtered_schedule = [train for train in closest_trains.values() if train]
+    
+    # Map them with exo_map_train_details if you still want final route_id/direction
+    from exo import exo_map_train_details, stop_id_map
     prioritized_schedule = exo_map_train_details(filtered_schedule, exo_trips, stop_id_map)
     return prioritized_schedule
