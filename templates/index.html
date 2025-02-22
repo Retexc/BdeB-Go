@@ -1,300 +1,303 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transport Real-Time</title>
-    <link rel="stylesheet" href="./static/index.css">
-    <script>
-        async function refreshData() {
-            try {
-                const response = await fetch('/api/data'); // Call the API endpoint
-                const data = await response.json();
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transport Real-Time</title>
+  <link rel="stylesheet" href="./static/index.css" />
+  <script>
+    async function refreshData() {
+      try {
+        const response = await fetch('/api/data'); // Call the API endpoint
+        const data = await response.json();
 
-                // Update current time
-                const timeElement = document.querySelector('.time');
-                const currentTimeParts = data.current_time.split(':');
-                timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`;
+        // Update current time
+        const timeElement = document.querySelector('.time');
+        const currentTimeParts = data.current_time.split(':');
+        timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`;
 
-                // Update buses
-                const frameContainer = document.querySelector('.frame');
-                frameContainer.innerHTML = ''; // Clear old content
+        // ===================
+        //  STM BUSES
+        // ===================
+        const frameContainer = document.querySelector('.frame');
+        frameContainer.innerHTML = ''; // Clear old content
 
-                const stmLogoDiv = document.createElement('div');
-                stmLogoDiv.className = "stm-logo-container";
-                stmLogoDiv.innerHTML = `<img src="/static/assets/images/STM.png" alt="STM logo" class="stm-logo">`;
-                frameContainer.appendChild(stmLogoDiv);
-                
-                data.buses.forEach((bus) => {
-                    const busDiv = document.createElement('div');
-                    busDiv.className = `frame-1 ${bus.arrival_time === 'Unavailable (Route Canceled)' ? 'canceled' : ''}`;
+        // STM Logo
+        const stmLogoDiv = document.createElement('div');
+        stmLogoDiv.className = "stm-logo-container";
+        stmLogoDiv.innerHTML = `<img src="/static/assets/images/STM.png" alt="STM logo" class="stm-logo">`;
+        frameContainer.appendChild(stmLogoDiv);
 
-                    const atStopIcon = bus.at_stop
-                    ? '<img src="/static/assets/icons/bus.png" class="blinking-bus">'
-                    : ''; // Show blinking icon only if at stop                    
+        // Render each bus row
+        data.buses.forEach((bus) => {
+          const busDiv = document.createElement('div');
+          // Apply "frame-1" for each row; also handle canceled
+          busDiv.className = `frame-1 ${bus.arrival_time === 'Indisponible (Route annulée)' ? 'canceled' : ''}`;
 
-                    // Occupancy icons
-                    let occupancyIcons;
-                    if (bus.occupancy === "MANY_SEATS_AVAILABLE") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (bus.occupancy === "FEW_SEATS_AVAILABLE") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (bus.occupancy === "STANDING_ROOM_ONLY") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        `;
-                    } else if (bus.occupancy === "FULL") {
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                        `;
-                    } else {
-                        // Default to unknown occupancy (all gray)
-                        occupancyIcons = `
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                            <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        `;
-                    }
-
-                    const signal = bus.arrival_time !== "Unavailable (Route Canceled)" ? '<img src="/static/assets/icons/signal.png" class="blinking-icon">' : '';
-
-                    busDiv.innerHTML = `
-                    <div class="buttonBlueBuses">                            
-                        <span class="frame-2">${bus.route_id}</span>
-                    </div>
-                    <div class="frame-3">
-                        <span class="direction">
-                            <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
-                            ${bus.direction}
-                        </span>
-                        <span class="location">${bus.location}</span>
-                    </div>
-                    <div class="frame-4">
-                        ${bus.delayed_text ? `<span class="delayed-text">${bus.delayed_text}</span>` : ''}
-                        ${bus.early_text ? `<span class="early-text">${bus.early_text}</span>` : ''}
-                        <div class="time-group">
-                            <span class="time-remaining">
-                                ${bus.arrival_time !== 'Unavailable (Route Canceled)' 
-                                ? `${bus.arrival_time} min` 
-                                : 'Annulé'}
-                            </span>
-                            ${signal}
-                        </div>
-                        <div class="occupancy-group">
-                        ${occupancyIcons}
-                        ${bus.wheelchair_accessible ? `<img src="/static/assets/icons/wheelchair.png" class="wheelchair">` : ''}
-                        ${bus.at_stop ? `<img src="/static/assets/icons/bus.png" class="blinking-bus">` : ''}
-                        </div>
-                    </div>
-                    `;
-                    frameContainer.appendChild(busDiv);
-
-                });
-
-                // Update trains
-                const trainContainer = document.querySelector('.train-frame');
-                trainContainer.innerHTML = ''; // Clear old content
-                
-                const logoDiv = document.createElement('div');
-                logoDiv.className = "exo-logo-container";
-                logoDiv.innerHTML = `<img src="/static/assets/images/exo_white.png" alt="Exo logo" class="exo-logo">`;
-                trainContainer.appendChild(logoDiv);
-
-                data.next_trains.forEach((train) => {
-                const trainDiv = document.createElement('div');
-                trainDiv.className = "frame-1";
-
-                // Inside refreshData(), after updating trains:
-                const alertContainer = document.getElementById('alertContainer');
-                const alertText = document.querySelector('.alert-text');
-
-                updateAlerts(data);     
-
-                let buttonClass = "";
-                if (train.route_id === "12") {
-                    buttonClass = "buttonSJ"; // Yellow for Saint-Jérôme
-                } else if (train.route_id === "15") {
-                    buttonClass = "buttonMA"; // Pink for Mascouche
-                } else {
-                    buttonClass = "defaultButton";
-                }
-
-                let occupancyIcons;
-                if (train.occupancy === "Near_Empty") {
-                    occupancyIcons = `
-                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                    `;
-                } else if (train.occupancy === "Light") {
-                    occupancyIcons = `
-                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                    `;
-                } else if (train.occupancy === "Medium") {
-                    occupancyIcons = `
-                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/gray-person.png" alt="Gray person" class="occupancy-icon">
-                    `;
-                } else if (train.occupancy === "Full") {
-                    occupancyIcons = `
-                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
-                    `;
-                } else {
-                    occupancyIcons = `
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                        <img src="/static/assets/icons/invisible-person.png" alt="Unknown occupancy" class="occupancy-icon">
-                    `;
-                }
-                const delayedText = train.delayed_text ? `
-                <span class="delayed-text">
-                    En retard (<span class="late_text">prévu à ${train.original_arrival_time}</span>)
-                </span>` : '';
-
-                trainDiv.innerHTML = `
-                <div class="${buttonClass}">
-                    <span class="frame-2-black">${train.route_id}</span>
-                </div>
-                <div class="frame-3">
-                    <span class="direction">
-                        <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
-                        ${train.direction || "Unknown"}
-                    </span>
-                    <span class="location">${train.location || "Unknown"}</span>
-                </div>
-                <div class="frame-4">
-                    ${train.no_service_text ? `
-                        <span class="no-service-text">${train.no_service_text}</span>
-                    ` : `
-                        ${train.delayed_text ? `<span class="delayed-text">${train.delayed_text}</span>` : ''}
-                        ${train.early_text ? `<span class="early-text">${train.early_text}</span>` : ''}
-                        <div class="time-group">
-                            <span class="time-remaining">${train.arrival_time || "Unknown"}</span>
-                            <img src="/static/assets/icons/signal.png" class="blinking-icon">
-                            ${train.at_stop ? `<img src="/static/assets/icons/train.png" class="blinking-train">` : ''}
-                        </div>
-
-                        <div class="occupancy-group">
-                        ${occupancyIcons}
-                        ${train.at_stop ? `<img src="/static/assets/icons/train.png" class="blinking-train">` : ''}
-                        </div>
-                    </div>
-                    `}
-                </div>
+          // Build occupancy icons
+          let occupancyIcons = '';
+          if (bus.occupancy === "MANY_SEATS_AVAILABLE") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
             `;
+          } else if (bus.occupancy === "FEW_SEATS_AVAILABLE") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+          } else if (bus.occupancy === "STANDING_ROOM_ONLY") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+          } else if (bus.occupancy === "FULL") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+            `;
+          } else {
+            // Unknown
+            occupancyIcons = `
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+            `;
+          }
 
-                trainContainer.appendChild(trainDiv);
-            });
+          // Build final icons row
+          let iconsHTML = occupancyIcons;
+          if (bus.wheelchair_accessible) {
+            iconsHTML += `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`;
+          }
+          if (bus.at_stop) {
+            iconsHTML += `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`;
+          }
 
+          // Delay text
+          const delayedText = bus.delayed_text ? 
+            `<span class="delayed-text">${bus.delayed_text}</span>` : '';
 
+          // Early text
+          const earlyText = bus.early_text ? 
+            `<span class="early-text">${bus.early_text}</span>` : '';
 
+          // Time (or "Annulé")
+          let timeStr = '';
+          if (bus.arrival_time === 'Indisponible (Route annulée)') {
+            timeStr = 'Annulé';
+          } else {
+            timeStr = `${bus.arrival_time} min`;
+          }
 
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
+          busDiv.innerHTML = `
+            <!-- Column 1: Route Button -->
+            <div class="bus-col-route">
+              <div class="buttonBlueBuses">
+                <span class="frame-2">${bus.route_id}</span>
+              </div>
+            </div>
 
-        function updateAlerts(data) {
-    const alertContainer = document.getElementById('alertContainer');
-    const alertText = document.querySelector('.alert-text');
-    const marquee = document.querySelector('.alert-marquee');
+            <!-- Column 2: Direction + Location -->
+            <div class="bus-col-info">
+              <span class="direction">
+                <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+                ${bus.direction}
+              </span>
+              <span class="location">${bus.location}</span>
+            </div>
 
-    if (data.alerts && data.alerts.length > 0) {
+            <!-- Column 3: Status line (delay text, time, icons) -->
+            <div class="bus-col-status">
+            <div class="status-line">
+                <!-- 1) Delayed/Early Text Cell -->
+                <div class="delay-cell">
+                ${delayedText}${earlyText}
+                </div>
+
+                <!-- 2) Time Cell -->
+                <div class="time-cell">
+                <span class="time-remaining">${timeStr}</span>
+                <img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />
+                </div>
+
+                <!-- 3) Occupancy Cell (always 4 icons or placeholders) -->
+                <div class="occupancy-cell">
+                ${occupancyIcons}
+                </div>
+
+                <!-- 4) Wheelchair Cell (real icon or invisible placeholder) -->
+                <div class="wheelchair-cell">
+                ${
+                    bus.wheelchair_accessible
+                    ? `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`
+                    : `<img src="/static/assets/icons/invisible-wheelchair.png" class="wheelchair" alt="">`
+                }
+                </div>
+
+                <!-- 5) Bus Cell (real icon or invisible placeholder) -->
+                <div class="bus-cell">
+                ${
+                    bus.at_stop
+                    ? `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`
+                    : `<img src="/static/assets/icons/invisible-bus.png" class="blinking-bus" alt="">`
+                }
+                </div>
+            </div>
+            </div>
+          `;
+          frameContainer.appendChild(busDiv);
+        });
+
+        // ===================
+        //  EXO TRAINS
+        // ===================
+        const trainContainer = document.querySelector('.train-frame');
+        trainContainer.innerHTML = ''; // Clear old content
+
+        const exoLogoDiv = document.createElement('div');
+        exoLogoDiv.className = "exo-logo-container";
+        exoLogoDiv.innerHTML = `<img src="/static/assets/images/exo_white.png" alt="Exo logo" class="exo-logo">`;
+        trainContainer.appendChild(exoLogoDiv);
+
+        data.next_trains.forEach((train) => {
+          const trainDiv = document.createElement('div');
+          trainDiv.className = "frame-1";
+
+          // Occupancy icons (similar approach as above) ...
+          // For brevity, do a shorter version:
+          let occupancyIcons = '';
+          if (train.occupancy === "Near_Empty") {
+            occupancyIcons = `<img src="/static/assets/icons/green-person.png" class="occupancy-icon"> ...`;
+            // etc.
+          }
+
+          let delayedText = train.delayed_text ? 
+            `<span class="delayed-text">${train.delayed_text}</span>` : '';
+          let earlyText = train.early_text ?
+            `<span class="early-text">${train.early_text}</span>` : '';
+          let timeStr = train.arrival_time || "Unknown";
+
+          // Possibly show train blinking icon if at_stop
+          let iconHTML = occupancyIcons;
+          if (train.at_stop) {
+            iconHTML += `<img src="/static/assets/icons/train.png" class="blinking-train">`;
+          }
+
+          trainDiv.innerHTML = `
+            <!-- Column 1: Route button (ex: 12, 15, etc.) -->
+            <div class="bus-col-route">
+              <div class="${train.route_id === '12' ? 'buttonSJ' : 
+                          train.route_id === '15' ? 'buttonMA' : 'defaultButton'}">
+                <span class="frame-2-black">${train.route_id}</span>
+              </div>
+            </div>
+
+            <!-- Column 2: direction + location -->
+            <div class="bus-col-info">
+              <span class="direction">
+                <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+                ${train.direction || "Unknown"}
+              </span>
+              <span class="location">${train.location || "Unknown"}</span>
+            </div>
+
+            <!-- Column 3: status line -->
+            <div class="bus-col-status">
+              <div class="status-line">
+                ${delayedText}
+                ${earlyText}
+                ${
+                  train.no_service_text 
+                  ? `<span class="no-service-text">${train.no_service_text}</span>` 
+                  : `<span class="time-remaining">${timeStr}</span>`
+                }
+                ${iconHTML}
+              </div>
+            </div>
+          `;
+          trainContainer.appendChild(trainDiv);
+        });
+
+        updateAlerts(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+
+    function updateAlerts(data) {
+      const alertContainer = document.getElementById('alertContainer');
+      const alertText = document.querySelector('.alert-text');
+      const marquee = document.querySelector('.alert-marquee');
+
+      if (data.alerts && data.alerts.length > 0) {
         alertContainer.style.display = 'block';
 
         // Combine all alerts into a single scrolling text
         const allAlerts = data.alerts.map(a => {
-        // Check if this is your custom alert
-        if (a.routes === "Custom" && a.stop === "Message") {
-            // Format as just "Header - description"
+          // Check if this is your custom alert
+          if (a.routes === "Custom" && a.stop === "Message") {
             return `${a.header}: ${a.description}`;
-        }
-        else if (a.routes) {
-            // The normal STM alerts: "Ligne(s) : {routes} ({stop}): {header} - {description}"
+          }
+          else if (a.routes) {
+            // Normal STM
             return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
-        } 
-        else {
-            // The EXO "Train" alerts, e.g. "Train Mascouche: ..."
+          } 
+          else {
+            // EXO
             return `Train ${a.train_route}: ${a.header} - ${a.description}`;
-        }
-    }).join(' ••• ');
+          }
+        }).join(' ••• ');
 
         alertText.textContent = allAlerts;
 
-        // Dynamically set animation speed based on text length
+        // Adjust marquee speed
         const baseSpeed = 20;
         const minSpeed = 15;
         const maxSpeed = 50;
         const textLength = allAlerts.length;
         const duration = Math.min(maxSpeed, Math.max(minSpeed, textLength / 8));
         marquee.style.animation = `marquee ${duration}s linear infinite`;
-
-    } else {
-        // no alerts => hide
+      } else {
         alertContainer.style.display = 'none';
+      }
     }
-}
 
-
-
-        setInterval(refreshData, 30000); // Refresh data every 30 seconds
-        document.addEventListener('DOMContentLoaded', refreshData);
-    </script>
+    setInterval(refreshData, 30000); // Refresh every 30s
+    document.addEventListener('DOMContentLoaded', refreshData);
+  </script>
 </head>
+
 <body>
-    <div class="main-container">
-        <span class="time">{{ current_time }}</span>
-        <div class="frame">
-            <div class="stm-logo-container">
-                <img src="/static/assets/images/STM.png" alt="STM logo" class="stm-logo">
-            </div>
-        </div>
-        <div class="train-frame">
-            <div class="exo-logo-container">
-                <img src="/static/assets/images/exo_white.png" alt="Exo logo" class="exo-logo">
-            </div>
-        </div>
-    
-        <div class="footer-text">
-            Données fournies par la STM et Exo
-        </div>
+  <div class="main-container">
+    <span class="time">{{ current_time }}</span>
+
+    <div class="frame"><!-- STM buses go here --></div>
+    <div class="train-frame"><!-- EXO trains go here --></div>
+
+    <div class="footer-text">
+      Données fournies par la STM et Exo
     </div>
-    <div class="logo-container">
-        <img src="/static/assets/images/B.png" alt="Transport Logos">
+  </div>
+
+  <div class="logo-container">
+    <img src="/static/assets/images/B.png" alt="Transport Logos">
+  </div>
+
+  <div id="alertContainer" class="alert-banner" style="display: none;">
+    <div class="alert-marquee">
+      <img src="/static/assets/icons/warning.png" class="alert-icon" alt="Alert">
+      <span class="alert-text"></span>
     </div>
-    <div id="alertContainer" class="alert-banner" style="display: none;">
-        <div class="alert-marquee">
-            <img src="/static/assets/icons/warning.png" class="alert-icon" alt="Alert">
-            <span class="alert-text"></span>
-        </div>
-    </div>  
-    
+  </div>  
 </body>
 </html>
