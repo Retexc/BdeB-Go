@@ -3,9 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Transport Real-Time</title>
+  <title>BdeB-GTFS</title>
   <link rel="stylesheet" href="./static/index.css" />
   <script>
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const preloader = document.querySelector('.preloader');
+    const mainContent = document.querySelector('.main-container');
+
+    // Option A: Hide main content until loader finishes
+    mainContent.style.display = 'none';
+
+    // Option B: Listen for the animation end, then hide the preloader
+    const bWrapper = document.querySelector('.b-wrapper');
+    bWrapper.addEventListener('animationend', () => {
+      // Fade out the entire overlay
+      preloader.classList.add('fade-out');
+    });
+
+    // Once the overlay is faded out, remove it from the DOM and show main content
+    preloader.addEventListener('transitionend', () => {
+      preloader.style.display = 'none';
+      mainContent.style.display = 'block';
+    });
+  });    
     async function refreshData() {
       try {
         const response = await fetch('/api/data'); // Call the API endpoint
@@ -280,15 +301,13 @@
 <body>
   <div class="main-container">
     <span class="time">{{ current_time }}</span>
-
     <div class="frame"><!-- STM buses go here --></div>
-    <div class="train-frame"><!-- EXO trains go here --></div>
-
+    <div class="train-frame"><!-- EXO trains go here -->
+    </div>
     <div class="footer-text">
       Données fournies par la STM et Exo
     </div>
   </div>
-
   <div class="logo-container">
     <img src="/static/assets/images/B.png" alt="Transport Logos">
   </div>
@@ -298,6 +317,27 @@
       <img src="/static/assets/icons/warning.png" class="alert-icon" alt="Alert">
       <span class="alert-text"></span>
     </div>
-  </div>  
+  </div>
+<!-- 1) LOADER OVERLAY -->
+<div class="preloader">
+    <!-- B Logo Wrapper -->
+    <div class="b-wrapper">
+      <!-- Your B SVG (white fill recommended so it “expands” in white) -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="162" height="187" viewBox="0 0 162 187" fill="white" class="b-logo">
+        <!-- (Same structure as your snippet, but fill="white" so it covers the screen when scaled) -->
+        <mask id="mask0_1790_213173" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="159" height="187">
+          <mask id="mask1_1790_213173" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="162" height="187">
+            <path d="M161.108 0H0L0 186.673H161.108L161.108 0Z" fill="white"/>
+          </mask>
+          <g mask="url(#mask1_1790_213173)">
+            <path d="M-1.85059 186.673L-1.85059 0H98.0804C135.347 0.0828362 149.814 21.3752 155.064 34.188C159.602 45.0734 160.162 57.2024 156.648 68.4588C153.48 78.2125 147.541 86.8391 139.55 93.2887C147.542 99.7382 153.481 108.365 156.648 118.12C160.146 129.342 159.619 141.429 155.16 152.308C149.897 165.073 135.431 186.494 98.1751 186.59L-1.85059 186.673Z" fill="white"/>
+          </g>
+        </mask>
+        <g mask="url(#mask0_1790_213173)">
+          <rect x="-2158.4" y="-1199.37" width="4480.15" height="2552.75" fill="white"/>
+        </g>
+      </svg>
+    </div>
+  </div>    
 </body>
 </html>

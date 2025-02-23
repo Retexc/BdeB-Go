@@ -1,4 +1,5 @@
 # utils.py
+
 import os
 import csv
 from datetime import datetime
@@ -36,12 +37,59 @@ def load_csv_dict(filepath):
 
 
 def get_weather_alerts(weather_api_key, city="Montreal"):
-    """Fetch weather alerts from WeatherAPI."""
-    url = f"http://api.weatherapi.com/v1/alerts.json?key={weather_api_key}&q={city}"
+    """
+    Fetch current weather for the given city.
+    If the weather condition is among a set of 'bad' conditions that can
+    cause delays (for buses and trains), return a weather alert message.
+    Otherwise, return an empty list.
+    """
+    url = f"http://api.weatherapi.com/v1/current.json?key={weather_api_key}&q={city}&aqi=no"
     try:
         response = requests.get(url)
         response.raise_for_status()
-        return response.json().get('alerts', [])
+        data = response.json()
+        condition = data.get("current", {}).get("condition", {})
+
+        # Define a set of weather condition codes considered "bad" for transit.
+        # (Codes based on WeatherAPI documentation and your criteria)
+        bad_codes = {
+            1087,  # Thundery outbreaks possible
+            1114,  # Blowing snow
+            1117,  # Blizzard
+            1147,  # Freezing fog
+            1168,  # Freezing drizzle
+            1171,  # Heavy freezing drizzle
+            1186,  # Moderate rain at times
+            1189,  # Moderate rain
+            1192,  # Heavy rain at times
+            1195,  # Heavy rain
+            1198,  # Light freezing rain
+            1201,  # Moderate or heavy freezing rain
+            1204,  # Light sleet
+            1207,  # Moderate or heavy sleet
+            1216,  # Patchy moderate snow
+            1219,  # Moderate snow
+            1222,  # Patchy heavy snow
+            1225,  # Heavy snow
+            1237,  # Ice pellets
+            1243,  # Moderate or heavy rain shower
+            1246,  # Torrential rain shower
+            1252,  # Moderate or heavy sleet showers
+            1258,  # Moderate or heavy snow showers
+            1264,  # Moderate or heavy showers of ice pellets
+            1276,  # Moderate or heavy rain with thunder
+            1282   # Moderate or heavy snow with thunder
+        }
+
+        if condition.get("code") in bad_codes:
+            return [{
+                'header': "🚨 Avertissement météo",
+                'description': "Conditions météorologiques difficiles: " + condition.get("text", ""),
+                'severity': "weather_alert",
+                'routes': "Tous",
+                'stop': "STM et Exo"
+            }]
+        return []
     except requests.exceptions.RequestException as err:
         print(f"Error fetching weather alerts: {err}")
         return []

@@ -23,11 +23,15 @@ html, body {
 }
 
 .time {
+  display: block;           
+  width: 1920px;            
+  margin: 0 auto 10px auto; 
+  text-align: left;
   color: #fff;
   font-size: 40px;
   font-weight: 900;
-  margin-left: 50px;
 }
+
 
 /* ========== STM & EXO FRAMES ========== */
 .frame, .train-frame {
@@ -333,7 +337,12 @@ html, body {
   font-size: 20px;
   font-weight: 900;
   color: #ffffff;
-  margin-top: 10px;
+  margin-top: 20px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 1920px;
+       /* centers it horizontally */
+  text-align: left;   
 }
 
 .logo-container {
@@ -366,3 +375,59 @@ html, body {
     font-size: 18px;
   }
 }
+
+/* =======================
+   1) PRELOADER OVERLAY
+   ======================= */
+   .preloader {
+    position: fixed;
+    inset: 0;  /* top:0; right:0; bottom:0; left:0; */
+    z-index: 9999;
+    /* The "background" color for the screen while the B is in the middle.
+       For example, a brand color or plain white. */
+    background: #4d6ba6; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    /* Start fully opaque */
+    opacity: 1;
+    transition: opacity 0.5s ease;
+  }
+  
+  .preloader.fade-out {
+    /* Fades out the overlay after the scale animation finishes */
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  /* The container for your B so we can scale it */
+  .b-wrapper {
+    animation: bExpand 2s forwards ease-in-out;
+  }
+  
+  /* The B icon itself can be sized in CSS if needed */
+  .b-logo {
+    width: 100px; /* or 150px, adjust as needed */
+    height: auto;
+  }
+  
+  /* Keyframes to scale the B from normal size to very large */
+  @keyframes bExpand {
+    /* For first 50% of the time (i.e., 1.5s of a 3s animation), stay at scale(1). */
+    0% {
+      opacity: 0;
+      transform: scale(3);
+    }
+    /* Fade in by 20% of the timeline */
+    20% {
+      opacity: 1;
+      transform: scale(3);
+    }
+    /* Stay fully visible & unscaled until 50% */
+    100% {
+      opacity: 1;
+      transform: scale(60);
+    }
+    /* Scale up from 50% to 100% while staying fully visible */
+  }
