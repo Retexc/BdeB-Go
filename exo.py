@@ -42,7 +42,7 @@ def fetch_exo_alerts():
         return []
 
 def load_exo_gtfs_trips(filepath):
-    """If you need to load Exo trips with direction_id, do it here."""
+    """Load Exo trips with direction, wheelchair, and bikes allowed information."""
     trips_data = {}
     with open(filepath, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
@@ -50,8 +50,11 @@ def load_exo_gtfs_trips(filepath):
             trips_data[row["trip_id"]] = {
                 "route_id": row["route_id"],
                 "direction_id": row.get("direction_id", "0"),
+                "wheelchair_accessible": row.get("wheelchair_accessible", "0"),  # '1' means accessible
+                "bikes_allowed": row.get("bikes_allowed", "0")                   # '1' means bikes allowed
             }
     return trips_data
+
 
 def load_exo_stop_times(filepath):
     stop_times_data = []
@@ -62,13 +65,38 @@ def load_exo_stop_times(filepath):
     return stop_times_data
 
 def exo_map_occupancy_status(status):
+    """
+    Maps the GTFS-Realtime occupancy status (which may be provided as an int or string)
+    to a string that matches the STM occupancy mapping.
+    """
+    # Define a mapping for string values as returned by GTFS-Realtime JSON conversion
     mapping = {
-        1: "Near_Empty",
-        2: "Light",
-        3: "Medium",
-        4: "Full",
+        "MANY_SEATS_AVAILABLE": "MANY_SEATS_AVAILABLE",
+        "FEW_SEATS_AVAILABLE": "FEW_SEATS_AVAILABLE",
+        "STANDING_ROOM_ONLY": "STANDING_ROOM_ONLY",
+        "FULL": "FULL",
+        "NOT_ACCEPTING_PASSENGERS": "NOT_ACCEPTING_PASSENGERS",
+        "UNKNOWN": "UNKNOWN"
     }
-    return mapping.get(status, "Unknown")
+    
+    # If the status is an integer (native enum), convert it to a string first.
+    if isinstance(status, int):
+        int_mapping = {
+            0: "UNKNOWN",
+            1: "MANY_SEATS_AVAILABLE",
+            2: "FEW_SEATS_AVAILABLE",
+            3: "STANDING_ROOM_ONLY",
+            4: "FULL",
+            5: "NOT_ACCEPTING_PASSENGERS"
+        }
+        status_str = int_mapping.get(status, "UNKNOWN")
+        return mapping.get(status_str, "UNKNOWN")
+    elif isinstance(status, str):
+        # If it's already a string, return the mapped value (or "UNKNOWN" if not found)
+        return mapping.get(status, "UNKNOWN")
+    else:
+        return "UNKNOWN"
+
 
 stop_id_map = {
     "MTL7B": "Gare Bois-de-Boulogne",
@@ -86,31 +114,34 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         stop_id = train["stop_id"]
         direction_id = trips_data.get(trip_id, {}).get("direction_id", "0")
         
-        # Determine the direction based on route_id and direction_id
+        # Determine direction based on route_id and direction_id
         direction = (
-        "Saint-Jérôme" if route_id == "4" and direction_id == "1"
-        else "Lucien-L'allier" if route_id == "4" and direction_id == "0"
-        else "Mascouche" if route_id == "6" and direction_id == "1"
-        else "Gare Centrale" if route_id == "6" and direction_id == "0"
-        else "Unknown"
-    )
+            "Saint-Jérôme" if route_id == "4" and direction_id == "1"
+            else "Lucien-L'allier" if route_id == "4" and direction_id == "0"
+            else "Mascouche" if route_id == "6" and direction_id == "1"
+            else "Gare Centrale" if route_id == "6" and direction_id == "0"
+            else "Unknown"
+        )
         
         # Get stop name from the map
         stop_name = stop_id_map.get(stop_id, "Unknown")
 
-        # Include both original and delayed arrival times
         mapped_train = {
             "route_id": "12" if route_id == "4" else "15" if route_id == "6" else route_id,
             "arrival_time": train.get("arrival_time", "Unknown"),
             "original_arrival_time": train.get("original_arrival_time", "Unknown"),
             "direction": direction,
             "location": stop_name,
-            "occupancy": train.get("occupancy", "Unknown"),  # Add occupancy
-            "delayed_text": train.get("delayed_text", None),  # Delayed text
+            "occupancy": train.get("occupancy", "Unknown"),  # occupancy remains the same
+            "delayed_text": train.get("delayed_text", None),
             "early_text": train.get("early_text", None),
+            # New fields based on trips.txt; compare with "1" to mean allowed
+            "wheelchair_accessible": trips_data.get(trip_id, {}).get("wheelchair_accessible", "0") == "1",
+            "bikes_allowed": trips_data.get(trip_id, {}).get("bikes_allowed", "0") == "1",
         }
         mapped_schedule.append(mapped_train)
     return mapped_schedule
+
     
 # Process Exo Vehicle Positions
 def process_exo_vehicle_positions(entities, stop_times):
