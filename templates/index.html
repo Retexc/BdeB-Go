@@ -236,7 +236,7 @@
 
   const delayedText = train.delayed_text ? `<span class="delayed-text">${train.delayed_text}</span>` : '';
   const earlyText = train.early_text ? `<span class="early-text">${train.early_text}</span>` : '';
-  const timeStr = train.arrival_time || "Unknown";
+  const timeStr = train.display_time || "Unknown";
 
   trainDiv.innerHTML = `
     <!-- Column 1: Route Button -->
