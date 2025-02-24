@@ -1,0 +1,100 @@
+/* src/styles/layout.css */
+
+/* Layout container (sidebar + main content) */
+.layout {
+    display: flex;
+    height: 100vh;
+    background: #0A0A0A; /* dark background */
+    color: #fff;
+    font-family: sans-serif;
+  }
+  
+  /* Sidebar styles */
+  .sidebar {
+    width: 240px;
+    background: #0A0A0A;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .logo {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #333;
+  }
+  
+  .nav ul {
+    list-style: none;
+    display: flex;
+    width: 182px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 35px;
+  }
+  
+  .nav li {
+    padding: 15px 20px;
+    cursor: pointer;
+  }
+  
+  .nav li.active {
+    background: #333;
+  }
+  
+  /* Main content area */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #181818;
+    overflow-y: auto; /* let content scroll if needed */
+  }
+
+  /* Example additions (could be in layout.css or a separate messages.css) */
+.messages-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .messages-topbar h1 {
+    font-size: 24px;
+  }
+  
+  .add-btn {
+    background: #ffca28;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .messages-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+  }
+  
+  .messages-tabs button {
+    background: #2c2c2c;
+    border: none;
+    padding: 8px 16px;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  .messages-tabs button.active {
+    background: #ffca28;
+    color: #000;
+  }
+  
+  .messages-list {
+    margin-top: 20px;
+  }
+

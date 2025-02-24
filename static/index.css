@@ -9,6 +9,8 @@ html, body {
   font-family: "Atlas Grotesk", sans-serif;
 }
 
+
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -113,6 +115,35 @@ html, body {
   but we won't rely on it for alignment—our grid does that.
 */
 .bus-col-status {
+  flex: 0 0 auto;
+  /* If you want a specific width on the status column, do so:
+     flex: 0 0 600px; or something similar. */
+}
+
+.train-status-line {
+  display: grid;
+  grid-template-columns: 250px 140px 130px 45px 25px;
+  align-items: center;
+  gap: 20px;
+}
+
+
+.train-col-route {
+  flex: 0 0 auto; /* route button fixed size */
+}
+
+.train-col-info {
+  flex: 1; /* expand the direction/location column */
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/*
+  We'll keep .bus-col-status as a container,
+  but we won't rely on it for alignment—our grid does that.
+*/
+.train-col-status {
   flex: 0 0 auto;
   /* If you want a specific width on the status column, do so:
      flex: 0 0 600px; or something similar. */

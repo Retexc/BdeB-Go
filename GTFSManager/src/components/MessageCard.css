@@ -1,0 +1,57 @@
+.message-card {
+    display: flex;
+    background: #262626;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .left-bar {
+    width: 5px;
+    background: #00b300; /* green bar */
+  }
+  
+  .message-content {
+    flex: 1;
+    padding: 10px;
+  }
+  
+  .message-content h2 {
+    margin: 0 0 5px;
+    font-size: 18px;
+  }
+  
+  .message-content p {
+    margin: 0;
+    color: #ccc;
+  }
+  
+  .message-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+  }
+  
+  .edit-btn,
+  .delete-btn {
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .edit-btn:hover {
+    background: #555;
+  }
+  
+  .delete-btn {
+    background: #e53935;
+  }
+  .delete-btn:hover {
+    background: #d32f2f;
+  }
+  

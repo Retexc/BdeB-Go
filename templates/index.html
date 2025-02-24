@@ -6,6 +6,7 @@
   <title>BdeB-GTFS</title>
   <link rel="stylesheet" href="./static/index.css" />
   <script>
+    
 
   document.addEventListener('DOMContentLoaded', () => {
     const preloader = document.querySelector('.preloader');
@@ -191,63 +192,121 @@
         trainContainer.appendChild(exoLogoDiv);
 
         data.next_trains.forEach((train) => {
-          const trainDiv = document.createElement('div');
-          trainDiv.className = "frame-1";
+  const trainDiv = document.createElement('div');
+  trainDiv.className = "frame-1";
 
-          // Occupancy icons (similar approach as above) ...
-          // For brevity, do a shorter version:
-          let occupancyIcons = '';
-          if (train.occupancy === "Near_Empty") {
-            occupancyIcons = `<img src="/static/assets/icons/green-person.png" class="occupancy-icon"> ...`;
-            // etc.
+  // Build occupancy icons similar to buses:
+  let occupancyIcons = '';
+  if (train.occupancy === "MANY_SEATS_AVAILABLE") {
+    occupancyIcons = `
+      <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+      <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+    `;
+  } else if (train.occupancy === "FEW_SEATS_AVAILABLE") {
+    occupancyIcons = `
+      <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+      <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+      <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+    `;
+  } else if (train.occupancy === "STANDING_ROOM_ONLY") {
+    occupancyIcons = `
+      <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+      <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+    `;
+  } else if (train.occupancy === "FULL") {
+    occupancyIcons = `
+      <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+      <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+      <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+    `;
+  } else {
+    occupancyIcons = `
+      <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+      <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+      <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+      <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+    `;
+  }
+
+  const delayedText = train.delayed_text ? `<span class="delayed-text">${train.delayed_text}</span>` : '';
+  const earlyText = train.early_text ? `<span class="early-text">${train.early_text}</span>` : '';
+  const timeStr = train.arrival_time || "Unknown";
+
+  trainDiv.innerHTML = `
+    <!-- Column 1: Route Button -->
+    <div class="train-col-route">
+      <div class="${
+        train.route_id === '12'
+          ? 'buttonSJ'
+          : train.route_id === '15'
+            ? 'buttonMA'
+            : 'defaultButton'
+      }">
+        <span class="frame-2-black">${train.route_id}</span>
+      </div>
+    </div>
+
+    <!-- Column 2: Direction + Location -->
+    <div class="train-col-info">
+      <span class="direction">
+        <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+        ${train.direction || "Unknown"}
+      </span>
+      <span class="location">${train.location || "Unknown"}</span>
+    </div>
+
+    <!-- Column 3: Status Line with 5 Columns -->
+    <div class="train-col-status">
+      <div class="status-line">
+        <!-- 1) Delay/Early Cell -->
+        <div class="delay-cell">
+          ${delayedText}
+          ${earlyText}
+        </div>
+
+        <!-- 2) Time Cell -->
+        <div class="time-cell">
+          ${
+            train.no_service_text 
+              ? `<span class="no-service-text">${train.no_service_text}</span>` 
+              : `<span class="time-remaining">${timeStr}</span>`
           }
+          <img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />
+        </div>
 
-          let delayedText = train.delayed_text ? 
-            `<span class="delayed-text">${train.delayed_text}</span>` : '';
-          let earlyText = train.early_text ?
-            `<span class="early-text">${train.early_text}</span>` : '';
-          let timeStr = train.arrival_time || "Unknown";
+        <!-- 3) Occupancy Cell -->
+        <div class="occupancy-cell">
+          ${occupancyIcons}
+        </div>
 
-          // Possibly show train blinking icon if at_stop
-          let iconHTML = occupancyIcons;
-          if (train.at_stop) {
-            iconHTML += `<img src="/static/assets/icons/train.png" class="blinking-train">`;
+        <!-- 4) Wheelchair & Bike Icon Cell -->
+        <div class="wheelchair-cell">
+        ${ train.bikes_allowed 
+            ? `<img src="/static/assets/icons/bike.png" alt="Bikes Allowed" class="bike-icon">`
+            : `<img src="/static/assets/icons/invisible.png" alt="" class="bike-icon">`
+        }
+        </div>
+
+        <!-- 5) Train Icon Cell -->
+        <div class="bus-cell">
+          ${
+            train.at_stop 
+              ? `<img src="/static/assets/icons/train.png" class="blinking-train" alt="Train at stop">`
+              : `<img src="/static/assets/icons/invisible.png" class="blinking-train" alt="">`
           }
+        </div>
+      </div>
+    </div>
+  `;
+  trainContainer.appendChild(trainDiv);
+});
 
-          trainDiv.innerHTML = `
-            <!-- Column 1: Route button (ex: 12, 15, etc.) -->
-            <div class="bus-col-route">
-              <div class="${train.route_id === '12' ? 'buttonSJ' : 
-                          train.route_id === '15' ? 'buttonMA' : 'defaultButton'}">
-                <span class="frame-2-black">${train.route_id}</span>
-              </div>
-            </div>
-
-            <!-- Column 2: direction + location -->
-            <div class="bus-col-info">
-              <span class="direction">
-                <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
-                ${train.direction || "Unknown"}
-              </span>
-              <span class="location">${train.location || "Unknown"}</span>
-            </div>
-
-            <!-- Column 3: status line -->
-            <div class="bus-col-status">
-              <div class="status-line">
-                ${delayedText}
-                ${earlyText}
-                ${
-                  train.no_service_text 
-                  ? `<span class="no-service-text">${train.no_service_text}</span>` 
-                  : `<span class="time-remaining">${timeStr}</span>`
-                }
-                ${iconHTML}
-              </div>
-            </div>
-          `;
-          trainContainer.appendChild(trainDiv);
-        });
 
         updateAlerts(data);
       } catch (error) {
@@ -299,6 +358,7 @@
 </head>
 
 <body>
+    <div class="scaling-container">
   <div class="main-container">
     <span class="time">{{ current_time }}</span>
     <div class="frame"><!-- STM buses go here --></div>
@@ -338,6 +398,7 @@
         </g>
       </svg>
     </div>
-  </div>    
+  </div>
+</div>    
 </body>
 </html>

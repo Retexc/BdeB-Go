@@ -1,0 +1,8 @@
+[
+  {
+    "header": "Circulation difficile autour du Collège",
+    "description": "Les accumulations de neige compliquent les déplacements aux abords du Collège. Les trottoirs et les rues avoisinantes sont impraticables. Privilégiez les transports collectifs et prévoyez cette semaine plus de temps pour vos trajets.",
+    "severity": "alert",
+    "bg_color": "#0080ff"
+  }
+]
