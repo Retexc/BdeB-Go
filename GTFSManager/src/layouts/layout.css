@@ -18,7 +18,7 @@
   }
   
   .logo {
-    height: 60px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,14 +27,18 @@
   
   .nav ul {
     list-style: none;
+    padding: 0;
+    margin: 0;
     display: flex;
-    width: 182px;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 35px;
+    gap: 25px;
+    font-family: "Atlas Grotesk", sans-serif;
   }
   
   .nav li {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* space between icon and text */
     padding: 15px 20px;
     cursor: pointer;
   }
@@ -43,13 +47,23 @@
     background: #333;
   }
   
+  /* Style for the icons */
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  
+  
   /* Main content area */
   .main-content {
     flex: 1;
+    width: 1920px;
+    height: 1080px;
     display: flex;
     flex-direction: column;
     background: #181818;
-    overflow-y: auto; /* let content scroll if needed */
+    overflow-y: none; /* let content scroll if needed */
   }
 
   /* Example additions (could be in layout.css or a separate messages.css) */

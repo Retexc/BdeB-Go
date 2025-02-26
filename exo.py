@@ -318,7 +318,7 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
     # ====== Step 5: Set a 'display_time' based on minutes_remaining vs. arrival_time ======
     for train in prioritized_schedule:
         mr = train.get("minutes_remaining", None)
-        if isinstance(mr, int) and mr < 60:
+        if isinstance(mr, int) and mr < 30:
             # If the train is within 60 minutes, show "X min"
             train["display_time"] = f"{mr} min"
         else:

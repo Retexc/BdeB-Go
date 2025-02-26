@@ -1,0 +1,145 @@
+/* src/pages/MessagesPage.css */
+
+/* Optional: Page container styling (if desired) */
+.messages-page {
+    padding: 20px;
+    /* color, background, etc. can be set globally or here */
+  }
+
+.header {
+    /* Make a horizontal flex container */
+    display: flex;
+    justify-content: space-between; /* space out items (left vs. right) */
+    align-items: center;           /* vertically center the items */
+    /* optional spacing or background color, e.g. */
+    margin-bottom: 20px;
+    margin-top: 50px;
+    margin-left: 50px;
+    margin-right: 50px;
+
+  }
+.Title {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}  
+  .Title h1 {
+    color: #FFF;
+    font-family: "Atlas Grotesk";
+    font-size: 38px;
+    font-style: normal;
+    font-weight: 900;
+    line-height: normal;
+    margin: 0; 
+}
+.Title, p {
+    color: #FFF;
+    font-family: "Atlas Grotesk";
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    margin: 0;
+}
+
+.messages-list {
+    margin-left: 50px;
+    margin-right: 50px;
+    margin-bottom: 20px;
+    margin-top: 50px;
+  }
+
+  /* ========== MODAL OVERLAY ========== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0; /* top: 0; right: 0; bottom: 0; left: 0 */
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* ensure it's on top */
+  }
+  
+  /* ========== MODAL CONTENT BOX ========== */
+  .modal-content {
+    background: #1e1e1e; /* Dark gray background */
+    width: 500px;
+    max-width: 90%;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    color: #fff;
+    font-family: sans-serif;
+  }
+  
+  /* Title at the top of the modal */
+  .modal-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #fff;
+    font-weight: 600;
+  }
+  
+  /* ========== FORM GROUP ========== */
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ccc;
+    font-weight: 500;
+  }
+  .form-group input[type="text"],
+  .form-group textarea {
+    width: 100%;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    outline: none;
+    font-size: 14px;
+  }
+  .form-group input::placeholder,
+  .form-group textarea::placeholder {
+    color: #999;
+  }
+  
+  /* ========== MODAL FOOTER BUTTONS ========== */
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px; /* space between buttons */
+    margin-top: 10px;
+  }
+  
+  .modal-footer button {
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 10px 16px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: background 0.2s ease;
+  }
+  
+  /* 'Annuler' style */
+  .cancel-btn {
+    background: transparent;
+    color: #ccc;
+  }
+  .cancel-btn:hover {
+    background: #333;
+  }
+  
+  /* 'Continuer' style (yellow button) */
+  .continue-btn {
+    background: #ffca28; /* or #fec41b, etc. */
+    color: #000;
+  }
+  .continue-btn:hover {
+    background: #e6b324;
+  }
+  

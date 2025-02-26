@@ -1,30 +1,35 @@
 // src/components/AlertsManager.jsx
 import React, { useState, useEffect } from "react";
+import MessageCard from "./MessageCard.jsx";
 
 function AlertsManager() {
-  // State to store alerts and input fields
   const [alerts, setAlerts] = useState([]);
   const [header, setHeader] = useState("");
   const [description, setDescription] = useState("");
   const [editingIndex, setEditingIndex] = useState(null);
 
-  // Fetch alerts from custom_messages.json on component mount
+  // Fetch messages from the backend when the component mounts
   useEffect(() => {
-    fetch("/custom_messages.json")
+    fetch("/api/messages")
       .then((response) => response.json())
       .then((data) => setAlerts(data))
       .catch((error) => console.error("Error fetching alerts:", error));
   }, []);
 
-  // Function to refresh alerts (if needed)
-  const refreshAlerts = () => {
-    fetch("/custom_messages.json")
+  // Function to send updated alerts to the backend
+  const saveAlerts = (newAlerts) => {
+    fetch("/api/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(newAlerts)
+    })
       .then((response) => response.json())
-      .then((data) => setAlerts(data))
-      .catch((error) => console.error("Error fetching alerts:", error));
+      .then((data) => console.log("Alerts saved successfully:", data))
+      .catch((error) => console.error("Error saving alerts:", error));
   };
 
-  // Add a new alert
   const addAlert = () => {
     if (!header.trim() || !description.trim()) {
       alert("Please fill in both the header and the description.");
@@ -33,40 +38,40 @@ function AlertsManager() {
     const newAlert = {
       header: header.trim(),
       description: description.trim(),
-      severity: "alert",
+      severity: "alert"
     };
-    setAlerts([...alerts, newAlert]);
+    const updatedAlerts = [...alerts, newAlert];
+    setAlerts(updatedAlerts);
+    saveAlerts(updatedAlerts); // Save to backend
     setHeader("");
     setDescription("");
   };
 
-  // Remove an alert by its index
   const removeAlert = (index) => {
-    const newAlerts = alerts.filter((_, i) => i !== index);
-    setAlerts(newAlerts);
+    const updatedAlerts = alerts.filter((_, i) => i !== index);
+    setAlerts(updatedAlerts);
+    saveAlerts(updatedAlerts);
   };
 
-  // Start editing an alert (populate input fields)
   const startEditing = (index) => {
     setEditingIndex(index);
     setHeader(alerts[index].header);
     setDescription(alerts[index].description);
   };
 
-  // Save modifications to an alert
   const saveEdit = () => {
-    if (editingIndex === null) return;
     if (!header.trim() || !description.trim()) {
       alert("Please fill in both the header and the description.");
       return;
     }
-    const newAlerts = alerts.map((alert, index) => {
-      if (index === editingIndex) {
+    const updatedAlerts = alerts.map((alert, i) => {
+      if (i === editingIndex) {
         return { ...alert, header: header.trim(), description: description.trim() };
       }
       return alert;
     });
-    setAlerts(newAlerts);
+    setAlerts(updatedAlerts);
+    saveAlerts(updatedAlerts); // Persist changes
     setEditingIndex(null);
     setHeader("");
     setDescription("");
@@ -75,6 +80,7 @@ function AlertsManager() {
   return (
     <div style={{ padding: "1rem" }}>
       <h1>Custom Alerts Manager</h1>
+      {/* Input fields for adding/editing alerts */}
       <div style={{ marginBottom: "1rem" }}>
         <input
           type="text"
@@ -99,19 +105,19 @@ function AlertsManager() {
       </div>
       <hr />
       <h2>Current Alerts</h2>
-      <ul>
+      <ul style={{ listStyle: "none", padding: 0 }}>
         {alerts.map((alert, index) => (
           <li key={index} style={{ marginBottom: "0.5rem" }}>
-            <strong>{alert.header}</strong>:{" "}
-            {alert.description.length > 50
-              ? alert.description.substring(0, 50) + "..."
-              : alert.description}
-            <button onClick={() => startEditing(index)} style={{ marginLeft: "1rem" }}>
-              Modify
-            </button>
-            <button onClick={() => removeAlert(index)} style={{ marginLeft: "0.5rem" }}>
-              Remove
-            </button>
+            <MessageCard
+              header={alert.header}
+              description={
+                alert.description.length > 50
+                  ? alert.description.substring(0, 50) + "..."
+                  : alert.description
+              }
+              onEdit={() => startEditing(index)}
+              onRemove={() => removeAlert(index)}
+            />
           </li>
         ))}
       </ul>

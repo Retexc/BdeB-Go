@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 import time
 import os, json
 
@@ -69,7 +69,7 @@ def index():
     )
 
 # ====================================================================
-# ROUTE: API JSON Data
+# ROUTE: API JSON Data for buses, trains, and alerts
 # ====================================================================
 @app.route("/api/data")
 def api_data():
@@ -82,17 +82,21 @@ def api_data():
     all_alerts = processed_stm + processed_exo
 
     # === Custom Alert Logic ===
-    custom_path = os.path.join(os.path.dirname(__file__), "custom_messages.json")
+    # Path to the custom_messages.json file in GTFSManager/public folder
+    custom_path = os.path.join(
+        os.path.dirname(__file__),
+        "GTFSManager",
+        "public",
+        "custom_messages.json"
+    )
     if os.path.exists(custom_path):
         with open(custom_path, "r", encoding="utf-8") as f:
             try:
-                custom_alerts = json.load(f)  # Expecting a list of alert objects
+                custom_alerts = json.load(f)
                 if not isinstance(custom_alerts, list):
                     custom_alerts = []
             except:
                 custom_alerts = []
-
-        # For each alert object in custom_alerts, append to all_alerts
         for c in custom_alerts:
             all_alerts.append({
                 "header": c.get("header", "Message"),
@@ -103,11 +107,8 @@ def api_data():
             })
 
     # ========== STM BUSES ==========
-    # 1) Trip updates
     stm_trip_entities = fetch_stm_realtime_data()
-    # 2) Vehicle positions => positions_dict
-    positions_dict = fetch_stm_positions_dict(["171","180","164"], stm_trips)
-    # 3) Merge into final buses
+    positions_dict = fetch_stm_positions_dict(["171", "180", "164"], stm_trips)
     buses = process_stm_trip_updates(
         stm_trip_entities,
         stm_trips,
@@ -117,16 +118,12 @@ def api_data():
 
     print("----- DEBUG: Final Merged STM Buses -----")
     status_map = {0: "INCOMING_AT", 1: "STOPPED_AT", 2: "IN_TRANSIT_TO"}
-
     for b in buses:
-        # If b["current_status"] is numeric, map it; otherwise just show whatever string is there
         raw_stat = b.get("current_status")
         if isinstance(raw_stat, int):
             stat_str = status_map.get(raw_stat, f"Unknown({raw_stat})")
         else:
-            # If it's a string like "2" or "STOPPED_AT" already, just pass it along
             stat_str = str(raw_stat)
-
         print(
             f"Route={b['route_id']}, Trip={b['trip_id']}, "
             f"Stop={b['stop_id']}, ArrTime={b['arrival_time']}, "
@@ -135,7 +132,6 @@ def api_data():
             f"currentStatus={stat_str}"
         )
     print("-----------------------------------------")
-
 
     # ========== EXO TRAINS ==========
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
@@ -146,8 +142,6 @@ def api_data():
         exo_vehicle_data,
         exo_trip_updates
     )
-
-    # ========== NO-SERVICE DAYS? ==========
     if is_service_unavailable():
         for train in exo_trains:
             train["no_service_text"] = "Aucun service aujourd'hui"
@@ -161,6 +155,34 @@ def api_data():
         "current_time": time.strftime("%I:%M:%S %p"),
         "alerts": all_alerts
     }
+
+# ====================================================================
+# NEW: API endpoint to get and update custom messages
+# ====================================================================
+@app.route("/api/messages", methods=["GET", "POST"])
+def api_messages():
+    # Adjust this path to the custom_messages.json in GTFSManager/public folder
+    custom_path = os.path.join(
+        os.path.dirname(__file__),
+        "GTFSManager",
+        "public",
+        "custom_messages.json"
+    )
+    if request.method == "GET":
+        if os.path.exists(custom_path):
+            with open(custom_path, "r", encoding="utf-8") as f:
+                messages = json.load(f)
+            return jsonify(messages)
+        else:
+            return jsonify([]), 404
+    elif request.method == "POST":
+        data = request.get_json()
+        try:
+            with open(custom_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            return jsonify({"status": "success"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

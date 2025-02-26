@@ -1,117 +1,163 @@
 // src/pages/MessagesPage.jsx
 import React, { useState, useEffect } from "react";
 import MessageCard from "../components/MessageCard";
+import "./MessagesPage.css";
 
 function MessagesPage() {
-  // State to store alerts and form fields.
   const [alerts, setAlerts] = useState([]);
   const [header, setHeader] = useState("");
   const [description, setDescription] = useState("");
   const [editingIndex, setEditingIndex] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch alerts from custom_messages.json on mount.
+  // Fetch alerts from the backend on mount
   useEffect(() => {
-    fetch("/custom_messages.json")
+    fetch("/api/messages")
       .then((response) => response.json())
       .then((data) => setAlerts(data))
       .catch((error) => console.error("Error fetching alerts:", error));
   }, []);
 
-  // Add a new alert.
+  // Function to save updated alerts to the backend
+  const saveAlerts = (newAlerts) => {
+    fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newAlerts)
+    })
+      .then((response) => response.json())
+      .then((data) => console.log("Alerts saved successfully:", data))
+      .catch((error) => console.error("Error saving alerts:", error));
+  };
+
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setHeader("");
+    setDescription("");
+    setEditingIndex(null);
+  };
+
   const addAlert = () => {
+    openModal();
+  };
+
+  // This function handles both adding and editing.
+  // It also calls saveAlerts to persist changes.
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (!header.trim() || !description.trim()) {
       alert("Veuillez remplir le titre et la description.");
       return;
     }
-    const newAlert = {
-      header: header.trim(),
-      description: description.trim(),
-      severity: "alert",
-    };
-    setAlerts([...alerts, newAlert]);
-    setHeader("");
-    setDescription("");
+    let updatedAlerts;
+    if (editingIndex === null) {
+      const newAlert = {
+        header: header.trim(),
+        description: description.trim(),
+        severity: "alert"
+      };
+      updatedAlerts = [...alerts, newAlert];
+      setAlerts(updatedAlerts);
+    } else {
+      updatedAlerts = alerts.map((alert, i) => {
+        if (i === editingIndex) {
+          return { ...alert, header: header.trim(), description: description.trim() };
+        }
+        return alert;
+      });
+      setAlerts(updatedAlerts);
+    }
+    saveAlerts(updatedAlerts);
+    closeModal();
   };
 
-  // Remove an alert.
-  const removeAlert = (index) => {
-    const newAlerts = alerts.filter((_, i) => i !== index);
-    setAlerts(newAlerts);
-  };
-
-  // Begin editing an alert.
   const startEditing = (index) => {
     setEditingIndex(index);
     setHeader(alerts[index].header);
     setDescription(alerts[index].description);
+    openModal();
   };
 
-  // Save modifications.
-  const saveEdit = () => {
-    if (editingIndex === null) return;
-    if (!header.trim() || !description.trim()) {
-      alert("Veuillez remplir le titre et la description.");
-      return;
-    }
-    const newAlerts = alerts.map((alert, i) => {
-      if (i === editingIndex) {
-        return { ...alert, header: header.trim(), description: description.trim() };
-      }
-      return alert;
-    });
-    setAlerts(newAlerts);
-    setEditingIndex(null);
-    setHeader("");
-    setDescription("");
+  const removeAlert = (index) => {
+    const updatedAlerts = alerts.filter((_, i) => i !== index);
+    setAlerts(updatedAlerts);
+    saveAlerts(updatedAlerts);
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      {/* Top bar with title and dynamic button */}
-      <div className="messages-topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Messages</h1>
+    <div className="messages-page">
+      {/* Header container with title, description, and the button on the right */}
+      <div className="header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "50px 50px 20px" }}>
+        <div className="Title">
+          <h1>Messages</h1>
+          <p>Ajouter, modifier et supprimer les messages qui s'afficheront sur la bannière</p>
+        </div>
         {editingIndex === null ? (
-          <button className="add-btn" onClick={addAlert}>+ Ajouter un message</button>
+          <button className="add-btn" onClick={addAlert}>
+            + Ajouter un message
+          </button>
         ) : (
-          <button className="add-btn" onClick={saveEdit}>Enregistrer Modification</button>
+          <button className="add-btn" onClick={handleSubmit}>
+            Enregistrer Modification
+          </button>
         )}
       </div>
 
-      {/* Input form */}
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          type="text"
-          placeholder="Titre"
-          value={header}
-          onChange={(e) => setHeader(e.target.value)}
-          style={{ width: "300px", marginRight: "1rem" }}
-        />
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          style={{ width: "300px", height: "100px", verticalAlign: "top" }}
-        />
-      </div>
+      {/* Modal for adding/editing a message */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>{editingIndex === null ? "Création du message" : "Modifier le message"}</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="title">Titre</label>
+                <input
+                  id="title"
+                  type="text"
+                  value={header}
+                  onChange={(e) => setHeader(e.target.value)}
+                  placeholder="Titre"
+                />
+              </div>
 
-      <p>Ajouter, modifier et supprimer les messages qui s'afficheront sur la bannière</p>
+              <div className="form-group">
+                <label htmlFor="message">Message</label>
+                <textarea
+                  id="message"
+                  rows="4"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Message"
+                />
+              </div>
 
-      {/* Optional tabs (you can style these as needed) */}
-      <div className="messages-tabs" style={{ display: "flex", gap: "10px", marginBottom: "1rem" }}>
-        <button className="active">Messages actifs</button>
-        <button>Programmé</button>
-        <button>Fermé</button>
-      </div>
+              <div className="modal-footer">
+                <button type="button" className="cancel-btn" onClick={closeModal}>
+                  Annuler
+                </button>
+                <button type="submit" className="continue-btn">
+                  Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-      {/* Messages list */}
-      <div className="messages-list">
+      {/* Existing messages */}
+      <div className="messages-list" style={{ margin: "50px" }}>
         {alerts.map((alert, index) => (
           <div key={index} style={{ marginBottom: "10px" }}>
-            <MessageCard header={alert.header} description={alert.description} />
-            <div style={{ marginTop: "5px" }}>
-              <button onClick={() => startEditing(index)} style={{ marginRight: "5px" }}>Modifier</button>
-              <button onClick={() => removeAlert(index)}>Supprimer</button>
-            </div>
+            <MessageCard
+              header={alert.header}
+              description={alert.description}
+              onEdit={() => startEditing(index)}
+              onRemove={() => removeAlert(index)}
+            />
           </div>
         ))}
       </div>

@@ -277,7 +277,11 @@
               ? `<span class="no-service-text">${train.no_service_text}</span>` 
               : `<span class="time-remaining">${timeStr}</span>`
           }
-          <img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />
+        ${
+            timeStr.includes("min")
+            ? `<img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />`
+            : ''
+        }
         </div>
 
         <!-- 3) Occupancy Cell -->
