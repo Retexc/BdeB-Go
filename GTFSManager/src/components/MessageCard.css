@@ -130,7 +130,7 @@
   .modal-content {
     background: #1e1e1e; /* Dark gray/black background */
     color: #fff;         /* White text */
-    width: 500px;
+    width: 950px;
     max-width: 90%;
     padding: 20px 24px;
     border-radius: 8px;
@@ -161,7 +161,10 @@
     background: #2b2b2b;      /* Slightly lighter dark background */
     border: 1px solid #444;   /* Subtle border */
     color: #fff;
-    padding: 10px;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 10px;
+    padding-right: 10px;
     border-radius: 4px;
     font-size: 14px;
     outline: none;

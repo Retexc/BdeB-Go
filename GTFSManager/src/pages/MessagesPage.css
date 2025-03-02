@@ -50,6 +50,30 @@
     margin-top: 50px;
   }
 
+  /* Tabs row container */
+.tabs-container {
+    display: flex;
+    gap: 40px;        /* spacing between tab labels */
+    margin: 0 50px;   /* left/right margin */
+    border-bottom: 2px solid #444;
+    margin-bottom: 20px; /* space below the tabs */
+  }
+  
+  /* Each tab label */
+  .tab {
+    padding: 10px 0;
+    cursor: pointer;
+    color: #fff;
+    font-weight: 500;
+    position: relative;
+  }
+  
+  /* Active tab highlight */
+  .tab.active {
+    font-weight: 700;           /* bolden active tab text */
+    border-bottom: 3px solid #ffca28; /* highlight color (yellow) */
+  }
+  
   /* ========== MODAL OVERLAY ========== */
   .modal-overlay {
     position: fixed;
@@ -64,7 +88,7 @@
   /* ========== MODAL CONTENT BOX ========== */
   .modal-content {
     background: #1e1e1e; /* Dark gray background */
-    width: 500px;
+    width: 950px;
     max-width: 90%;
     padding: 24px;
     border-radius: 8px;
@@ -97,16 +121,19 @@
     background: #2a2a2a;
     border: 1px solid #444;
     color: #fff;
-    padding: 10px;
+    padding-top: 10px;
+    padding-bottom: 15px;
+    padding-left: 0px;
+    padding-right: 0px;
     border-radius: 4px;
     outline: none;
     font-size: 14px;
   }
   .form-group input::placeholder,
   .form-group textarea::placeholder {
-    color: #999;
+    color: #ffffff;
   }
-  
+
   /* ========== MODAL FOOTER BUTTONS ========== */
   .modal-footer {
     display: flex;
@@ -115,7 +142,7 @@
     margin-top: 10px;
   }
   
-  .modal-footer button {
+  .modal-footer, .continue-btn, .cancel-btn{
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -124,6 +151,11 @@
     font-size: 14px;
     transition: background 0.2s ease;
   }
+    .continue-btn{
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    }
+
   
   /* 'Annuler' style */
   .cancel-btn {
@@ -141,5 +173,71 @@
   }
   .continue-btn:hover {
     background: #e6b324;
+  }
+  
+ /* Dropdown container to position relative to the modal footer */
+.dropdown-container {
+    position: relative;
+    display: inline-block;
+    margin-left: 10px; /* space between the buttons */
+  }
+  
+  /* Dropdown button styling */
+  .dropdown-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+  }
+  
+  /* Optional: set a size for the icon */
+  .dropdown-btn img {
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* The dropdown menu itself */
+  .dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 40px; /* adjust so it appears below the button */
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 4px;
+    min-width: 150px;
+    z-index: 100;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  }
+
+  .dropdown-toggle {
+    background-color:#ffca28 ;
+    padding: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .dropdown-toggle img {
+    width: 16px;
+    height: 16px;
+  }
+  
+  
+  /* Each dropdown item */
+  .dropdown-item {
+    padding: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #333;
+  }
+   
+/* Group the 'Enregistrer' button and arrow in a relative container */
+.btn-group {
+    display: inline-flex;   
+    position: relative;     
+    vertical-align: middle;
   }
   

@@ -3,9 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron-main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"cross-env NODE_ENV=development vite\" \"cross-env NODE_ENV=development electron .\"",
     "build": "vite build",
+    "serve": "cross-env NODE_ENV=production electron .",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -18,6 +20,9 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react-swc": "^3.5.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.2.0",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.0.0",

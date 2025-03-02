@@ -3,6 +3,7 @@
 from flask import Flask, render_template, request, jsonify
 import time
 import os, json
+from datetime import datetime
 
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -97,14 +98,27 @@ def api_data():
                     custom_alerts = []
             except:
                 custom_alerts = []
+        # Append custom messages as they are (including keys such as status and scheduledTime)
         for c in custom_alerts:
-            all_alerts.append({
-                "header": c.get("header", "Message"),
-                "description": c.get("description", ""),
-                "severity": c.get("severity", "alert"),
-                "routes": "Custom",
-                "stop": "Message"
-            })
+            all_alerts.append(c)
+
+    # ========= Filtering Out Pending Alerts =========
+    now = datetime.now()
+    filtered_alerts = []
+    for alert in all_alerts:
+        # If alert is pending and has a scheduledTime, check if it should be displayed.
+        if alert.get("status") == "pending":
+            st = alert.get("scheduledTime")
+            if st:
+                try:
+                    scheduled_dt = datetime.fromisoformat(st)
+                    if scheduled_dt > now:
+                        # Skip this alert since its scheduled time is in the future.
+                        continue
+                except Exception as e:
+                    # In case of parsing error, include it (or handle as needed)
+                    pass
+        filtered_alerts.append(alert)
 
     # ========== STM BUSES ==========
     stm_trip_entities = fetch_stm_realtime_data()
@@ -153,7 +167,7 @@ def api_data():
         "buses": buses,
         "next_trains": exo_trains,
         "current_time": time.strftime("%I:%M:%S %p"),
-        "alerts": all_alerts
+        "alerts": filtered_alerts
     }
 
 # ====================================================================
