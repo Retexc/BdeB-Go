@@ -13,6 +13,7 @@ from stm import (
     fetch_stm_positions_dict,      # new helper to get lat/lon
     load_stm_gtfs_trips,
     load_stm_stop_times,
+    load_stm_routes,
     process_stm_trip_updates,       # merges arrival + positions
     stm_map_occupancy_status,
     debug_print_stm_occupancy_status,
@@ -36,7 +37,8 @@ app = Flask(__name__)
 # ====================================================================
 # Load static GTFS data once at startup
 # ====================================================================
-stm_trips = load_stm_gtfs_trips("STM/trips.txt")
+routes_map = load_stm_routes("STM/routes.txt")
+stm_trips = load_stm_gtfs_trips("STM/trips.txt", routes_map)
 stm_stop_times = load_stm_stop_times("STM/stop_times.txt")
 exo_trips = load_exo_gtfs_trips("Exo/Train/trips.txt")
 exo_stop_times = load_exo_stop_times("Exo/Train/stop_times.txt")

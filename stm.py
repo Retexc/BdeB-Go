@@ -2,7 +2,7 @@ import requests
 import os
 import csv
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from google.transit import gtfs_realtime_pb2
 from config import (
     STM_API_KEY,
@@ -10,10 +10,87 @@ from config import (
     STM_VEHICLE_POSITIONS_ENDPOINT,
     STM_ALERTS_ENDPOINT
 )
-from utils import load_csv_dict  # or not used if you prefer your direct CSV logic
+from utils import load_csv_dict  
+# Cache for calendar data
+_calendar_data = None
+_calendar_dates_data = None
 
-# Dynamically construct paths for GTFS files
 script_dir = os.path.dirname(os.path.abspath(__file__))
+
+def load_calendar_data():
+    global _calendar_data
+    if _calendar_data is None:
+        cal_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "STM", "calendar.txt")
+        _calendar_data = {}
+        try:
+            with open(cal_path, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    service_id = row["service_id"]
+                    _calendar_data[service_id] = row
+        except Exception as e:
+            print("Error loading calendar.txt:", e)
+    return _calendar_data
+
+def load_calendar_dates_data():
+    global _calendar_dates_data
+    if _calendar_dates_data is None:
+        cal_dates_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "STM", "calendar_dates.txt")
+        _calendar_dates_data = {}
+        try:
+            with open(cal_dates_path, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    service_id = row["service_id"]
+                    if service_id not in _calendar_dates_data:
+                        _calendar_dates_data[service_id] = []
+                    _calendar_dates_data[service_id].append(row)
+        except Exception as e:
+            print("Error loading calendar_dates.txt:", e)
+    return _calendar_dates_data
+
+def serviceRunsToday(service_id):
+    """
+    Optimized check if a given service_id is running today.
+    Uses cached data from calendar.txt and calendar_dates.txt.
+    """
+    today = datetime.now().date()
+    run_today = False
+
+    cal_data = load_calendar_data()
+    cal_dates = load_calendar_dates_data()
+
+    # Check the regular calendar
+    if service_id in cal_data:
+        row = cal_data[service_id]
+        try:
+            start_date = datetime.strptime(row["start_date"], "%Y%m%d").date()
+            end_date = datetime.strptime(row["end_date"], "%Y%m%d").date()
+        except Exception as e:
+            print(f"Error parsing dates for service_id {service_id}: {e}")
+            return False
+        weekday = today.weekday()  # Monday=0, Sunday=6
+        days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        if start_date <= today <= end_date and row[days[weekday]] == "1":
+            run_today = True
+    else:
+        print(f"Service_id {service_id} not found in calendar.txt")
+
+    # Apply exceptions from calendar_dates.txt
+    if service_id in cal_dates:
+        for row in cal_dates[service_id]:
+            try:
+                exception_date = datetime.strptime(row["date"], "%Y%m%d").date()
+            except Exception as e:
+                print(f"Error parsing exception date for service_id {service_id}: {e}")
+                continue
+            if exception_date == today:
+                # exception_type "1" means added service, "2" means removed service.
+                if row["exception_type"] == "2":
+                    run_today = False
+                elif row["exception_type"] == "1":
+                    run_today = True
+    return run_today
 
 def fetch_stm_realtime_data():
     headers = {
@@ -59,6 +136,20 @@ def fetch_stm_alerts():
         print(f"Error fetching alerts: {str(e)}")
         return None
 
+def load_stm_routes(routes_file):
+    """
+    Returns a dict mapping real route_id (e.g. "1") -> route_short_name (e.g. "171")
+    and possibly route_long_name, etc.
+    """
+    routes_data = {}
+    with open(routes_file, mode="r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            real_id = row["route_id"]              # e.g. "1"
+            short_name = row["route_short_name"]   # e.g. "171"
+            routes_data[real_id] = short_name
+    return routes_data
+
 def load_stm_stop_times(filepath):
     """
     Your single, correct STM stop_times loader (dict => {(trip_id, stop_id): arrival_time}).
@@ -71,24 +162,26 @@ def load_stm_stop_times(filepath):
             stop_times[key] = row["arrival_time"]
     return stop_times
 
-def load_stm_gtfs_trips(filepath):
+def load_stm_gtfs_trips(filepath, routes_map):
     """
-    Load STM GTFS trips into a dict keyed by trip_id.
-    Each value is a dict: {"route_id": ..., "wheelchair_accessible": ...}.
+    Load trips.txt. 
+    `routes_map` is the dict from load_stm_routes that maps real route_id -> short_name.
     """
     trips_data = {}
     with open(filepath, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
             trip_id = row["trip_id"]
-            route_id = row["route_id"]
-            # If the CSV has a column named "wheelchair_accessible" with "1" or "2" or blank:
-            w_str = row.get("wheelchair_accessible", "0")  # default "0" if missing
+            real_route_id = row["route_id"]   # e.g. "1"
+            # Convert real_route_id -> short_name
+            short_name = routes_map.get(real_route_id, real_route_id)
+            w_str = row.get("wheelchair_accessible", "0")
             trips_data[trip_id] = {
-                "route_id": route_id,
+                "route_id": short_name,  # store the short name, e.g. "171"
                 "wheelchair_accessible": w_str
             }
     return trips_data
+
 
 
 def stm_map_occupancy_status(status):
@@ -148,7 +241,6 @@ def fetch_stm_positions_dict(desired_routes, stm_trips):
 
                 # currentStatus => e.g. IN_TRANSIT_TO, STOPPED_AT, etc.
                 # In the proto, it might be "current_status" or "current_status_value"
-                # We'll assume it's "current_status" in the Python-generated code.
                 current_status_str = None
                 if vehicle.HasField("current_status"):
                     current_status_str = vehicle.current_status  # This is an enum or string. Might be something like 2 => "IN_TRANSIT_TO"
@@ -166,149 +258,228 @@ def fetch_stm_positions_dict(desired_routes, stm_trips):
 
 def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions_dict):
     """
-    Combine real-time TripUpdates with lat/lon info and wheelchair info.
-    Return a list of bus objects with fields like:
-      route_id, trip_id, stop_id, arrival_time, occupancy, direction, location,
-      delayed_text, early_text, at_stop, wheelchair_accessible
+    Show each route+direction as a separate line, e.g. "180_Est" and "180_Ouest".
+    We'll do that by defining combos that map (GTFS route_id, stop_id) => final dictionary key.
     """
 
-    import math, time
-    from datetime import datetime
+    import time
+    from datetime import datetime, timedelta
 
-    # The routes we care about (Example)
-    desired_routes = ["171", "180", "164", "171_Ouest", "180_Ouest"]
+    # The combos we care about. Each tuple is (gtfs_route, stop_id, final_key).
+    # 'gtfs_route' is what your GTFS/trips store as route_id (like "180", "171", "164").
+    # 'stop_id' is the actual stop in your data. 
+    # 'final_key' is how you want to label it in the output, e.g. "180_Est", "180_Ouest".
+    desired_combos = [
+        ("171","50270","171_Est"),
+        ("171","62374","171_Ouest"),
+        ("180","50270","180_Est"),
+        ("180","62374","180_Ouest"),
+        ("164","50270","164_Est"),
+        ("164","62374","164_Ouest"),
+    ]
 
-    # Prepare a dict to hold the closest bus for each route
-    closest_buses = {r: None for r in desired_routes}
-
-    # Basic route -> direction/ location (Example)
-    route_metadata = {
-        "171": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
-        "180": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
-        "164": {"direction": "Est", "location": "Collège de Bois-de-Boulogne"},
-        "171_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
-        "180_Ouest": {"direction": "Ouest", "location": "Henri-Bourassa/du Bois-de-Boulogne"},
+    # We'll store direction/location strings for each final_key
+    # e.g. "171_Est" => direction="Est", location="Collège de Bois-de-Boulogne"
+    combo_info = {
+        "171_Est": {
+            "direction": "Est",
+            "location": "Collège de Bois-de-Boulogne",
+        },
+        "171_Ouest": {
+            "direction": "Ouest",
+            "location": "Henri-Bourassa/du Bois-de-Boulogne",
+        },
+        "180_Est": {
+            "direction": "Est",
+            "location": "Collège de Bois-de-Boulogne",
+        },
+        "180_Ouest": {
+            "direction": "Ouest",
+            "location": "Henri-Bourassa/du Bois-de-Boulogne",
+        },
+        "164_Est": {
+            "direction": "Est",
+            "location": "Collège de Bois-de-Boulogne",
+        },
+        "164_Ouest": {
+            "direction": "Ouest",
+            "location": "Henri-Bourassa/du Bois-de-Boulogne", 
+        },
     }
 
-    # Stop IDs we care about (Example)
-    stop_ids_of_interest = ["50270", "62374"]
+    closest_buses = { combo[2]: None for combo in desired_combos }
 
+    # ================
+    # 1) REAL-TIME
+    # ================
     for entity in trip_entities:
         if entity.HasField("trip_update"):
             t_update = entity.trip_update
-            route_id = t_update.trip.route_id
+            route_id = t_update.trip.route_id  # e.g. "180"
             trip_id = t_update.trip.trip_id
 
-            # Skip if route not in our desired list (Optional)
-            if route_id not in ["171", "180", "164"]:
-                # if route_id is "171_Ouest" or "180_Ouest" you might handle differently
-                # or you can handle them by a separate logic. Adjust as needed.
+
+            if route_id not in ["171","180","164"]:
                 continue
 
-            # Validate that trip_id in stm_trips matches route_id
+            # Check trip validity
             if not validate_trip(trip_id, route_id, stm_trips):
                 continue
 
-            # Lookup wheelchair flag from stm_trips
-            # We assume "1" means accessible; else "0" or "2" means not
+            # wheelchair
             trip_info = stm_trips.get(trip_id, {})
             w_str = trip_info.get("wheelchair_accessible", "0")
             wheelchair_accessible = (w_str == "1")
 
             for stop_time in t_update.stop_time_update:
-                # Skip if stop not in interest
-                if stop_time.stop_id not in stop_ids_of_interest:
-                    continue
-
-                # Skip route 164 if it's at 62374 (Optional)
-                if route_id == "164" and stop_time.stop_id == "62374":
-                    continue
-
-                # Grab scheduled arrival from stop_times
-                scheduled_arrival_str = stm_stop_times.get((trip_id, stop_time.stop_id))
-                # Grab real arrival from the feed
                 arrival_unix = stop_time.arrival.time if stop_time.HasField("arrival") else None
                 if not arrival_unix:
                     continue
 
-                # Compute minutes until arrival
+                # See if (route_id, stop_id) is one of our combos
+                stop_id = stop_time.stop_id
+                # We find a matching tuple in desired_combos
+                # e.g. ("180","62374","180_Ouest")
+                final_key = None
+                for (gtfs_route, wanted_stop, key_name) in desired_combos:
+                    if route_id == gtfs_route and stop_id == wanted_stop:
+                        final_key = key_name
+                        break
+                if final_key is None:
+                    # Not a combo we track
+                    continue
+
+                # Now we compute arrival_time
                 now_ts = time.time()
                 minutes_to_arrival = (arrival_unix - now_ts) // 60
 
-                # Build a delay text if we have scheduled + real
+                # If we have a scheduled arrival
+                scheduled_arrival_str = stm_stop_times.get((trip_id, stop_id))
                 delay_text = None
                 if scheduled_arrival_str:
                     try:
                         h, m, s = map(int, scheduled_arrival_str.split(":"))
                         if h >= 24:
-                            h = 0
+                            # handle hours beyond 24 by mod 24
+                            h = h % 24
                         sched_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
                         diff_min = (arrival_unix - sched_ts) // 60
                         if diff_min > 0:
                             delay_text = f"En retard (prévu à {h:02d}:{m:02d})"
                         elif diff_min < 0:
                             delay_text = f"En avance (prévu à {h:02d}:{m:02d})"
-                    except ValueError:
+                    except:
                         pass
 
-                # If the stop is 62374, we might treat route as route_id+"_Ouest" (Example)
-                route_key = route_id
-                if stop_time.stop_id == "62374" and not route_id.endswith("_Ouest"):
-                    route_key = f"{route_id}_Ouest"
-
-                # Occupancy from positions_dict
+                # occupancy
                 pos_info = positions_dict.get((route_id, trip_id), {})
                 raw_occ = pos_info.get("occupancy")
                 occ_str = stm_map_occupancy_status(raw_occ) if raw_occ else "Unknown"
 
-                # If minutes_to_arrival < 2 => at_stop
-                at_stop_flag = isinstance(minutes_to_arrival, (int, float)) and (minutes_to_arrival < 2)
+                at_stop_flag = (isinstance(minutes_to_arrival, (int,float)) and minutes_to_arrival < 2)
 
-                # Build the bus object
+                # Build bus object
+                direction_str = combo_info[final_key]["direction"]
+                location_str  = combo_info[final_key]["location"]
+
                 bus_obj = {
                     "route_id": route_id,
                     "trip_id": trip_id,
-                    "stop_id": stop_time.stop_id,
-                    "arrival_time": minutes_to_arrival,
+                    "stop_id": stop_id,
+                    "arrival_time": minutes_to_arrival,  # e.g. 25 (minutes)
                     "occupancy": occ_str,
-                    "direction": route_metadata.get(route_key, {}).get("direction", "Unknown"),
-                    "location": route_metadata.get(route_key, {}).get("location", "Unknown"),
+                    "direction": direction_str,
+                    "location": location_str,
                     "delayed_text": delay_text,
                     "early_text": None,
                     "at_stop": at_stop_flag,
-                    "wheelchair_accessible": wheelchair_accessible  # New field
+                    "wheelchair_accessible": wheelchair_accessible
                 }
 
-                # Keep only earliest arrival for that route
-                existing = closest_buses.get(route_key)
+                existing = closest_buses[final_key]
                 if existing is None:
-                    closest_buses[route_key] = bus_obj
+                    closest_buses[final_key] = bus_obj
                 else:
-                    # Compare times if both are numeric
-                    if (isinstance(existing["arrival_time"], (int, float))
-                        and isinstance(minutes_to_arrival, (int, float))
+                    # keep earliest arrival
+                    if (isinstance(existing["arrival_time"], (int,float))
+                        and isinstance(minutes_to_arrival, (int,float))
                         and minutes_to_arrival < existing["arrival_time"]):
-                        closest_buses[route_key] = bus_obj
+                        closest_buses[final_key] = bus_obj
 
-    # Fill missing routes
-    for r in desired_routes:
-        if closest_buses[r] is None:
-            closest_buses[r] = {
-                "route_id": r,
+    # ================
+    # 2) FALLBACK
+    # ================
+    now = datetime.now()
+    for (gtfs_route, wanted_stop, final_key) in desired_combos:
+        if closest_buses[final_key] is None:
+            # We didn't find real-time data for that route+stop
+            nextScheduled = None
+            # find all trips that have route_id=gtfs_route
+            route_trip_ids = {tid for tid, data in stm_trips.items() if data["route_id"] == gtfs_route}
+
+            for (trip_id, stop_id), schedTimeStr in stm_stop_times.items():
+                if trip_id not in route_trip_ids:
+                    continue
+                if stop_id != wanted_stop:
+                    continue
+
+                # parse time
+                try:
+                    parts = schedTimeStr.split(":")
+                    if len(parts)<2:
+                        continue
+                    hours = int(parts[0])
+                    minutes = int(parts[1])
+                    seconds = int(parts[2]) if len(parts)>2 else 0
+                    extra_days = 0
+                    if hours>=24:
+                        extra_days = hours//24
+                        hours = hours%24
+                    schedDt = datetime(now.year, now.month, now.day, hours, minutes, seconds)
+                    if extra_days>0:
+                        schedDt += timedelta(days=extra_days)
+                    if schedDt<= now:
+                        schedDt += timedelta(days=1)
+                    if nextScheduled is None or schedDt<nextScheduled:
+                        nextScheduled = schedDt
+                except:
+                    continue
+
+            if nextScheduled is not None:
+                arrival_str = nextScheduled.strftime("%H:%M")
+            else:
+                arrival_str = "Indisponible (Route annulée)"
+
+            # Build fallback bus object
+            direction_str = combo_info[final_key]["direction"]
+            location_str  = combo_info[final_key]["location"]
+            fallback_bus = {
+                "route_id": gtfs_route,
                 "trip_id": "N/A",
-                "stop_id": "50270" if "Ouest" not in r else "62374",
-                "arrival_time": "Indisponible (Route annulée)",
+                "stop_id": wanted_stop,
+                "arrival_time": arrival_str,
                 "occupancy": "Unknown",
-                "direction": route_metadata.get(r, {}).get("direction", "Unknown"),
-                "location": route_metadata.get(r, {}).get("location", "Unknown"),
+                "direction": direction_str,
+                "location": location_str,
                 "delayed_text": None,
                 "early_text": None,
                 "at_stop": False,
-                "wheelchair_accessible": False  # default
+                "wheelchair_accessible": False
             }
+            closest_buses[final_key] = fallback_bus
 
-    # Return a list of bus objects
-    return list(closest_buses.values())
+    # ================
+    # 3) Convert to a list
+    # ================
+    # Return them in the order you want (e.g. 171_Est, 171_Ouest, 180_Est, 180_Ouest, 164_Est, 164_Ouest).
+    order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est"]
+    result = []
+    for key in order:
+        if closest_buses[key] is not None:
+            result.append(closest_buses[key])
+    return result
+
+
 
 
 
