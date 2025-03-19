@@ -462,3 +462,41 @@ html, body {
     }
     /* Scale up from 50% to 100% while staying fully visible */
   }
+
+  .bike-wheelchair-container {
+    position: relative;
+    width: 30px;  /* adjust to your icon size */
+    height: 30px;
+  }
+  
+  .anim-bike, .anim-wheelchair {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  
+  /* Animate only the train-specific icons */
+  .anim-bike {
+    animation: bikeFade 3s infinite;
+  }
+  
+  .anim-wheelchair {
+    animation: wheelchairFade 3s infinite;
+  }
+  
+  @keyframes bikeFade {
+    0%   { opacity: 1; }
+    50%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
+  @keyframes wheelchairFade {
+    0%   { opacity: 0; }
+    50%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  
+  

@@ -203,11 +203,42 @@ data.next_trains.forEach((train) => {
   if (!hideIcons) {
     // (same occupancy logic as before)
     if (train.occupancy === "MANY_SEATS_AVAILABLE") {
-      occupancyIcons = `...`;
-    } else if (train.occupancy === "FEW_SEATS_AVAILABLE") {
-      occupancyIcons = `...`;
-    } 
-    // etc.
+            occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+          } else if (train.occupancy === "FEW_SEATS_AVAILABLE") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+          } else if (train.occupancy === "STANDING_ROOM_ONLY") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+          } else if (train.occupancy === "FULL") {
+            occupancyIcons = `
+              <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+            `;
+          } else {
+            // Unknown
+            occupancyIcons = `
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+            `;
+          }
   } else {
     // If no service, fill with invisible placeholders or just empty
     occupancyIcons = `
@@ -219,11 +250,16 @@ data.next_trains.forEach((train) => {
   }
 
   // Similarly, hide wheelchair or bike if no_service_text
-  let bikeIcon = '';
+  let bikeIconHTML = '';
   if (!hideIcons && train.bikes_allowed) {
-    bikeIcon = `<img src="/static/assets/icons/bike.png" alt="Bikes Allowed" class="bike-icon">`;
+    bikeIconHTML = `
+      <div class="bike-wheelchair-container">
+        <img src="/static/assets/icons/bike.png" alt="Bike" class="anim-bike">
+        <img src="/static/assets/icons/wheelchair.png" alt="Wheelchair" class="anim-wheelchair">
+      </div>
+    `;
   } else {
-    bikeIcon = `<img src="/static/assets/icons/invisible.png" alt="" class="bike-icon">`;
+    bikeIconHTML = `<img src="/static/assets/icons/invisible.png" alt="" class="bike-icon">`;
   }
 
   // Hide train icon if no service
@@ -294,12 +330,7 @@ data.next_trains.forEach((train) => {
 
         <!-- 4) Wheelchair & Bike Icon Cell -->
         <div class="wheelchair-cell">
-          ${
-            // If no service, hide wheelchair icon too
-            (!hideIcons && train.bikes_allowed)
-              ? `<img src="/static/assets/icons/bike.png" alt="Bikes Allowed" class="bike-icon">`
-              : `<img src="/static/assets/icons/invisible.png" alt="" class="bike-icon">`
-          }
+          ${bikeIconHTML}
         </div>
 
         <!-- 5) Train Icon Cell -->

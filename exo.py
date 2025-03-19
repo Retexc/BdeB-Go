@@ -258,8 +258,8 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
 
         # Adjust scheduled time by that delay
         adjusted_datetime = original_datetime + timedelta(minutes=actual_delay)
-        original_arrival_time = original_datetime.strftime("%H:%M")   # HH:MM
-        adjusted_arrival_time = adjusted_datetime.strftime("%H:%M")   # HH:MM
+        original_arrival_time = original_datetime.strftime("%I:%M %p")
+        adjusted_arrival_time = adjusted_datetime.strftime("%I:%M %p")   # HH:MM
 
         # Convert scheduled time to "seconds from midnight"
         arrival_time_seconds = (original_datetime.hour * 3600
@@ -319,10 +319,9 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
     for train in prioritized_schedule:
         mr = train.get("minutes_remaining", None)
         if isinstance(mr, int) and mr < 30:
-            # If the train is within 60 minutes, show "X min"
             train["display_time"] = f"{mr} min"
         else:
-            # Otherwise, show the HH:MM arrival_time
+            # Since arrival_time is already formatted as "HH:MM AM/PM", use it directly.
             train["display_time"] = train.get("arrival_time", "Unknown")
 
     return prioritized_schedule

@@ -446,7 +446,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
                     continue
 
             if nextScheduled is not None:
-                arrival_str = nextScheduled.strftime("%H:%M")
+                arrival_str = nextScheduled.strftime("%I:%M %p")
             else:
                 arrival_str = "Indisponible (Route annulée)"
 
