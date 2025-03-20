@@ -5,29 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BdeB-GTFS</title>
   <link rel="stylesheet" href="./static/index.css" />
+  {% if active_bg %}
+  <style>
+    .scaling-container::before {
+      background: url('{{ active_bg }}') center center no-repeat;
+      background-size: cover;
+    }
+  </style>
+  {% endif %}  
   <script>
-    
+    function scaleContent() {
+      const container = document.querySelector('.scaling-container');
+      const designWidth  = 1920;
+      const designHeight = 1080;
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const preloader = document.querySelector('.preloader');
-    const mainContent = document.querySelector('.main-container');
+      const windowWidth  = window.innerWidth;
+      const windowHeight = window.innerHeight;
 
-    // Option A: Hide main content until loader finishes
-    mainContent.style.display = 'none';
+      // Scale down if the browser is smaller, but never scale above 1
+      const scaleX = windowWidth  / designWidth;
+      const scaleY = windowHeight / designHeight;
+      const scale  = Math.min(scaleX, scaleY);
 
-    // Option B: Listen for the animation end, then hide the preloader
-    const bWrapper = document.querySelector('.b-wrapper');
-    bWrapper.addEventListener('animationend', () => {
-      // Fade out the entire overlay
-      preloader.classList.add('fade-out');
-    });
+      // Center the container
+      container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
 
-    // Once the overlay is faded out, remove it from the DOM and show main content
-    preloader.addEventListener('transitionend', () => {
-      preloader.style.display = 'none';
-      mainContent.style.display = 'block';
-    });
-  });    
+    // Re-scale on load and when resizing the browser
+    window.addEventListener('resize', scaleContent);
+    window.addEventListener('DOMContentLoaded', scaleContent);
+
+    /* 2) Your existing code that hides the preloader */
+    document.addEventListener('DOMContentLoaded', () => {
+      const preloader = document.querySelector('.preloader');
+      const mainContent = document.querySelector('.main-container');
+
+      // Option A: Hide main content until loader finishes
+      mainContent.style.display = 'none';
+
+      // Option B: Listen for the animation end, then hide the preloader
+      const bWrapper = document.querySelector('.b-wrapper');
+      bWrapper.addEventListener('animationend', () => {
+        // Fade out the entire overlay
+        preloader.classList.add('fade-out');
+      });
+
+      // Once the overlay is faded out, remove it from the DOM and show main content
+      preloader.addEventListener('transitionend', () => {
+        preloader.style.display = 'none';
+        mainContent.style.display = 'block';
+      });
+    });  
     async function refreshData() {
       try {
         const response = await fetch('/api/data'); // Call the API endpoint
@@ -115,68 +143,79 @@
 
           // Time (or "Annulé")
           let timeStr = '';
-          if (bus.arrival_time === 'Indisponible (Route annulée)') {
-            timeStr = 'Annulé';
-          } else {
+          let showSignal = false;
+          if (typeof bus.arrival_time === 'number') {
             timeStr = `${bus.arrival_time} min`;
+            showSignal = true;
+          } else {
+            timeStr = (bus.arrival_time === 'Indisponible (Route annulée)')
+              ? 'Annulé'
+              : bus.arrival_time;
           }
 
           busDiv.innerHTML = `
-            <!-- Column 1: Route Button -->
-            <div class="bus-col-route">
-              <div class="buttonBlueBuses">
-                <span class="frame-2">${bus.route_id}</span>
-              </div>
-            </div>
+          <!-- Column 1: Route Button -->
+          <div class="bus-col-route">
+          <div class="buttonBlueBuses ${bus.route_id === '171' ? 'buttonPinkOverride' : ''}">
+            <span class="frame-2">${bus.route_id}</span>
+          </div>
+          </div>
 
-            <!-- Column 2: Direction + Location -->
-            <div class="bus-col-info">
-              <span class="direction">
-                <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
-                ${bus.direction}
-              </span>
-              <span class="location">${bus.location}</span>
-            </div>
+          <!-- Column 2: Direction + Location -->
+          <div class="bus-col-info">
+            <span class="direction">
+              <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+              ${bus.direction}
+            </span>
+            <span class="location">${bus.location}</span>
+          </div>
 
-            <!-- Column 3: Status line (delay text, time, icons) -->
-            <div class="bus-col-status">
+          <!-- Column 3: Status line -->
+          <div class="bus-col-status">
             <div class="status-line">
-                <!-- 1) Delayed/Early Text Cell -->
-                <div class="delay-cell">
-                ${delayedText}${earlyText}
-                </div>
 
-                <!-- 2) Time Cell -->
-                <div class="time-cell">
+              <!-- Delayed/Early text -->
+              <div class="delay-cell">
+                ${bus.delayed_text ? `<span class="delayed-text">${bus.delayed_text}</span>` : ''}
+                ${bus.early_text   ? `<span class="early-text">${bus.early_text}</span>`   : ''}
+              </div>
+
+              <!-- Time Cell -->
+              <div class="time-cell">
                 <span class="time-remaining">${timeStr}</span>
-                <img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />
-                </div>
-
-                <!-- 3) Occupancy Cell (always 4 icons or placeholders) -->
-                <div class="occupancy-cell">
-                ${occupancyIcons}
-                </div>
-
-                <!-- 4) Wheelchair Cell (real icon or invisible placeholder) -->
-                <div class="wheelchair-cell">
                 ${
-                    bus.wheelchair_accessible
+                  showSignal
+                    ? `<img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />`
+                    : ''
+                }
+              </div>
+
+              <!-- Occupancy Cell -->
+              <div class="occupancy-cell">
+                ${occupancyIcons}
+              </div>
+
+              <!-- Wheelchair Cell -->
+              <div class="wheelchair-cell">
+                ${
+                  bus.wheelchair_accessible
                     ? `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`
                     : `<img src="/static/assets/icons/invisible.png" class="wheelchair" alt="">`
                 }
-                </div>
+              </div>
 
-                <!-- 5) Bus Cell (real icon or invisible placeholder) -->
-                <div class="bus-cell">
+              <!-- Bus Cell (at_stop) -->
+              <div class="bus-cell">
                 ${
-                    bus.at_stop
+                  bus.at_stop
                     ? `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`
                     : `<img src="/static/assets/icons/invisible.png" class="blinking-bus" alt="">`
                 }
-                </div>
+              </div>
+
             </div>
-            </div>
-          `;
+          </div>
+        `;
           frameContainer.appendChild(busDiv);
         });
 
@@ -407,7 +446,7 @@ data.next_trains.forEach((train) => {
     </div>
   </div>
   <div class="logo-container">
-    <img src="/static/assets/images/B.png" alt="Transport Logos">
+    <!-- <img src="/static/assets/images/B.png" alt="Transport Logos"> -->
   </div>
 
   <div id="alertContainer" class="alert-banner" style="display: none;">

@@ -356,20 +356,23 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
                 # If we have a scheduled arrival
                 scheduled_arrival_str = stm_stop_times.get((trip_id, stop_id))
                 delay_text = None
+                early_text = None
                 if scheduled_arrival_str:
                     try:
                         h, m, s = map(int, scheduled_arrival_str.split(":"))
-                        if h >= 24:
-                            # handle hours beyond 24 by mod 24
-                            h = h % 24
-                        sched_ts = datetime.now().replace(hour=h, minute=m, second=s, microsecond=0).timestamp()
-                        diff_min = (arrival_unix - sched_ts) // 60
+                        # Handle hours beyond 24 by using modulo arithmetic:
+                        sched_dt = datetime.now().replace(hour=h % 24, minute=m, second=s, microsecond=0)
+                        # If the scheduled time is already past, assume it's tomorrow.
+                        if sched_dt < datetime.now():
+                            sched_dt += timedelta(days=1)
+                        diff_min = (arrival_unix - sched_dt.timestamp()) // 60
                         if diff_min > 0:
-                            delay_text = f"En retard (prévu à {h:02d}:{m:02d})"
+                            delay_text = f"En retard (prévu à {sched_dt.strftime('%I:%M %p')})"
                         elif diff_min < 0:
-                            delay_text = f"En avance (prévu à {h:02d}:{m:02d})"
-                    except:
+                            early_text = f"En avance (prévu à {sched_dt.strftime('%I:%M %p')})"
+                    except Exception as e:
                         pass
+
 
                 # occupancy
                 pos_info = positions_dict.get((route_id, trip_id), {})
@@ -391,7 +394,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
                     "direction": direction_str,
                     "location": location_str,
                     "delayed_text": delay_text,
-                    "early_text": None,
+                    "early_text": early_text, 
                     "at_stop": at_stop_flag,
                     "wheelchair_accessible": wheelchair_accessible
                 }

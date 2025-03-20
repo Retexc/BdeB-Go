@@ -278,13 +278,13 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
                 exo_occupancy_status = vehicle.get("occupancy", "Unknown")
                 break
 
-        # Build delayed/early text
+        # Build delayed/early text using the original scheduled time
         delayed_text = None
         early_text = None
         if actual_delay > 0:
-            delayed_text = f"En retard (+{actual_delay}min)"
+            delayed_text = f"En retard (prévu à {original_arrival_time})"
         elif actual_delay < 0:
-            early_text = f"En avance ({abs(actual_delay)}min)"
+            early_text = f"En avance (prévu à {original_arrival_time})"
 
         # Decide "at_stop" if minutes_remaining < 2
         at_stop_flag = (minutes_remaining < 2)

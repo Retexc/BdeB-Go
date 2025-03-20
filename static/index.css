@@ -9,71 +9,90 @@ html, body {
   font-family: "Atlas Grotesk", sans-serif;
 }
 
-
-
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
 /* ========== MAIN CONTAINER ========== */
+    /* The scaling container is your 1920×1080 "canvas" */
+.scaling-container {
+  width: 1920px;
+  height: 1080px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #080913; 
+  overflow: hidden;    
+}
+
+.scaling-container::before {
+content: "";
+position: absolute;
+inset: 0;  /* top:0; right:0; bottom:0; left:0; */
+z-index: 0;
+background: url('/static/assets/images/Printemps - Banner Big.png') center center no-repeat; /* Active from 2025-03-19 to 2025-06-12 */
+background-size: cover;
+/* This is where you control the image’s transparency: */
+opacity: 0.2; 
+}  
+
 .main-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  padding: 20px;
+  gap: 15px; 
+  padding: 10px; 
 }
 
 .time {
-  display: block;           
-  width: 1920px;            
-  margin: 0 auto 10px auto; 
-  text-align: left;
+  display: block;
+  width: 1920px;
+  margin: 0 auto 10px auto;
+  text-align: right;
   color: #fff;
-  font-size: 40px;
+  font-size: 32px; 
   font-weight: 900;
+  margin-top: 15px;
+  padding-right: 40px;
 }
-
 
 /* ========== STM & EXO FRAMES ========== */
 .frame, .train-frame {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 50px; /* spacing between rows */
-  position: relative; 
-  width: 1920px; /* adjust to your liking */
-  margin: 0 auto; /* center horizontally */
+  gap: 20px; 
+  position: relative;
+  width: 1920px;
+  margin: 0 auto;
 }
 
 .frame {
-  margin-top: 165px; /* pushes the STM frame (and logo) further down */
+  margin-top: 80px; 
 }
 
 .train-frame {
-  margin-top: 100px; /* pushes the Exo frame (and logo) further down */
+  margin-top: 20px; 
 }
 
-
+/* ========== LOGO CONTAINERS ========== */
 .stm-logo-container {
   position: absolute;
-  top: -125px; /* shift logo upward if needed */
+  top: -60px; 
   left: 0;
   z-index: 1000;
-  
 }
 
 .exo-logo-container {
-  position: static; /* or 'relative' */
-  margin-bottom: 20px; /* add spacing if needed */
-  top: -50px; /* override top from .exo-logo-container */
-  left: auto; /* override left from .exo-logo-container */
+  position: static;
+  margin-bottom: 10px;
+  top: 0; 
+  left: auto;
 }
-
 
 .stm-logo,
 .exo-logo {
-  width: 136px;
+  width: 100px; 
   height: auto;
 }
 
@@ -82,105 +101,79 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 15px;
+  gap: 10px; 
   width: 100%;
-  padding-bottom: 10px;
+  padding-bottom: 5px; 
   border-bottom: 1px solid #444;
 }
 
-/* Remove bottom border on last child if you like: */
 .frame-1:last-child {
   border-bottom: none;
 }
 
-/* If canceled, fade out */
 .canceled {
   opacity: 0.5;
 }
 
 /* ========== COLUMNS ========== */
 .bus-col-route {
-  flex: 0 0 auto; /* route button fixed size */
+  flex: 0 0 auto;
 }
 
 .bus-col-info {
-  flex: 1; /* expand the direction/location column */
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-/*
-  We'll keep .bus-col-status as a container,
-  but we won't rely on it for alignment—our grid does that.
-*/
 .bus-col-status {
   flex: 0 0 auto;
-  /* If you want a specific width on the status column, do so:
-     flex: 0 0 600px; or something similar. */
 }
 
 .train-status-line {
   display: grid;
-  grid-template-columns: 250px 140px 130px 45px 25px;
+  grid-template-columns: 285px 140px 128px 24px 95px;
   align-items: center;
-  gap: 20px;
+  gap: 15px; /* reduced gap */
 }
 
-
 .train-col-route {
-  flex: 0 0 auto; /* route button fixed size */
+  flex: 0 0 auto;
 }
 
 .train-col-info {
-  flex: 1; /* expand the direction/location column */
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-/*
-  We'll keep .bus-col-status as a container,
-  but we won't rely on it for alignment—our grid does that.
-*/
 .train-col-status {
   flex: 0 0 auto;
-  /* If you want a specific width on the status column, do so:
-     flex: 0 0 600px; or something similar. */
 }
 
 /* ========== GRID LAYOUT FOR THE STATUS LINE ========== */
 .status-line {
   display: grid;
-  /* 5 columns:
-     1) Delayed/Early text
-     2) Time
-     3) Occupancy icons
-     4) Wheelchair
-     5) Bus icon
-  */
-  grid-template-columns: 250px 140px 130px 45px 25px;
+  grid-template-columns: 285px 140px 130px 45px 45px;
   align-items: center;
-  gap:20px;
+  gap: 10px; /* reduced gap */
+  margin-right: 35px;
 }
 
-/* Optional: style each cell if desired */
-.delay-cell {
-  /* e.g., text-align: left; or color adjustments */
-}
 
 .time-cell {
   display: flex;
-  align-items: center;    /* vertical center */
+  align-items: center;
   justify-content: center;
-  gap: 5px;               /* space between text & icon */
-  white-space: nowrap;    /* prevent line breaks */
+  gap: 5px;
+  white-space: nowrap;
 }
-
 
 .occupancy-cell {
   display: flex;
-  gap: 4px; /* space between the occupant icons */
+  gap: 3px; /* reduced gap */
 }
 
 .wheelchair-cell,
@@ -191,41 +184,45 @@ html, body {
 
 /* ========== ROUTE BUTTONS ========== */
 .buttonBlueBuses {
-  width: 100px;
-  padding: 10px;
+  width: 80px;    
+  padding: 8px;   
   background: #469BDA;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 70px;
+  height: 50px;   
+}
+
+.buttonBlueBuses.buttonPinkOverride {
+  background-color: #f64cff !important;
 }
 
 .buttonSJ {
-  width: 100px;
-  padding: 10px;
+  width: 80px;
+  padding: 8px;
   background: #EBC977;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 70px;
+  height: 50px;
 }
 
 .buttonMA {
-  width: 100px;
-  padding: 10px;
+  width: 80px;
+  padding: 8px;
   background: #F74E8F;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 70px;
+  height: 50px;
 }
 
 .defaultButton {
-  width: 100px;
-  padding: 10px;
+  width: 80px;
+  padding: 8px;
   background: #cccccc;
   border-radius: 12px;
   display: flex;
@@ -236,60 +233,60 @@ html, body {
 /* ========== TEXT STYLES ========== */
 .frame-2 {
   color: #fff;
-  font-size: 28px;
+  font-size: 24px; 
   font-weight: 900;
 }
 
 .frame-2-black {
   color: #000;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 900;
 }
 
 .direction {
   color: #fff;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 900;
 }
 
 .location {
   color: #fff;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 500;
 }
 
 .delayed-text {
   color: red;
-  font-size: 20px;
+  font-size: 18px; 
   font-weight: 500;
   white-space: nowrap;
 }
 
 .early-text {
   color: #3a85cc;
-  font-size: 20px;
+  font-size: 18px;
   white-space: nowrap;
-  margin-left: 5px;
+  font-weight: 500;
 }
 
 .no-service-text {
   color: #ff4444;
   font-weight: bold;
-  font-size: 20px;
+  font-size: 18px;
   white-space: nowrap;
 }
 
 .time-remaining {
   color: #3dc341;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 500;
   white-space: nowrap;
 }
 
 /* ========== ICONS ========== */
 .direction-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px; 
+  height: 24px;
   vertical-align: middle;
   margin-right: 5px;
 }
@@ -298,29 +295,26 @@ html, body {
 .wheelchair,
 .blinking-bus,
 .blinking-train {
-  width: 30px;
-  height: 30px;
+  width: 24px; 
+  height: 24px;
   object-fit: contain;
   vertical-align: middle;
 }
 
-/* Just an example margin; adjust as needed */
 .wheelchair,
 .blinking-bus,
 .blinking-train {
-  margin-left: 5px;
+  margin-left: 3px;
 }
 
 .blinking-signal {
-  width: 30px;       /* match your other icon sizes */
-  height: 30px;
-  margin-left: 2px;  /* small gap from the time text */
-  margin-bottom: 30px;
+  width: 24px;       
+  height: 24px;
+  margin-left: -8px;
+  margin-bottom: 28px;
   animation: blink-animation 1s steps(5, start) infinite;
 }
 
-
-/* Optional blinking animation for bus/train at stop */
 @keyframes blink-animation {
   50% { opacity: 0; }
 }
@@ -335,7 +329,8 @@ html, body {
 .alert-banner {
   position: fixed;
   bottom: 0;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   background: #0052cc;
   color: #fff;
   font-size: 25px;
@@ -365,33 +360,32 @@ html, body {
 
 /* ========== FOOTER, LOGO, ETC. ========== */
 .footer-text {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 900;
   color: #ffffff;
-  margin-top: 20px;
+  margin-top: 20px; 
   margin-left: auto;
   margin-right: auto;
   width: 1920px;
-       /* centers it horizontally */
-  text-align: left;   
+  text-align: left;
 }
 
 .logo-container {
-  position: fixed;
-  bottom: 0; left: 0;
+  bottom: 0;
+  left: 0;
   z-index: 100;
 }
 
 .logo-container img {
-  width: 354px;
+  width: 250px; 
   height: auto;
   opacity: 0.8;
 }
 
-/* ========== MEDIA QUERIES (EXAMPLE) ========== */
+/* ========== MEDIA QUERIES ========== */
 @media (max-width: 768px) {
   .frame, .train-frame {
-    width: 95%; /* narrower screens */
+    width: 95%;
   }
   .time {
     font-size: 30px;
@@ -407,96 +401,86 @@ html, body {
   }
 }
 
-/* =======================
-   1) PRELOADER OVERLAY
-   ======================= */
-   .preloader {
-    position: fixed;
-    inset: 0;  /* top:0; right:0; bottom:0; left:0; */
-    z-index: 9999;
-    /* The "background" color for the screen while the B is in the middle.
-       For example, a brand color or plain white. */
-    background: #4d6ba6; 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    /* Start fully opaque */
-    opacity: 1;
-    transition: opacity 0.5s ease;
-  }
-  
-  .preloader.fade-out {
-    /* Fades out the overlay after the scale animation finishes */
-    opacity: 0;
-    pointer-events: none;
-  }
-  
-  /* The container for your B so we can scale it */
-  .b-wrapper {
-    animation: bExpand 2s forwards ease-in-out;
-  }
-  
-  /* The B icon itself can be sized in CSS if needed */
-  .b-logo {
-    width: 100px; /* or 150px, adjust as needed */
-    height: auto;
-  }
-  
-  /* Keyframes to scale the B from normal size to very large */
-  @keyframes bExpand {
-    /* For first 50% of the time (i.e., 1.5s of a 3s animation), stay at scale(1). */
-    0% {
-      opacity: 0;
-      transform: scale(3);
-    }
-    /* Fade in by 20% of the timeline */
-    20% {
-      opacity: 1;
-      transform: scale(3);
-    }
-    /* Stay fully visible & unscaled until 50% */
-    100% {
-      opacity: 1;
-      transform: scale(60);
-    }
-    /* Scale up from 50% to 100% while staying fully visible */
-  }
+/* ========== PRELOADER OVERLAY ========== */
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #4d6ba6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
 
-  .bike-wheelchair-container {
-    position: relative;
-    width: 30px;  /* adjust to your icon size */
-    height: 30px;
+.preloader.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.b-wrapper {
+  animation: bExpand 2s forwards ease-in-out;
+}
+
+.b-logo {
+  width: 100px;
+  height: auto;
+}
+
+@keyframes bExpand {
+  0% {
+    opacity: 0;
+    transform: scale(3);
   }
-  
-  .anim-bike, .anim-wheelchair {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+  20% {
+    opacity: 1;
+    transform: scale(3);
   }
-  
-  /* Animate only the train-specific icons */
-  .anim-bike {
-    animation: bikeFade 3s infinite;
+  100% {
+    opacity: 1;
+    transform: scale(60);
   }
-  
-  .anim-wheelchair {
-    animation: wheelchairFade 3s infinite;
-  }
-  
-  @keyframes bikeFade {
-    0%   { opacity: 1; }
-    50%  { opacity: 0; }
-    100% { opacity: 1; }
-  }
-  
-  @keyframes wheelchairFade {
-    0%   { opacity: 0; }
-    50%  { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  
-  
+}
+
+.bike-wheelchair-container {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.anim-bike, .anim-wheelchair {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.anim-bike {
+  animation: bikeFade 3s infinite;
+}
+
+.anim-wheelchair {
+  animation: wheelchairFade 3s infinite;
+}
+
+@keyframes bikeFade {
+  0%   { opacity: 1; }
+  50%  { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes wheelchairFade {
+  0%   { opacity: 0; }
+  50%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* MULTISLOT:
+SLOT1: ./static/assets/images/Printemps - Banner Big.png from 2025-03-19 to 2025-03-19
+SLOT2: ./static/assets/images/265.jpg from 2026-03-05 to 2026-09-03
+SLOT3: ./static/assets/images/pexels-timmossholder-3359733.jpg from 2025-09-01 to 2025-12-01
+SLOT4: ./static/assets/images/Winter Banner.png from 2025-12-21 to 2026-03-18 */

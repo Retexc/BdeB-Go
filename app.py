@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, jsonify
 import time
 import os, json
 from datetime import datetime
+import re
 
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -50,6 +51,51 @@ def debug_occupancy():
     return "Check your console logs for occupancy info!"
 
 # ====================================================================
+# Load background image from Background Manager
+# ====================================================================        
+def get_active_background(css_path):
+    """
+    Reads the MULTISLOT block from the CSS file and returns the URL (string)
+    of the slot whose date range includes today's date.
+    Returns None if no slot is active.
+    """
+    if not os.path.isfile(css_path):
+        return None
+
+    with open(css_path, "r", encoding="utf-8") as f:
+        css_content = f.read()
+
+    # Look for a block starting with "/* MULTISLOT:" and ending with "*/"
+    pattern_block = re.compile(r"/\*\s*MULTISLOT:\s*(.*?)\*/", re.IGNORECASE | re.DOTALL)
+    match = pattern_block.search(css_content)
+    if not match:
+        return None
+
+    block_text = match.group(1).strip()
+    today = datetime.today().date()
+    active_bg = None
+
+    # Each line should be like:
+    # SLOT1: /static/assets/images/Printemps - Banner Big.png from 2025-03-19 to 2025-06-12
+    for line in block_text.splitlines():
+        line = line.strip()
+        m = re.match(r"SLOT\d+:\s+(.*?)\s+from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})", line, re.IGNORECASE)
+        if m:
+            bg_url = m.group(1).strip()
+            start_str = m.group(2).strip()
+            end_str = m.group(3).strip()
+            try:
+                start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if start_date <= today <= end_date:
+                active_bg = bg_url
+                break
+
+    return active_bg      
+
+# ====================================================================
 # ROUTE: Home Page
 # ====================================================================
 @app.route("/")
@@ -65,10 +111,12 @@ def index():
     )
     
     current_time = time.strftime("%I:%M:%S %p")
+    active_bg = get_active_background("./static/index.css")
     return render_template(
         "index.html",
         next_trains=exo_trains,
-        current_time=current_time
+        current_time=current_time,
+        active_bg=active_bg
     )
 
 # ====================================================================
@@ -199,6 +247,7 @@ def api_messages():
             return jsonify({"status": "success"}), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+  
 
 if __name__ == "__main__":
     app.run(debug=True)
