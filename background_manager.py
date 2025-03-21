@@ -4,6 +4,7 @@ from tkcalendar import DateEntry  # pip install tkcalendar
 import datetime
 import re
 import os
+import json
 import shutil
 from PIL import Image, ImageTk  # pip install pillow
 import zipfile
@@ -12,6 +13,27 @@ from tkinter import ttk
 # Paths for CSS and static images (used by the background manager)
 CSS_FILE_PATH = "./static/index.css"
 STATIC_IMAGES_DIR = "./static/assets/images"
+UPDATE_INFO_FILE = "./gtfs_update_info.json"
+
+def load_gtfs_update_info():
+    """Load the last update times from a JSON file."""
+    if os.path.exists(UPDATE_INFO_FILE):
+        try:
+            with open(UPDATE_INFO_FILE, "r", encoding="utf-8") as f:
+                info = json.load(f)
+            return info
+        except Exception as e:
+            print("Erreur lors du chargement des infos de mise à jour :", e)
+    # Return default info if file doesn't exist or error occurs
+    return {"stm": None, "exo": None}
+
+def save_gtfs_update_info(info):
+    """Save the update times dictionary to a JSON file."""
+    try:
+        with open(UPDATE_INFO_FILE, "w", encoding="utf-8") as f:
+            json.dump(info, f, indent=2)
+    except Exception as e:
+        print("Erreur lors de l'enregistrement des infos de mise à jour :", e)
 
 #############################################
 # Existing functions for Background Manager #
@@ -203,6 +225,8 @@ import webbrowser
 class GTFSManagerApp:
     def __init__(self, parent):
         self.parent = parent
+        # Load previously saved update info and store it
+        self.update_info = load_gtfs_update_info()
         self.build_ui()
 
     def build_ui(self):
@@ -210,54 +234,38 @@ class GTFSManagerApp:
             "Veuillez mettre à jour les fichiers GTFS lorsque cela est nécessaire.\n\n"
             "Les fichiers GTFS contiennent les horaires et les informations des autobus et des trains Exo. "
             "Il est nécessaire de les mettre à jour régulièrement.\n\n"
-            "Vous pouvez utiliser les dates disponibles sur le site de la STM comme référence "
-            "pour mettre à jour les fichiers.\n\n"
-            "Après avoir téléchargé les fichiers compressés (ZIP), sélectionnez-les ci-dessous afin de "
-            "les décompresser et de mettre à jour l'application."
+            "Vous pouvez utiliser les dates disponibles sur le site de la STM comme référence pour mettre à jour les fichiers.\n\n"
+            "Pour télécharger les dernières versions des données GTFS, veuillez consulter les pages officielles suivantes :"
         )
         tk.Label(self.parent, text=message, font=("Helvetica", 14), justify="left", wraplength=600).pack(pady=10)
 
-        # Example: "Pour télécharger..." heading
-        tk.Label(
-            self.parent,
-            text="Pour télécharger les dernières versions des données GTFS, veuillez consulter :",
-            font=("Helvetica", 12),
-            justify="left",
-            wraplength=600
-        ).pack(pady=(0, 10))
-
-        # 1) STM clickable link with an icon
+        # STM clickable link with icon (image shown under the text)
         stm_url = "https://www.stm.info/fr/a-propos/developpeurs"
-        stm_icon_path = "./static/assets/images/STM_Web.png"  # Replace with your actual image path
+        stm_icon_path = "./static/assets/images/STM_Web.png"  # adjust path as needed
         stm_icon = Image.open(stm_icon_path)
-        stm_icon = stm_icon.resize((662, 315), Image.Resampling.LANCZOS)  # optional resizing
+        stm_icon = stm_icon.resize((662, 315), Image.Resampling.LANCZOS)
         stm_icon_photo = ImageTk.PhotoImage(stm_icon)
-
         stm_label = tk.Label(
             self.parent,
             text=f"STM : {stm_url}",
             image=stm_icon_photo,
-            compound="bottom",      # text to the right of the image
+            compound="bottom",
             fg="blue",
             cursor="hand2",
             font=("Helvetica", 12, "underline"),
-            justify="left",
+            justify="center",
             wraplength=600
         )
-        stm_label.image = stm_icon_photo  # keep a reference so it’s not garbage-collected
+        stm_label.image = stm_icon_photo
         stm_label.pack(pady=2)
+        stm_label.bind("<Button-1>", lambda event: webbrowser.open_new_tab(stm_url))
 
-        def open_stm(event):
-            webbrowser.open_new_tab(stm_url)
-        stm_label.bind("<Button-1>", open_stm)
-
-        # 2) EXO clickable link with an icon
+        # EXO clickable link with icon (image shown under the text)
         exo_url = "https://exo.quebec/fr/a-propos/donnees-ouvertes"
-        exo_icon_path = "./static/assets/images/Exo_Web.png"   # Replace with your actual image path
+        exo_icon_path = "./static/assets/images/Exo_Web.png"  # adjust path as needed
         exo_icon = Image.open(exo_icon_path)
         exo_icon = exo_icon.resize((917, 51), Image.Resampling.LANCZOS)
         exo_icon_photo = ImageTk.PhotoImage(exo_icon)
-
         exo_label = tk.Label(
             self.parent,
             text=f"EXO : {exo_url}",
@@ -266,17 +274,14 @@ class GTFSManagerApp:
             fg="blue",
             cursor="hand2",
             font=("Helvetica", 12, "underline"),
-            justify="left",
+            justify="center",
             wraplength=600
         )
         exo_label.image = exo_icon_photo
         exo_label.pack(pady=2)
+        exo_label.bind("<Button-1>", lambda event: webbrowser.open_new_tab(exo_url))
 
-        def open_exo(event):
-            webbrowser.open_new_tab(exo_url)
-        exo_label.bind("<Button-1>", open_exo)
-
-        # The rest of your UI for selecting STM/EXO ZIP and updating...
+        # GTFS file selection UI
         self.stm_var = tk.StringVar()
         self.exo_var = tk.StringVar()
 
@@ -285,12 +290,20 @@ class GTFSManagerApp:
         tk.Label(stm_frame, text="Fichier GTFS (ZIP):").grid(row=0, column=0, padx=5, pady=5, sticky="e")
         tk.Entry(stm_frame, textvariable=self.stm_var, width=40).grid(row=0, column=1, padx=5, pady=5)
         tk.Button(stm_frame, text="Browse...", command=self.browse_stm).grid(row=0, column=2, padx=5, pady=5)
+        # Dernière mise à jour label for STM
+        stm_update = self.update_info.get("stm") or "N/A"
+        self.stm_update_label = tk.Label(stm_frame, text="Dernière mise à jour : " + stm_update, font=("Helvetica", 10))
+        self.stm_update_label.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
         exo_frame = tk.LabelFrame(self.parent, text="GTFS EXO")
         exo_frame.pack(padx=10, pady=10, fill="x")
         tk.Label(exo_frame, text="Fichier GTFS (ZIP):").grid(row=0, column=0, padx=5, pady=5, sticky="e")
         tk.Entry(exo_frame, textvariable=self.exo_var, width=40).grid(row=0, column=1, padx=5, pady=5)
         tk.Button(exo_frame, text="Browse...", command=self.browse_exo).grid(row=0, column=2, padx=5, pady=5)
+        # Dernière mise à jour label for EXO
+        exo_update = self.update_info.get("exo") or "N/A"
+        self.exo_update_label = tk.Label(exo_frame, text="Dernière mise à jour : " + exo_update, font=("Helvetica", 10))
+        self.exo_update_label.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
         tk.Button(self.parent, text="Update GTFS", command=self.update_gtfs).pack(pady=10)
 
@@ -314,30 +327,44 @@ class GTFSManagerApp:
         stm_zip = self.stm_var.get().strip()
         exo_zip = self.exo_var.get().strip()
         errors = []
+        updated_stm = False
+        updated_exo = False
+
         if stm_zip:
             try:
-                import zipfile
                 with zipfile.ZipFile(stm_zip, "r") as zip_ref:
                     target_dir = "./STM"
                     zip_ref.extractall(target_dir)
+                updated_stm = True
             except Exception as e:
                 errors.append(f"STM: {e}")
-        else:
-            errors.append("Aucun fichier STM sélectionné")
+
         if exo_zip:
             try:
-                import zipfile
                 with zipfile.ZipFile(exo_zip, "r") as zip_ref:
                     target_dir = "./Exo/Train"
                     zip_ref.extractall(target_dir)
+                updated_exo = True
             except Exception as e:
                 errors.append(f"EXO: {e}")
-        else:
-            errors.append("Aucun fichier EXO sélectionné")
+
+        if not stm_zip and not exo_zip:
+            messagebox.showerror("Error", "Aucun fichier STM ou EXO sélectionné")
+            return
+
         if errors:
             messagebox.showerror("Error", "\n".join(errors))
         else:
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if updated_stm:
+                self.stm_update_label.config(text="Dernière mise à jour : " + now_str)
+                self.update_info["stm"] = now_str
+            if updated_exo:
+                self.exo_update_label.config(text="Dernière mise à jour : " + now_str)
+                self.update_info["exo"] = now_str
+            save_gtfs_update_info(self.update_info)
             messagebox.showinfo("Success", "Les fichiers GTFS ont été mis à jour avec succès!")
+
 
 
 #############################################

@@ -78,15 +78,15 @@ opacity: 0.2;
 /* ========== LOGO CONTAINERS ========== */
 .stm-logo-container {
   position: absolute;
-  top: -60px; 
+  top: -70px; 
   left: 0;
   z-index: 1000;
 }
 
 .exo-logo-container {
-  position: static;
+  position: relative;
   margin-bottom: 10px;
-  top: 0; 
+  top: 10px; 
   left: auto;
 }
 
@@ -94,6 +94,7 @@ opacity: 0.2;
 .exo-logo {
   width: 100px; 
   height: auto;
+  margin-left: 30px;
 }
 
 /* ========== BUS/TRAIN ROWS ========== */
@@ -125,6 +126,10 @@ opacity: 0.2;
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.bus-col-info, .train-col-info, .train-col-route, .bus-col-route {
+  margin-left: 30px; /* adjust the value as needed */
 }
 
 .bus-col-status {
@@ -364,7 +369,7 @@ opacity: 0.2;
   font-weight: 900;
   color: #ffffff;
   margin-top: 20px; 
-  margin-left: auto;
+  margin-left: 30px;
   margin-right: auto;
   width: 1920px;
   text-align: left;

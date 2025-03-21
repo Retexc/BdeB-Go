@@ -5,6 +5,7 @@ import time
 import os, json
 from datetime import datetime
 import re
+from waitress import serve
 
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -250,4 +251,4 @@ def api_messages():
   
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    serve(app, host="0.0.0.0", port=5000)
