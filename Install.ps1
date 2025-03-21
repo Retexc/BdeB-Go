@@ -1,7 +1,7 @@
-# Define project directory
+# Set project installation path
 $installPath = "$env:ProgramFiles\BdeB-GTFS"
 
-# 1️⃣ Ensure the target directory exists
+# 1️⃣ Create install directory if needed
 if (!(Test-Path $installPath)) {
     New-Item -Path $installPath -ItemType Directory -Force
 }
@@ -13,7 +13,7 @@ if (-Not (Get-Command python -ErrorAction SilentlyContinue)) {
     Start-Process -FilePath "$env:TEMP\python-installer.exe" -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
 }
 
-# 3️⃣ Clone or update GitHub repository
+# 3️⃣ Clone or update the project from GitHub
 if (!(Test-Path "$installPath\.git")) {
     Write-Output "Cloning repository..."
     git clone https://github.com/Retexc/BdeB-GTFS.git $installPath
@@ -23,21 +23,23 @@ if (!(Test-Path "$installPath\.git")) {
     git pull
 }
 
-# 4️⃣ Install dependencies
+# 4️⃣ Install Python dependencies manually (no requirements.txt)
 Write-Output "Installing Python dependencies..."
 Set-Location -Path $installPath
+
+# Upgrade pip
 python -m pip install --upgrade pip
-# Define the dependencies directly in the script
+
+# List of dependencies
 $dependencies = @(
     "flask",
     "tkcalendar",
     "pillow",
     "requests",
-    "google-transit",
-    "protobuf"
+    "protobuf",
+    "gtfs-realtime-bindings"
 )
 
-# Install each dependency one by one
 foreach ($package in $dependencies) {
     Write-Output "Installing $package..."
     python -m pip install --no-cache-dir $package
@@ -46,9 +48,9 @@ foreach ($package in $dependencies) {
         exit 1
     }
 }
-Write-Output "✅ All dependencies installed successfully!"
+Write-Output "✅ All dependencies installed."
 
-# 5️⃣ Create Desktop Shortcut
+# 5️⃣ Create a Desktop Shortcut
 $shortcutPath = "$env:Public\Desktop\BdeB-GTFS.lnk"
 $targetPath = "C:\Windows\System32\cmd.exe"
 $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
@@ -56,4 +58,4 @@ $shortcut.TargetPath = $targetPath
 $shortcut.Arguments = "/k cd `"$installPath`" & python app.py"
 $shortcut.Save()
 
-Write-Output "Installation Complete!"
+Write-Output "✅ Installation Complete!"

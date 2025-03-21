@@ -6,9 +6,18 @@ import re
 import os
 import json
 import shutil
+import subprocess
+import requests
 from PIL import Image, ImageTk  # pip install pillow
 import zipfile
 from tkinter import ttk
+import shutil
+
+# GitHub repository for fetching the project
+GITHUB_REPO = "https://github.com/Retexc/BdeB-GTFS.git"
+INSTALL_DIR = os.path.join(os.path.expanduser("~"), "BdeB-GTFS")
+PYTHON_EXEC = os.path.join(INSTALL_DIR, "python", "python.exe")
+APP_SCRIPT = os.path.join(INSTALL_DIR, "app.py")
 
 # Paths for CSS and static images (used by the background manager)
 CSS_FILE_PATH = "./static/index.css"
@@ -34,6 +43,132 @@ def save_gtfs_update_info(info):
             json.dump(info, f, indent=2)
     except Exception as e:
         print("Erreur lors de l'enregistrement des infos de mise à jour :", e)
+
+# ========================== MAIN TAB (Launcher) ==========================
+class MainTab:
+    def __init__(self, parent):
+        self.parent = parent
+        self.build_ui()
+
+    def build_ui(self):
+        frame = tk.Frame(self.parent)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        tk.Label(frame, text="BdeB-GTFS Launcher", font=("Helvetica", 16, "bold")).pack(pady=5)
+
+        self.status_label = tk.Label(frame, text="Status: Checking...", font=("Helvetica", 12))
+        self.status_label.pack(pady=5)
+
+        self.install_button = tk.Button(frame, text="Install / Update Project", command=self.install_or_update)
+        self.install_button.pack(pady=5)
+
+        self.start_button = tk.Button(frame, text="Start Application", command=self.start_app, state="disabled")
+        self.start_button.pack(pady=5)
+
+        self.stop_button = tk.Button(frame, text="Stop Application", command=self.stop_app, state="disabled")
+        self.stop_button.pack(pady=5)
+
+        self.check_status()
+
+    def check_status(self):
+        """Check if the application is running."""
+        try:
+            response = requests.get("http://127.0.0.1:5000")
+            if response.status_code == 200:
+                self.status_label.config(text="Status: Running", fg="green")
+                self.start_button.config(state="disabled")
+                self.stop_button.config(state="normal")
+            else:
+                self.status_label.config(text="Status: Stopped", fg="red")
+                self.start_button.config(state="normal")
+                self.stop_button.config(state="disabled")
+        except requests.exceptions.ConnectionError:
+            self.status_label.config(text="Status: Stopped", fg="red")
+            self.start_button.config(state="normal")
+            self.stop_button.config(state="disabled")
+
+        self.parent.after(5000, self.check_status)  # Refresh status every 5 seconds
+
+    def install_or_update(self):
+        """Install or update the project from GitHub, with pip fallback."""
+        def run():
+            # Step 1: Download or update the repo
+            if os.path.exists(INSTALL_DIR):
+                subprocess.run(["git", "-C", INSTALL_DIR, "pull"], shell=True)
+            else:
+                subprocess.run(["git", "clone", GITHUB_REPO, INSTALL_DIR], shell=True)
+
+            # Step 2: Check if pip is available
+            pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], shell=True)
+            if pip_check.returncode != 0:
+                # pip not available — download get-pip.py
+                try:
+                    import urllib.request
+                    url = "https://bootstrap.pypa.io/get-pip.py"
+                    local_path = os.path.join(INSTALL_DIR, "get-pip.py")
+                    urllib.request.urlretrieve(url, local_path)
+                    subprocess.run([PYTHON_EXEC, local_path], shell=True)
+                except Exception as e:
+                    messagebox.showerror("Erreur", f"Impossible d'installer pip automatiquement:\n{e}")
+                    return
+
+            # Step 3: Install dependencies
+            subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"], shell=True)
+            requirements_file = os.path.join(INSTALL_DIR, "requirements.txt")
+            if os.path.exists(requirements_file):
+                subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "-r", requirements_file], shell=True)
+
+            messagebox.showinfo("Installation terminée", "Le projet a été installé/mis à jour avec succès.")
+
+        import threading
+        threading.Thread(target=run).start()
+
+
+    def start_app(self):
+        """Start the application using Waitress, ensuring pip and waitress are installed."""
+        def run():
+            if not os.path.exists(APP_SCRIPT):
+                messagebox.showerror("Erreur", "Le fichier app.py est introuvable.")
+                return
+
+            # Step 1: Check if pip is installed
+            pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+            if pip_check.returncode != 0:
+                # pip not found – download get-pip.py
+                import urllib.request
+                get_pip_path = os.path.join(INSTALL_DIR, "get-pip.py")
+                try:
+                    urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", get_pip_path)
+                    subprocess.run([PYTHON_EXEC, get_pip_path], shell=True)
+                    os.remove(get_pip_path)
+                except Exception as e:
+                    messagebox.showerror("Erreur", f"Impossible d'installer pip : {e}")
+                    return
+
+            # Step 2: Make sure waitress is installed
+            result = subprocess.run([PYTHON_EXEC, "-m", "pip", "show", "waitress"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            if result.returncode != 0:
+                subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "waitress"], shell=True)
+
+            # Step 3: Launch the app with waitress
+            subprocess.Popen([
+                PYTHON_EXEC, "-m", "waitress", "serve",
+                "--host=127.0.0.1", "--port=5000", "app:app"
+            ], cwd=INSTALL_DIR, shell=True)
+
+            messagebox.showinfo("Lancement", "L'application est en cours d'exécution sur http://127.0.0.1:5000")
+
+        run()
+
+
+
+
+    def stop_app(self):
+        """Stop the running application."""
+        subprocess.run(["taskkill", "/IM", "python.exe", "/F"], shell=True)
+        messagebox.showinfo("Stopping", "Application has been stopped.")
+        self.check_status()        
 
 #############################################
 # Existing functions for Background Manager #
@@ -373,21 +508,26 @@ class GTFSManagerApp:
 
 def main():
     root = tk.Tk()
-    root.title("Multi-Slot Manager & GTFS Updater")
+    root.title("BdeB-GTFS Manager")
     root.iconbitmap("./static/assets/icons/icon.ico")
 
     notebook = ttk.Notebook(root)
     notebook.pack(fill="both", expand=True)
 
+    # NEW: Add the Launcher as the first tab
+    main_tab = tk.Frame(notebook)
+    notebook.add(main_tab, text="Launcher")
+    MainTab(main_tab)
+
+    # Existing Background Manager Tab
     background_tab = tk.Frame(notebook)
+    notebook.add(background_tab, text="Background Manager")
+    MultiSlotManagerApp(background_tab)
+
+    # Existing GTFS Manager Tab
     gtfs_tab = tk.Frame(notebook)
-
-    notebook.add(background_tab, text="Background")
-    notebook.add(gtfs_tab, text="GTFS")
-
-    # You can choose to wrap the background tab in a scrollable frame if needed.
-    bg_app = MultiSlotManagerApp(background_tab)
-    gtfs_app = GTFSManagerApp(gtfs_tab)
+    notebook.add(gtfs_tab, text="GTFS Manager")
+    GTFSManagerApp(gtfs_tab)
 
     root.mainloop()
 
