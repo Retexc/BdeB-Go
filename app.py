@@ -2,11 +2,12 @@
 
 from flask import Flask, render_template, request, jsonify
 import time
+import sys
 import os, json
 from datetime import datetime
 import re
 from waitress import serve
-
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
 from stm import (
@@ -35,7 +36,6 @@ from alerts import (
 )
 
 app = Flask(__name__)
-
 # ====================================================================
 # Load static GTFS data once at startup
 # ====================================================================

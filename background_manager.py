@@ -15,7 +15,7 @@ import shutil
 
 # GitHub repository for fetching the project
 GITHUB_REPO = "https://github.com/Retexc/BdeB-GTFS.git"
-INSTALL_DIR = os.path.join(os.path.expanduser("~"), "BdeB-GTFS")
+INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHON_EXEC = os.path.join(INSTALL_DIR, "python", "python.exe")
 APP_SCRIPT = os.path.join(INSTALL_DIR, "app.py")
 
@@ -134,28 +134,32 @@ class MainTab:
             # Step 1: Check if pip is installed
             pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
-            if pip_check.returncode != 0:
-                # pip not found – download get-pip.py
-                import urllib.request
-                get_pip_path = os.path.join(INSTALL_DIR, "get-pip.py")
+            pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], capture_output=True, text=True)
+            if "pip" not in pip_check.stdout:
                 try:
-                    urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", get_pip_path)
-                    subprocess.run([PYTHON_EXEC, get_pip_path], shell=True)
-                    os.remove(get_pip_path)
+                    import urllib.request
+                    url = "https://bootstrap.pypa.io/get-pip.py"
+                    local_path = os.path.join(INSTALL_DIR, "get-pip.py")
+                    urllib.request.urlretrieve(url, local_path)
+                    subprocess.run([PYTHON_EXEC, local_path], shell=True)
+                    os.remove(local_path)  # Remove installer after successful install
                 except Exception as e:
-                    messagebox.showerror("Erreur", f"Impossible d'installer pip : {e}")
+                    messagebox.showerror("Erreur", f"Impossible d'installer pip automatiquement:\n{e}")
                     return
 
             # Step 2: Make sure waitress is installed
-            result = subprocess.run([PYTHON_EXEC, "-m", "pip", "show", "waitress"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            result = subprocess.run([PYTHON_EXEC, "-c", "import waitress"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             if result.returncode != 0:
+                subprocess.run([PYTHON_EXEC, "-m", "ensurepip"], shell=True)  # Ensure pip is properly configured
+                subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"], shell=True)  # Upgrade pip
                 subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "waitress"], shell=True)
 
             # Step 3: Launch the app with waitress
             subprocess.Popen([
                 PYTHON_EXEC, "-m", "waitress", "serve",
+                "--call", 
                 "--host=127.0.0.1", "--port=5000", "app:app"
-            ], cwd=INSTALL_DIR, shell=True)
+            ], cwd=INSTALL_DIR)
 
             messagebox.showinfo("Lancement", "L'application est en cours d'exécution sur http://127.0.0.1:5000")
 
