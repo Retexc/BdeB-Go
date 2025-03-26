@@ -6,7 +6,8 @@ import sys
 import os, json
 from datetime import datetime
 import re
-from waitress import serve
+#from app import app
+#from waitress import serve
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -250,5 +251,4 @@ def api_messages():
             return jsonify({"error": str(e)}), 500
   
 
-if __name__ == "__main__":
-    serve(app, host="0.0.0.0", port=5000)
+#serve(app, host="0.0.0.0", port=5000)

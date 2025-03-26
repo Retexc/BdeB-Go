@@ -7,16 +7,22 @@ import os
 import json
 import shutil
 import subprocess
+import threading
 import requests
 from PIL import Image, ImageTk  # pip install pillow
 import zipfile
 from tkinter import ttk
 import shutil
+import sys
+from waitress import serve
+from app import app 
+
 
 # GitHub repository for fetching the project
 GITHUB_REPO = "https://github.com/Retexc/BdeB-GTFS.git"
 INSTALL_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHON_EXEC = os.path.join(INSTALL_DIR, "python", "python.exe")
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_PYTHON = os.path.join(PROJECT_DIR, "python", "python.exe")
 APP_SCRIPT = os.path.join(INSTALL_DIR, "app.py")
 
 # Paths for CSS and static images (used by the background manager)
@@ -24,6 +30,73 @@ CSS_FILE_PATH = "./static/index.css"
 STATIC_IMAGES_DIR = "./static/assets/images"
 UPDATE_INFO_FILE = "./gtfs_update_info.json"
 
+if os.path.exists(PROJECT_PYTHON):
+    PYTHON_EXEC = PROJECT_PYTHON
+else:
+    PYTHON_EXEC = sys.executable   # Python global en fallback
+print("Using Python executable:", sys.executable)
+
+print("Script path:", os.path.abspath(__file__))
+print("Current working directory:", os.getcwd())
+
+if os.path.exists(PROJECT_PYTHON):
+    print("✅ Python du projet détecté :", PROJECT_PYTHON)
+else:
+    print("❌ Python du projet introuvable !")
+
+class ServerManager:
+    def __init__(self):
+        self.server_process = None
+        self.server_running = False
+
+    def start_server(self):
+        """Start the Waitress server"""
+        if self.server_running:
+            return False
+
+        try:
+            cmd = [
+                PYTHON_EXEC,
+                "-m", "waitress",
+                "--host=127.0.0.1",
+                "--port=5000",
+                "--threads=4",
+                "app:app"
+            ]
+            
+            self.server_process = subprocess.Popen(
+                cmd,
+                cwd=INSTALL_DIR,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            )
+            self.server_running = True
+            return True
+        except Exception as e:
+            print(f"Error starting server: {str(e)}")
+            return False
+
+    def stop_server(self):
+        """Stop the Waitress server"""
+        if not self.server_running:
+            return False
+
+        try:
+            self.server_process.terminate()
+            self.server_process.wait(timeout=5)
+            self.server_running = False
+            return True
+        except Exception as e:
+            print(f"Error stopping server: {str(e)}")
+            return False
+
+    def get_status(self):
+        """Check if server is running"""
+        try:
+            response = requests.get("http://127.0.0.1:5000", timeout=2)
+            return response.status_code == 200
+        except:
+            return False
+    
 def load_gtfs_update_info():
     """Load the last update times from a JSON file."""
     if os.path.exists(UPDATE_INFO_FILE):
@@ -45,10 +118,16 @@ def save_gtfs_update_info(info):
         print("Erreur lors de l'enregistrement des infos de mise à jour :", e)
 
 # ========================== MAIN TAB (Launcher) ==========================
+# ========================== MAIN TAB (Launcher) ==========================
 class MainTab:
     def __init__(self, parent):
         self.parent = parent
+        self.server = ServerManager()
+        self.last_checked = None
+        self.update_available = False
         self.build_ui()
+        self.check_status()
+        self.check_for_updates()  # Initial check
 
     def build_ui(self):
         frame = tk.Frame(self.parent)
@@ -56,19 +135,111 @@ class MainTab:
 
         tk.Label(frame, text="BdeB-GTFS Launcher", font=("Helvetica", 16, "bold")).pack(pady=5)
 
-        self.status_label = tk.Label(frame, text="Status: Checking...", font=("Helvetica", 12))
+        # Update status frame
+        update_frame = tk.LabelFrame(frame, text="Update Status")
+        update_frame.pack(fill="x", padx=5, pady=5)
+        
+        self.update_status_label = tk.Label(
+            update_frame, 
+            text="Checking for updates...", 
+            font=("Helvetica", 10)
+        )
+        self.update_status_label.pack(side="left", padx=5, pady=5)
+        
+        self.last_checked_label = tk.Label(
+            update_frame, 
+            text="Last checked: Never", 
+            font=("Helvetica", 8), 
+            fg="gray"
+        )
+        self.last_checked_label.pack(side="left", padx=5, pady=5)
+        
+        tk.Button(
+            update_frame, 
+            text="Refresh", 
+            command=self.check_for_updates
+        ).pack(side="right", padx=5, pady=5)
+
+        # Server status frame
+        status_frame = tk.LabelFrame(frame, text="Server Status")
+        status_frame.pack(fill="x", padx=5, pady=5)
+        
+        self.status_label = tk.Label(
+            status_frame, 
+            text="Status: Checking...", 
+            font=("Helvetica", 12)
+        )
         self.status_label.pack(pady=5)
 
-        self.install_button = tk.Button(frame, text="Install / Update Project", command=self.install_or_update)
-        self.install_button.pack(pady=5)
+        # Buttons frame
+        buttons_frame = tk.Frame(frame)
+        buttons_frame.pack(fill="x", padx=5, pady=5)
+        
+        self.install_button = tk.Button(
+            buttons_frame, 
+            text="Install / Update Project", 
+            command=self.install_or_update
+        )
+        self.install_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        
+        self.start_button = tk.Button(
+            buttons_frame, 
+            text="Start Application", 
+            command=self.start_app, 
+            state="disabled"
+        )
+        self.start_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        
+        self.stop_button = tk.Button(
+            buttons_frame, 
+            text="Stop Application", 
+            command=self.stop_app, 
+            state="disabled"
+        )
+        self.stop_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
-        self.start_button = tk.Button(frame, text="Start Application", command=self.start_app, state="disabled")
-        self.start_button.pack(pady=5)
-
-        self.stop_button = tk.Button(frame, text="Stop Application", command=self.stop_app, state="disabled")
-        self.stop_button.pack(pady=5)
-
-        self.check_status()
+    def check_for_updates(self):
+        """Check GitHub for updates to the project."""
+        def run_check():
+            try:
+                # Get local commit hash
+                local_hash = subprocess.check_output(
+                    ["git", "-C", INSTALL_DIR, "rev-parse", "HEAD"],
+                    shell=True
+                ).decode().strip()
+                
+                # Get remote commit hash
+                remote_hash = subprocess.check_output(
+                    ["git", "ls-remote", GITHUB_REPO, "HEAD"],
+                    shell=True
+                ).decode().split()[0]
+                
+                self.update_available = (local_hash != remote_hash)
+                
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                self.last_checked = now
+                
+                if self.update_available:
+                    status_text = "Update available! Click 'Install/Update' to update."
+                    self.update_status_label.config(text=status_text, fg="green")
+                else:
+                    status_text = "No updates available - you have the latest version."
+                    self.update_status_label.config(text=status_text, fg="black")
+                
+                self.last_checked_label.config(text=f"Last checked: {now}")
+                
+            except Exception as e:
+                print(f"Error checking for updates: {e}")
+                self.update_status_label.config(
+                    text="Error checking for updates", 
+                    fg="red"
+                )
+        
+        # Run in a thread to keep GUI responsive
+        threading.Thread(target=run_check, daemon=True).start()
+        
+        # Schedule next check in 10 minutes
+        self.parent.after(600000, self.check_for_updates)  # 10 minutes = 600000 ms
 
     def check_status(self):
         """Check if the application is running."""
@@ -92,6 +263,22 @@ class MainTab:
     def install_or_update(self):
         """Install or update the project from GitHub, with pip fallback."""
         def run():
+            # First check if there are updates available if we haven't checked recently
+            if self.last_checked is None or not hasattr(self, 'update_available'):
+                self.check_for_updates()
+                # Wait a moment for the check to complete
+                self.parent.update()
+                time.sleep(1)
+            
+            if not self.update_available:
+                if messagebox.askyesno(
+                    "No Updates Available", 
+                    "No updates were found. Do you want to reinstall the current version anyway?"
+                ):
+                    pass  # Continue with installation
+                else:
+                    return
+            
             # Step 1: Download or update the repo
             if os.path.exists(INSTALL_DIR):
                 subprocess.run(["git", "-C", INSTALL_DIR, "pull"], shell=True)
@@ -118,11 +305,11 @@ class MainTab:
             if os.path.exists(requirements_file):
                 subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "-r", requirements_file], shell=True)
 
+            # After installation, check for updates again
+            self.check_for_updates()
             messagebox.showinfo("Installation terminée", "Le projet a été installé/mis à jour avec succès.")
 
-        import threading
-        threading.Thread(target=run).start()
-
+        threading.Thread(target=run, daemon=True).start()
 
     def start_app(self):
         """Start the application using Waitress, ensuring pip and waitress are installed."""
@@ -132,46 +319,48 @@ class MainTab:
                 return
 
             # Step 1: Check if pip is installed
-            pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], 
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE, 
+                                     shell=True)
 
-            pip_check = subprocess.run([PYTHON_EXEC, "-m", "pip", "--version"], capture_output=True, text=True)
-            if "pip" not in pip_check.stdout:
+            if pip_check.returncode != 0:
                 try:
                     import urllib.request
                     url = "https://bootstrap.pypa.io/get-pip.py"
                     local_path = os.path.join(INSTALL_DIR, "get-pip.py")
                     urllib.request.urlretrieve(url, local_path)
                     subprocess.run([PYTHON_EXEC, local_path], shell=True)
-                    os.remove(local_path)  # Remove installer after successful install
+                    os.remove(local_path)
                 except Exception as e:
                     messagebox.showerror("Erreur", f"Impossible d'installer pip automatiquement:\n{e}")
                     return
 
             # Step 2: Make sure waitress is installed
-            result = subprocess.run([PYTHON_EXEC, "-c", "import waitress"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            result = subprocess.run([PYTHON_EXEC, "-c", "import waitress"], 
+                                  stdout=subprocess.PIPE, 
+                                  stderr=subprocess.PIPE, 
+                                  shell=True)
             if result.returncode != 0:
-                subprocess.run([PYTHON_EXEC, "-m", "ensurepip"], shell=True)  # Ensure pip is properly configured
-                subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"], shell=True)  # Upgrade pip
+                subprocess.run([PYTHON_EXEC, "-m", "ensurepip"], shell=True)
+                subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"], shell=True)
                 subprocess.run([PYTHON_EXEC, "-m", "pip", "install", "waitress"], shell=True)
 
-            # Step 3: Launch the app with waitress
-            subprocess.Popen([
-                PYTHON_EXEC, "-m", "waitress", "serve",
-                "--call", 
-                "--host=127.0.0.1", "--port=5000", "app:app"
-            ], cwd=INSTALL_DIR)
+            # Step 3: Use ServerManager to launch the app
+            if self.server.start_server():
+                messagebox.showinfo("Lancement", "L'application est en cours d'exécution sur http://127.0.0.1:5000")
+            else:
+                messagebox.showerror("Erreur", "Le serveur est déjà en cours d'exécution ou n'a pas pu démarrer")
 
-            messagebox.showinfo("Lancement", "L'application est en cours d'exécution sur http://127.0.0.1:5000")
-
-        run()
-
-
-
+        # Run in a thread to keep GUI responsive
+        threading.Thread(target=run, daemon=True).start()
 
     def stop_app(self):
         """Stop the running application."""
-        subprocess.run(["taskkill", "/IM", "python.exe", "/F"], shell=True)
-        messagebox.showinfo("Stopping", "Application has been stopped.")
+        if self.server.stop_server():
+            messagebox.showinfo("Stopping", "Application has been stopped.")
+        else:
+            messagebox.showerror("Error", "Failed to stop server")
         self.check_status()        
 
 #############################################
@@ -513,22 +702,26 @@ class GTFSManagerApp:
 def main():
     root = tk.Tk()
     root.title("BdeB-GTFS Manager")
-    root.iconbitmap("./static/assets/icons/icon.ico")
+    
+    try:
+        root.iconbitmap("./static/assets/icons/icon.ico")
+    except:
+        pass
 
     notebook = ttk.Notebook(root)
     notebook.pack(fill="both", expand=True)
 
-    # NEW: Add the Launcher as the first tab
+    # Launcher Tab
     main_tab = tk.Frame(notebook)
     notebook.add(main_tab, text="Launcher")
     MainTab(main_tab)
 
-    # Existing Background Manager Tab
+    # Background Manager Tab
     background_tab = tk.Frame(notebook)
     notebook.add(background_tab, text="Background Manager")
     MultiSlotManagerApp(background_tab)
 
-    # Existing GTFS Manager Tab
+    # GTFS Manager Tab
     gtfs_tab = tk.Frame(notebook)
     notebook.add(gtfs_tab, text="GTFS Manager")
     GTFSManagerApp(gtfs_tab)
