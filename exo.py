@@ -122,8 +122,8 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         direction = (
             "Saint-Jérôme" if route_id == "4" and direction_id == "1"
             else "Lucien-L'allier" if route_id == "4" and direction_id == "0"
-            else "Mascouche"       if route_id == "6" and direction_id == "1"
-            else "Gare Centrale"   if route_id == "6" and direction_id == "0"
+            else "Mascouche" if route_id == "6" and direction_id == "1"
+            else "Gare Centrale" if route_id == "6" and direction_id == "0"
             else "Unknown"
         )
         
@@ -135,7 +135,7 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
 
         mapped_train = {
             # Convert route_id=4 => '12', route_id=6 => '15', else just use the original
-            "route_id": "12" if route_id == "4" else "15" if route_id == "6" else route_id,
+            "route_id": route_id,
             "arrival_time": train.get("arrival_time", "Unknown"),          # adjusted arrival time
             "original_arrival_time": train.get("original_arrival_time"),   # scheduled arrival time
             "direction": direction,
