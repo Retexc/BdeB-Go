@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import threading
 import requests
+import logging
+import time
 from PIL import Image, ImageTk  # pip install pillow
 import zipfile
 from tkinter import ttk
@@ -17,6 +19,69 @@ import sys
 from waitress import serve
 from app import app 
 
+class TextHandler(logging.Handler):
+    """Custom logging handler that outputs to a Tkinter Text widget"""
+    def __init__(self, text_widget):
+        logging.Handler.__init__(self)
+        self.text_widget = text_widget
+        
+    def emit(self, record):
+        msg = self.format(record)
+        self.text_widget.configure(state='normal')
+        self.text_widget.insert('end', msg + '\n')
+        self.text_widget.configure(state='disabled')
+        self.text_widget.see('end')
+
+class TextRedirector(object):
+    """Redirects stdout/stderr to a Tkinter Text widget"""
+    def __init__(self, text_widget, tag='stdout'):
+        self.text_widget = text_widget
+        self.tag = tag
+        
+    def write(self, string):
+        self.text_widget.configure(state='normal')
+        self.text_widget.insert('end', string, (self.tag,))
+        self.text_widget.configure(state='disabled')
+        self.text_widget.see('end')
+        
+    def flush(self):
+        pass
+class ScrollableFrame(tk.Frame):
+    def __init__(self, parent, *args, **kwargs):
+        tk.Frame.__init__(self, parent, *args, **kwargs)
+        
+        self.canvas = tk.Canvas(self, borderwidth=0)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas)
+        
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        
+        self.scrollable_frame.bind("<Configure>", self.on_frame_configure)
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
+        self.scrollable_frame.bind('<Enter>', self.bind_mousewheel)
+        self.scrollable_frame.bind('<Leave>', self.unbind_mousewheel)
+        
+    def on_frame_configure(self, event):
+        """Reset the scroll region to encompass the inner frame"""
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        
+    def on_canvas_configure(self, event):
+        """Reset the canvas width to fit parent"""
+        canvas_width = event.width
+        self.canvas.itemconfig("inner_frame", width=canvas_width)
+        
+    def bind_mousewheel(self, event):
+        self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
+        
+    def unbind_mousewheel(self, event):
+        self.canvas.unbind_all("<MouseWheel>")
+        
+    def on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
 # GitHub repository for fetching the project
 GITHUB_REPO = "https://github.com/Retexc/BdeB-GTFS.git"
@@ -44,36 +109,52 @@ if os.path.exists(PROJECT_PYTHON):
 else:
     print("❌ Python du projet introuvable !")
 
+
 class ServerManager:
     def __init__(self):
         self.server_process = None
         self.server_running = False
+        self.logger = logging.getLogger('BdeB-GTFS.Server')
 
     def start_server(self):
-        """Start the Waitress server"""
+        """Start the Waitress server with log capture"""
         if self.server_running:
             return False
 
         try:
             cmd = [
                 PYTHON_EXEC,
+                "-u",  # Unbuffered output
                 "-m", "waitress",
                 "--host=127.0.0.1",
                 "--port=5000",
                 "--threads=4",
+                "--ident=BdeB-GTFS",  # Add identifier
                 "app:app"
             ]
             
             self.server_process = subprocess.Popen(
                 cmd,
                 cwd=INSTALL_DIR,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,  # Line buffered
+                universal_newlines=True,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
             )
             self.server_running = True
+            threading.Thread(target=self.log_output, daemon=True).start()
             return True
         except Exception as e:
-            print(f"Error starting server: {str(e)}")
+            self.logger.error(f"Error starting server: {str(e)}")
             return False
+
+    def log_output(self):
+        """Capture and redirect server output"""
+        while self.server_process.poll() is None:
+            output = self.server_process.stdout.readline()
+            if output:
+                self.logger.info(output.strip())
 
     def stop_server(self):
         """Stop the Waitress server"""
@@ -81,20 +162,22 @@ class ServerManager:
             return False
 
         try:
-            self.server_process.terminate()
-            self.server_process.wait(timeout=5)
+            # For Windows
+            if sys.platform == "win32":
+                self.server_process.send_signal(subprocess.signal.CTRL_BREAK_EVENT)
+                
+            self.server_process.wait(timeout=10)
             self.server_running = False
+            print("Server stopped successfully")  # Debug log
             return True
         except Exception as e:
             print(f"Error stopping server: {str(e)}")
-            return False
-
-    def get_status(self):
-        """Check if server is running"""
-        try:
-            response = requests.get("http://127.0.0.1:5000", timeout=2)
-            return response.status_code == 200
-        except:
+            try:
+                self.server_process.kill()  # Force kill if still running
+                print("Force-killed server process")
+            except Exception as kill_error:
+                print(f"Force kill failed: {str(kill_error)}")
+            self.server_running = False
             return False
     
 def load_gtfs_update_info():
@@ -126,8 +209,27 @@ class MainTab:
         self.last_checked = None
         self.update_available = False
         self.build_ui()
+        self.setup_logging()
         self.check_status()
         self.check_for_updates()  # Initial check
+
+    def setup_logging(self):
+        """Configure logging to output to our text widget"""
+        self.logger = logging.getLogger('BdeB-GTFS')
+        self.logger.setLevel(logging.INFO)
+        
+        # Remove existing handlers
+        for handler in self.logger.handlers[:]:
+            self.logger.removeHandler(handler)
+            
+        # Add our text handler
+        text_handler = TextHandler(self.log_text)
+        text_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        self.logger.addHandler(text_handler)
+        
+        # Redirect stdout and stderr
+        sys.stdout = TextRedirector(self.log_text, 'stdout')
+        sys.stderr = TextRedirector(self.log_text, 'stderr')        
 
     def build_ui(self):
         frame = tk.Frame(self.parent)
@@ -171,6 +273,7 @@ class MainTab:
         )
         self.status_label.pack(pady=5)
 
+
         # Buttons frame
         buttons_frame = tk.Frame(frame)
         buttons_frame.pack(fill="x", padx=5, pady=5)
@@ -197,6 +300,20 @@ class MainTab:
             state="disabled"
         )
         self.stop_button.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+
+        log_frame = tk.LabelFrame(frame, text="Server Logs")
+        log_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        self.log_text = tk.Text(log_frame, height=10, state='disabled', wrap='word')
+        scrollbar = ttk.Scrollbar(log_frame, command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side="right", fill="y")
+        self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Add color tags for stdout/stderr
+        self.log_text.tag_config('stdout', foreground='black')
+        self.log_text.tag_config('stderr', foreground='red')        
 
     def check_for_updates(self):
         """Check GitHub for updates to the project."""
@@ -456,7 +573,6 @@ def copy_to_static_folder(src_path):
 class MultiSlotManagerApp:
     def __init__(self, parent):
         self.root = parent
-        # Do not set title here if parent isn't the root
         self.slots_data = parse_slots_from_css(CSS_FILE_PATH)
         self.slot_frames = []
         for i in range(4):
@@ -702,6 +818,18 @@ class GTFSManagerApp:
 def main():
     root = tk.Tk()
     root.title("BdeB-GTFS Manager")
+    
+    window_width = 1440
+    window_height = 800
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    
+    # Center the window
+    x = (screen_width // 2) - (window_width // 2)
+    y = (screen_height // 2) - (window_height // 2)
+    
+    root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+    root.minsize(1200, 800)  # Minimum size to prevent weird layouts
     
     try:
         root.iconbitmap("./static/assets/icons/icon.ico")

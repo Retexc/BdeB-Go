@@ -9,6 +9,8 @@ from config import (
     EXO_ALERTS_URL,
 )
 from utils import load_csv_dict
+import logging
+logger = logging.getLogger('BdeB-GTFS.exo')
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -42,16 +44,16 @@ def fetch_exo_alerts():
         return []
 
 def load_exo_gtfs_trips(filepath):
-    """Load Exo trips with direction, wheelchair, and bikes allowed information."""
+    """Load Exo trips with full trip_id (including suffixes)."""
     trips_data = {}
     with open(filepath, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
-            trips_data[row["trip_id"]] = {
+            trips_data[row["trip_id"]] = {  
                 "route_id": row["route_id"],
                 "direction_id": row.get("direction_id", "0"),
-                "wheelchair_accessible": row.get("wheelchair_accessible", "0"),  # '1' means accessible
-                "bikes_allowed": row.get("bikes_allowed", "0")                   # '1' means bikes allowed
+                "wheelchair_accessible": row.get("wheelchair_accessible", "0"),
+                "bikes_allowed": row.get("bikes_allowed", "0")
             }
     return trips_data
 
@@ -209,18 +211,17 @@ def process_exo_vehicle_positions(entities, stop_times):
     return filtered_vehicles
 
 def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle_positions, exo_trip_updates):
-    """
-    1) Reads the Exo trip updates => real-time delays
-    2) Reads vehicle_positions => occupancy info
-    3) Merges with static stop_times to find the next arrival for each desired stop
-    4) For each train, calculates minutes_remaining
-    5) Sets a 'display_time' that shows either "X min" (if < 60) or "HH:MM"
-    """
     from datetime import datetime, timedelta
     current_time = datetime.now()
     current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
 
-    # ====== Step 1: Build a dictionary of real-time delays (in minutes) ======
+    
+    occupancy_lookup = {}
+    for vehicle in vehicle_positions:
+        key = (vehicle["trip_id"], vehicle["route_id"])
+        occupancy_lookup[key] = vehicle.get("occupancy", "Unknown")
+        logger.debug(f"Cached occupancy - Trip: {vehicle['trip_id']}, Route: {vehicle['route_id']} -> {occupancy_lookup[key]}")
+
     real_delays = {}
     for entity in exo_trip_updates:
         if entity.HasField('trip_update'):
@@ -228,7 +229,7 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
             for stop_update in entity.trip_update.stop_time_update:
                 stop_id = stop_update.stop_id
                 delay_seconds = stop_update.arrival.delay if stop_update.HasField('arrival') else 0
-                real_delays[(trip_id, stop_id)] = delay_seconds // 60  # convert to minutes
+                real_delays[(trip_id, stop_id)] = delay_seconds // 60
 
     # ====== Step 2: We'll track the next arrival for each "desired" stop ======
     desired_stops = {"MTL7D", "MTL7B", "MTL59A", "MTL59C"}
@@ -248,6 +249,12 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
         # We only care about route_id=4 (Saint-Jérôme) or 6 (Mascouche) in this example
         if route_id not in ("4", "6"):
             continue
+
+        exo_occupancy_status = occupancy_lookup.get(
+            (trip_id, route_id), 
+            "Unknown"
+        )
+        logger.debug(f"Matched occupancy - Trip: {trip_id}, Route: {route_id} -> {exo_occupancy_status}")        
 
         # Convert scheduled time to a datetime
         original_time_str = stop_time["departure_time"]

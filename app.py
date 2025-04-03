@@ -6,8 +6,7 @@ import sys
 import os, json
 from datetime import datetime
 import re
-#from app import app
-#from waitress import serve
+import logging
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -36,6 +35,11 @@ from alerts import (
     process_exo_alerts
 )
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('BdeB-GTFS')
 app = Flask(__name__)
 # ====================================================================
 # Load static GTFS data once at startup
@@ -182,7 +186,7 @@ def api_data():
         positions_dict
     )
 
-    print("----- DEBUG: Final Merged STM Buses -----")
+    logger.info("----- DEBUG: Final Merged STM Buses -----")
     status_map = {0: "INCOMING_AT", 1: "STOPPED_AT", 2: "IN_TRANSIT_TO"}
     for b in buses:
         raw_stat = b.get("current_status")
@@ -190,14 +194,14 @@ def api_data():
             stat_str = status_map.get(raw_stat, f"Unknown({raw_stat})")
         else:
             stat_str = str(raw_stat)
-        print(
+        logger.info(
             f"Route={b['route_id']}, Trip={b['trip_id']}, "
             f"Stop={b['stop_id']}, ArrTime={b['arrival_time']}, "
             f"Occupancy={b['occupancy']}, AtStop={b['at_stop']}, "
             f"Lat={b.get('lat')}, Lon={b.get('lon')}, Dist={b.get('distance_m')}m, "
             f"currentStatus={stat_str}"
         )
-    print("-----------------------------------------")
+    logger.info("-----------------------------------------")
 
     # ========== EXO TRAINS ==========
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()

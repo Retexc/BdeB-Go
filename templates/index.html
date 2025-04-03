@@ -316,17 +316,23 @@ data.next_trains.forEach((train) => {
   // If no_service_text is present, the time might say "N/A"
   const timeStr = train.display_time || "Unknown";
 
-  trainDiv.innerHTML = `
+    trainDiv.innerHTML = `
     <!-- Column 1: Route Button -->
     <div class="train-col-route">
       <div class="${
-        train.route_id === '12'
-          ? 'buttonSJ'
-          : train.route_id === '15'
-            ? 'buttonMA'
+        train.route_id === '4' 
+          ? 'buttonSJ' 
+          : train.route_id === '6' 
+            ? 'buttonMA' 
             : 'defaultButton'
       }">
-        <span class="frame-2-black">${train.route_id}</span>
+        <span class="frame-2-black">${
+          train.route_id === '4' 
+            ? 'SJ' 
+            : train.route_id === '6' 
+              ? 'MA' 
+              : train.route_id
+        }</span>
       </div>
     </div>
 
