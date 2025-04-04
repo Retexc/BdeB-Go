@@ -279,11 +279,9 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
         minutes_remaining = (arrival_time_seconds - current_seconds) // 60
 
         # Occupancy from vehicle_positions
-        exo_occupancy_status = "Unknown"
-        for vehicle in vehicle_positions:
-            if trip_id == vehicle["trip_id"]:
-                exo_occupancy_status = vehicle.get("occupancy", "Unknown")
-                break
+        occupancy_key = (trip_id, route_id)
+        exo_occupancy_status = occupancy_lookup.get(occupancy_key, "Unknown")
+        logger.debug(f"[Train] Found occupancy for {occupancy_key}: {exo_occupancy_status}")
 
         # Build delayed/early text using the original scheduled time
         delayed_text = None
