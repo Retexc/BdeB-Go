@@ -197,15 +197,23 @@ def process_exo_vehicle_positions(entities, stop_times):
                         }
 
     # Prepare the final list
-    filtered_vehicles = [
-        {
-            "trip_id": vehicle["trip_id"],
-            "route_id": vehicle["route_id"],
-            "occupancy": vehicle["occupancy"],
-            "stop_id": vehicle["stop_id"],
-        }
-        for vehicle in closest_vehicles.values() if vehicle is not None
-    ]
+    filtered_vehicles = []
+    for vehicle in closest_vehicles.values():
+        if vehicle:
+            seconds = vehicle["arrival_time_seconds"]
+            hours = (seconds // 3600) % 24
+            minutes = (seconds % 3600) // 60
+            arrival_dt = datetime.now().replace(hour=hours, minute=minutes, second=0, microsecond=0)
+            arrival_str = arrival_dt.strftime("%I:%M %p")
+            
+            filtered_vehicles.append({
+                "trip_id": vehicle["trip_id"],
+                "route_id": vehicle["route_id"],
+                "occupancy": vehicle["occupancy"],
+                "stop_id": vehicle["stop_id"],
+                "arrival_time": arrival_str,
+            })
+
 
     print("Filtered Exo Vehicle Positions with Stop IDs:", filtered_vehicles)  # Debugging
     return filtered_vehicles
