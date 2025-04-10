@@ -1,6 +1,8 @@
 
 from utils import get_weather_alerts
 
+from utils import get_weather_alerts
+
 def process_stm_alerts(stm_alerts_data, weather_api_key):
     filtered_alerts = []
     if not stm_alerts_data:
@@ -14,7 +16,7 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
     # Optional mapping for friendly stop names.
     stop_code_to_name = {
         "50270": "Collège de Bois-de-Boulogne",
-        "62374": "Henri-Bourassa/du Bois-de-Boulogne"  # Adjust this as necessary.
+        "62374": "Henri-Bourassa/du Bois-de-Boulogne"  # Adjust as necessary.
     }
 
     for alert in stm_alerts_data.get('alerts', []):
@@ -38,6 +40,11 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
                 available_directions.add(str(entity['direction_id']).strip())
             if 'stop_code' in entity:
                 available_stop_codes.add(str(entity['stop_code']).strip())
+        
+        # --- Added exception for route "164" West: ---
+        if "164" in available_routes and "W" in available_directions:
+            available_routes.discard("164")
+        # ------------------------------------------------
 
         if (available_routes & allowed_routes and 
             available_directions & allowed_directions and 
@@ -49,6 +56,8 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
 
             routes_str = ", ".join(valid_routes) if valid_routes else "Non spécifié"
             stops_str = ", ".join(friendly_stops) if friendly_stops else "Inconnu"
+
+            desc_lower = desc_text.lower()
 
             final_header = f"🚍 Info Bus: {header_text}" if header_text else "🚍 Info Bus"
 
@@ -73,6 +82,7 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
             })
 
     return filtered_alerts
+
 
 
 def process_exo_alerts(exo_alert_entities):

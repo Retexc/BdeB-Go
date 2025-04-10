@@ -57,6 +57,33 @@ def debug_occupancy():
     return "Check your console logs for occupancy info!"
 
 # ====================================================================
+# Merge STM alerts into bus rows and update location styling
+# ====================================================================
+def merge_alerts_into_buses(buses, stm_alerts):
+    """
+    For each bus row, check if there's a matching STM alert that references the same
+    route and stop (based on the processed alert's "routes" and "stop" fields). If the
+    alert description contains "déplacé" or "relocalisé", append a styled HTML badge
+    next to the bus's location.
+    """
+    for bus in buses:
+        route_id = bus.get("route_id", "").strip()
+        bus_location = bus.get("location", "").strip()
+        for alert in stm_alerts:
+            # Check if the bus's route appears in the alert's routes field.
+            if route_id in alert.get("routes", ""):
+                # Check if the bus's location is part of the alert's stop field.
+                if bus_location in alert.get("stop", ""):
+                    desc = alert.get("description", "").lower()
+                    if "déplacé" in desc:
+                        bus["location"] = f"{bus_location} <span class='alert-badge alert-deplace'>Arrêt déplacé</span>"
+                        break
+                    elif "relocalisé" in desc:
+                        bus["location"] = f"{bus_location} <span class='alert-badge alert-relocalise'>Arrêt relocalisé</span>"
+                        break
+    return buses
+
+# ====================================================================
 # Load background image from Background Manager
 # ====================================================================        
 def get_active_background(css_path):
@@ -172,7 +199,6 @@ def api_data():
                         # Skip this alert since its scheduled time is in the future.
                         continue
                 except Exception as e:
-                    # In case of parsing error, include it (or handle as needed)
                     pass
         filtered_alerts.append(alert)
 
@@ -203,6 +229,9 @@ def api_data():
         )
     logger.info("-----------------------------------------")
 
+    # Merge alerts into bus rows – update bus location with styled alert badges.
+    buses = merge_alerts_into_buses(buses, processed_stm)
+
     # ========== EXO TRAINS ==========
     exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
     exo_vehicle_data = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
@@ -231,7 +260,6 @@ def api_data():
 # ====================================================================
 @app.route("/api/messages", methods=["GET", "POST"])
 def api_messages():
-    # Adjust this path to the custom_messages.json in GTFSManager/public folder
     custom_path = os.path.join(
         os.path.dirname(__file__),
         "GTFSManager",

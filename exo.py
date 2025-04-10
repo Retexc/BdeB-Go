@@ -99,34 +99,54 @@ def exo_map_occupancy_status(status):
     else:
         return "UNKNOWN"
 
+# For route 6 stops, we use this mapping.
 stop_id_map = {
     "MTL7B": "Gare Bois-de-Boulogne",
     "MTL7D": "Gare Bois-de-Boulogne",
     "MTL59A": "Gare Ahuntsic",
-    "MTL59C": "Gare Ahuntsic",
 }
 
 def exo_map_train_details(schedule, trips_data, stop_id_map):
     """
     Maps the raw schedule (including minutes_remaining, arrival_time, etc.)
     into a final list of trains with route/direction, plus wheelchair/bike info.
+    
+    For trains on route "4":
+      - If stop_id is "MTL7D", set direction to "Lucien-L'allier"
+      - If stop_id is "MTL7B", set direction to "Saint-Jérôme"
+    For route "6", the direction is determined from trips_data.
     """
     mapped_schedule = []
     for train in schedule:
         trip_id = train["trip_id"]
         route_id = train["route_id"]
         stop_id = train["stop_id"]
-        direction_id = trips_data.get(train["trip_id"], {}).get("direction_id", "0")
+        # For route 4, instead of relying on direction_id from trips_data, use stop_id.
+        if route_id == "4":
+            if stop_id == "MTL7D":
+                direction = "Lucien-L'allier"
+            elif stop_id == "MTL7B":
+                direction = "Saint-Jérôme"
+            else:
+                direction = "Unknown"
+        elif route_id == "6":
+            direction_id = trips_data.get(train["trip_id"], {}).get("direction_id", "0")
+            direction = (
+                "Mascouche" if direction_id == "0"
+                else "Unknown"
+            )
+        else:
+            direction = "Unknown"
         
-        direction = (
-            "Saint-Jérôme" if route_id == "4" and direction_id == "1"
-            else "Lucien-L'allier" if route_id == "4" and direction_id == "0"
-            else "Mascouche" if route_id == "6" and direction_id == "1"
-            else "Gare Centrale" if route_id == "6" and direction_id == "0"
-            else "Unknown"
-        )
+        # For route 4, we now override the stop name based on stop_id if needed.
+        if route_id == "4":
+            # For route 4, you might choose to simply use the direction as location
+            # Or you can keep the original stop based on your business rule.
+            # Here we'll keep it as provided by stop_id_map if available.
+            stop_name = stop_id_map.get(stop_id, "Unknown")
+        else:
+            stop_name = stop_id_map.get(stop_id, "Unknown")
         
-        stop_name = stop_id_map.get(stop_id, "Unknown")
         minutes_remaining = train.get("minutes_remaining")
         mapped_train = {
             "route_id": route_id,
@@ -147,7 +167,7 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
     return mapped_schedule
 
 def process_exo_vehicle_positions(entities, stop_times):
-    desired_stops = {"MTL7D", "MTL7B", "MTL59A", "MTL59C"}
+    desired_stops = {"MTL7D", "MTL7B", "MTL59A"}
     closest_vehicles = {stop_id: None for stop_id in desired_stops}
 
     for entity in entities:
@@ -160,7 +180,6 @@ def process_exo_vehicle_positions(entities, stop_times):
 
             # Match with stop_times to find the stop_id and arrival time.
             for stop_time in stop_times:
-                # Normalize the CSV trip_id and also strip the stop_id.
                 csv_trip_id = normalize_trip_id(stop_time["trip_id"])
                 candidate_stop = stop_time["stop_id"].strip()
                 logger.debug(f"Comparing realtime trip_id: {trip_id} with CSV trip_id: {csv_trip_id} for stop {candidate_stop}")
@@ -228,7 +247,7 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
                 delay_seconds = stop_update.arrival.delay if stop_update.HasField('arrival') else 0
                 real_delays[(trip_id, stop_id)] = delay_seconds // 60
 
-    desired_stops = {"MTL7D", "MTL7B", "MTL59A", "MTL59C"}
+    desired_stops = {"MTL7D", "MTL7B", "MTL59A"}
     closest_trains = {stop: None for stop in desired_stops}
 
     for stop_time in exo_stop_times:

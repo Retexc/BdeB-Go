@@ -291,16 +291,13 @@ data.next_trains.forEach((train) => {
 
   // Similarly, hide wheelchair or bike if no_service_text
   let bikeIconHTML = '';
-  if (!hideIcons && train.bikes_allowed) {
     bikeIconHTML = `
       <div class="bike-wheelchair-container">
         <img src="/static/assets/icons/bike.png" alt="Bike" class="anim-bike">
         <img src="/static/assets/icons/wheelchair.png" alt="Wheelchair" class="anim-wheelchair">
       </div>
     `;
-  } else {
-    bikeIconHTML = `<img src="/static/assets/icons/invisible.png" alt="" class="bike-icon">`;
-  }
+
 
   // Hide train icon if no service
   let trainIcon = '';

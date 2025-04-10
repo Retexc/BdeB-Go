@@ -364,6 +364,27 @@ opacity: 0.2;
   vertical-align: middle;
 }
 
+.alert-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: bold;
+  margin-left: 5px;
+  font-size: 0.8em;
+}
+
+.alert-deplace {
+  background-color: #A91F10;
+  color: #ffffff;;
+}
+
+.alert-relocalise {
+  background-color: #e9f7ef;
+  color: #27ae60;
+  border-color: #2ecc71;
+}
+
+
 /* ========== FOOTER, LOGO, ETC. ========== */
 .footer-text {
   font-size: 16px;
