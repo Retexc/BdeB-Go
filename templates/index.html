@@ -231,6 +231,7 @@ exoLogoDiv.innerHTML = `<img src="/static/assets/images/exo_white.png" alt="Exo 
 trainContainer.appendChild(exoLogoDiv);
 
 data.next_trains.forEach((train) => {
+  console.log("Train:", train);
   const trainDiv = document.createElement('div');
   trainDiv.className = "frame-1";
 

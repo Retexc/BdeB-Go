@@ -254,5 +254,9 @@ def api_messages():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
   
+@app.route("/api/raw-stm-alerts")
+def raw_stm_alerts():
+    raw_alerts = fetch_stm_alerts()
+    return jsonify(raw_alerts)
 
 #serve(app, host="0.0.0.0", port=5000)
