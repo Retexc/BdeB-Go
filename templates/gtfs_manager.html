@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>GTFS Manager</title>
+  </head>
+  <body>
+    <h1>GTFS Manager</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+          {% for category, message in messages %}
+            <li style="color: {% if category == 'success' %}green{% else %}red{% endif %};">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form action="{{ url_for('gtfs_manager') }}" method="post">
+      <label>GTFS STM (ZIP): <input type="text" name="stm_zip"></label>
+      <br>
+      <label>GTFS EXO (ZIP): <input type="text" name="exo_zip"></label>
+      <br>
+      <button type="submit">Update GTFS</button>
+    </form>
+    <p>Last Update STM: {{ update_info.stm or "N/A" }}</p>
+    <p>Last Update EXO: {{ update_info.exo or "N/A" }}</p>
+    <p><a href="{{ url_for('home') }}">Back to Home</a></p>
+  </body>
+</html>

@@ -50,10 +50,6 @@ def load_calendar_dates_data():
     return _calendar_dates_data
 
 def serviceRunsToday(service_id):
-    """
-    Optimized check if a given service_id is running today.
-    Uses cached data from calendar.txt and calendar_dates.txt.
-    """
     today = datetime.now().date()
     run_today = False
 
@@ -137,10 +133,6 @@ def fetch_stm_alerts():
         return None
 
 def load_stm_routes(routes_file):
-    """
-    Returns a dict mapping real route_id (e.g. "1") -> route_short_name (e.g. "171")
-    and possibly route_long_name, etc.
-    """
     routes_data = {}
     with open(routes_file, mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -151,9 +143,6 @@ def load_stm_routes(routes_file):
     return routes_data
 
 def load_stm_stop_times(filepath):
-    """
-    Your single, correct STM stop_times loader (dict => {(trip_id, stop_id): arrival_time}).
-    """
     stop_times = {}
     with open(filepath, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
@@ -163,10 +152,6 @@ def load_stm_stop_times(filepath):
     return stop_times
 
 def load_stm_gtfs_trips(filepath, routes_map):
-    """
-    Load trips.txt. 
-    `routes_map` is the dict from load_stm_routes that maps real route_id -> short_name.
-    """
     trips_data = {}
     with open(filepath, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
@@ -185,14 +170,6 @@ def load_stm_gtfs_trips(filepath, routes_map):
 
 
 def stm_map_occupancy_status(status):
-    """
-    Convert numeric occupancy code to a human-friendly string
-    based on STM doc:
-      1 -> MANY_SEATS_AVAILABLE
-      2 -> FEW_SEATS_AVAILABLE
-      3 -> STANDING_ROOM_ONLY
-      4 -> FULL
-    """
     mapping = {
         1: "MANY_SEATS_AVAILABLE",
         2: "FEW_SEATS_AVAILABLE",
@@ -210,10 +187,6 @@ def validate_trip(trip_id, route_id, gtfs_trips):
 
 
 def fetch_stm_positions_dict(desired_routes, stm_trips):
-    """
-    Fetch from STM_VEHICLE_POSITIONS_ENDPOINT, build dict keyed by (route_id, trip_id)
-    => { "lat": ..., "lon": ..., "occupancy": ..., "stop_id": ..., "current_status": ... } if present
-    """
     positions = {}
     entities = fetch_stm_vehicle_positions()
     if not entities:
@@ -257,11 +230,6 @@ def fetch_stm_positions_dict(desired_routes, stm_trips):
 
 
 def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions_dict):
-    """
-    Show each route+direction as a separate line, e.g. "180_Est" and "180_Ouest".
-    We'll do that by defining combos that map (GTFS route_id, stop_id) => final dictionary key.
-    """
-
     import time
     from datetime import datetime, timedelta
 
@@ -493,11 +461,6 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
     return buses
 
 def debug_print_stm_occupancy_status(desired_routes, stm_trips):
-    """
-    Fetch the latest STM vehicle positions and print occupancyStatus
-    ONLY for the bus routes we care about.
-    Also prints out latitude/longitude + currentStatus if present.
-    """
     entities = fetch_stm_vehicle_positions()
     
     if not entities:

@@ -262,17 +262,31 @@ opacity: 0.2;
 }
 
 .delayed-text {
-  color: red;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: bold;
+  margin-left: 5px;
+  font-size: 0.8em;  
+  background-color: #A91F10;
+  color: rgb(255, 255, 255);
   font-size: 18px; 
   font-weight: 500;
   white-space: nowrap;
 }
 
 .early-text {
-  color: #3a85cc;
-  font-size: 18px;
-  white-space: nowrap;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: bold;
+  margin-left: 5px;
+  font-size: 0.8em;  
+  background-color: #0056A7;
+  color: rgb(255, 255, 255);
+  font-size: 18px; 
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .no-service-text {
@@ -374,8 +388,8 @@ opacity: 0.2;
 }
 
 .alert-deplace {
-  background-color: #A91F10;
-  color: #ffffff;;
+  background-color: #FF8C08;
+  color: #000000;;
 }
 
 .alert-relocalise {

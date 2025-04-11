@@ -70,10 +70,6 @@ def load_exo_stop_times(filepath):
     return stop_times_data
 
 def exo_map_occupancy_status(status):
-    """
-    Maps the GTFS-Realtime occupancy status (which may be provided as an int or string)
-    to a string that matches the STM occupancy mapping.
-    """
     mapping = {
         "MANY_SEATS_AVAILABLE": "MANY_SEATS_AVAILABLE",
         "FEW_SEATS_AVAILABLE": "FEW_SEATS_AVAILABLE",
@@ -107,15 +103,6 @@ stop_id_map = {
 }
 
 def exo_map_train_details(schedule, trips_data, stop_id_map):
-    """
-    Maps the raw schedule (including minutes_remaining, arrival_time, etc.)
-    into a final list of trains with route/direction, plus wheelchair/bike info.
-    
-    For trains on route "4":
-      - If stop_id is "MTL7D", set direction to "Lucien-L'allier"
-      - If stop_id is "MTL7B", set direction to "Saint-Jérôme"
-    For route "6", the direction is determined from trips_data.
-    """
     mapped_schedule = []
     for train in schedule:
         trip_id = train["trip_id"]

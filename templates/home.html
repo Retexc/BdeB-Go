@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+  </head>
+  <body>
+    <h1>Admin Dashboard</h1>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('launcher') }}">Launcher</a></li>
+        <li><a href="{{ url_for('background_manager') }}">Background Manager</a></li>
+        <li><a href="{{ url_for('gtfs_manager') }}">GTFS Manager</a></li>
+      </ul>
+    </nav>
+  </body>
+</html>
