@@ -1,9 +1,41 @@
 
 from utils import get_weather_alerts
 
-from utils import get_weather_alerts
+def get_text(text_source):
+    """
+    Accepts either:
+      - a dictionary with keys 'language' and 'text'
+      - a list of such dictionaries, or even strings,
+      - or a plain string.
+    Returns the text. First, it tries to find one where language is 'fr';
+    if not found, it returns the first available translation.
+    """
+    # If it's a dict, return its text (fallback to its text regardless of language)
+    if isinstance(text_source, dict):
+        return text_source.get("text", "")
+    # If it's a plain string, just return it.
+    if isinstance(text_source, str):
+        return text_source
+    # If it's not a list, wrap it into a list.
+    if not isinstance(text_source, list):
+        text_source = [text_source]
+    # Try to find a French translation.
+    for item in text_source:
+        if isinstance(item, dict) and item.get("language") == "fr":
+            return item.get("text", "")
+    # If no French translation exists, return the first available text.
+    for item in text_source:
+        if isinstance(item, dict):
+            return item.get("text", "")
+        elif isinstance(item, str):
+            return item
+    return ""
 
 def process_stm_alerts(stm_alerts_data, weather_api_key):
+    """
+    Process STM alerts for display alongside EXO alerts.
+    Only alerts with at least one informed entity matching the allowed criteria are kept.
+    """
     filtered_alerts = []
     if not stm_alerts_data:
         return filtered_alerts
@@ -13,22 +45,16 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
     allowed_directions = {"W", "E"}
     allowed_stop_codes = {"50270", "62374"}
 
-    # Optional mapping for friendly stop names.
+    # Mapping for friendly stop names.
     stop_code_to_name = {
         "50270": "Collège de Bois-de-Boulogne",
         "62374": "Henri-Bourassa/du Bois-de-Boulogne"  # Adjust as necessary.
     }
 
     for alert in stm_alerts_data.get('alerts', []):
-        # Extract French texts.
-        desc_text = next(
-            (t.get('text', '') for t in alert.get('description_texts', []) if t.get('language') == 'fr'),
-            ''
-        )
-        header_text = next(
-            (t.get('text', '') for t in alert.get('header_texts', []) if t.get('language') == 'fr'),
-            ''
-        )
+        # Extract French texts using our helper.
+        desc_text = get_text(alert.get('description_texts', []))
+        header_text = get_text(alert.get('header_texts', []))
 
         available_routes = set()
         available_directions = set()
@@ -41,13 +67,13 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
             if 'stop_code' in entity:
                 available_stop_codes.add(str(entity['stop_code']).strip())
         
-        # --- Added exception for route "164" West: ---
+        # --- Exception: if route "164" and direction "W", skip the alert for route 164.
         if "164" in available_routes and "W" in available_directions:
             available_routes.discard("164")
         # ------------------------------------------------
 
-        if (available_routes & allowed_routes and 
-            available_directions & allowed_directions and 
+        if (available_routes & allowed_routes and
+            available_directions & allowed_directions and
             available_stop_codes & allowed_stop_codes):
 
             valid_routes = sorted(available_routes & allowed_routes)
@@ -56,8 +82,6 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
 
             routes_str = ", ".join(valid_routes) if valid_routes else "Non spécifié"
             stops_str = ", ".join(friendly_stops) if friendly_stops else "Inconnu"
-
-            desc_lower = desc_text.lower()
 
             final_header = f"🚍 Info Bus: {header_text}" if header_text else "🚍 Info Bus"
 
@@ -82,6 +106,8 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
             })
 
     return filtered_alerts
+
+
 
 
 
