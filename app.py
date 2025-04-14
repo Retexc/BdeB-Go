@@ -7,6 +7,8 @@ import os, json
 from datetime import datetime
 import re
 import logging
+import subprocess
+import threading
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import WEATHER_API_KEY
 from utils import is_service_unavailable
@@ -287,7 +289,57 @@ def raw_stm_alerts():
     raw_alerts = fetch_stm_alerts()
     return jsonify(raw_alerts)
 
+@app.route("/admin")
+def admin_dashboard():
+    # Render your admin dashboard (home.html)
+    return render_template("home.html")
+
+app.config['APP_RUNNING'] = False
+main_app_logs = []
+app_process = None  # This will hold the subprocess.Popen object
+
+def capture_app_logs(process):
+    """Continuously read output from the process and append to main_app_logs."""
+    while True:
+        line = process.stdout.readline()
+        if not line:  # Process terminated and stdout closed.
+            break
+        main_app_logs.append(line.rstrip())
+    # Optionally, mark the app as no longer running when process ends:
+    app.config['APP_RUNNING'] = False
+
+@app.route('/admin/start', methods=['POST'])
+def admin_start():
+    global app_process
+    if not app.config['APP_RUNNING']:
+        try:
+            # Spawn the main application as a subprocess.
+            # Replace the command below with the actual command you use to launch your main app.
+            cmd = [PYTHON_EXEC, "-u", "app.py"]  
+            # For example, if your main app is also in app.py and you want to run it in non-debug mode.
+            app_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True
+            )
+            app.config['APP_RUNNING'] = True
+            main_app_logs.append(f"{datetime.now()} - Main app started.")
+            # Start a background thread to capture the process logs:
+            threading.Thread(target=capture_app_logs, args=(app_process,), daemon=True).start()
+            return jsonify({'status': 'started'}), 200
+        except Exception as e:
+            return jsonify({'status': 'error', 'error': str(e)}), 500
+    else:
+        return jsonify({'status': 'already_running'}), 200
+
+@app.route('/admin/logs_data')
+def logs_data():
+    # Return the logs as plain text.
+    # In a real app, you might read from a log file.
+    return "\n".join(main_app_logs)
+
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    app.run(debug=True, use_reloader=False, host="127.0.0.1", port=5000)
 
 #serve(app, host="0.0.0.0", port=5000)
