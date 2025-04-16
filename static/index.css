@@ -263,28 +263,28 @@ opacity: 0.2;
 
 .delayed-text {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 6px 6px;
   border-radius: 8px;
   font-weight: bold;
-  margin-left: 5px;
+  margin-left: -6px;
   font-size: 0.8em;  
   background-color: #A91F10;
   color: rgb(255, 255, 255);
-  font-size: 18px; 
+  font-size: 20px; 
   font-weight: 500;
   white-space: nowrap;
 }
 
 .early-text {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 6px 6px;
   border-radius: 8px;
   font-weight: bold;
-  margin-left: 5px;
+  margin-left: -6px;
   font-size: 0.8em;  
   background-color: #0056A7;
   color: rgb(255, 255, 255);
-  font-size: 18px; 
+  font-size: 20px; 
   font-weight: 500;
   white-space: nowrap;
 }
@@ -315,8 +315,8 @@ opacity: 0.2;
 .wheelchair,
 .blinking-bus,
 .blinking-train {
-  width: 24px; 
-  height: 24px;
+  width: 28px; 
+  height: 28px;
   object-fit: contain;
   vertical-align: middle;
 }
@@ -487,8 +487,8 @@ opacity: 0.2;
 
 .bike-wheelchair-container {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .anim-bike, .anim-wheelchair {

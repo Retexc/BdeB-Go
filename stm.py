@@ -323,23 +323,25 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
 
                 # If we have a scheduled arrival
                 scheduled_arrival_str = stm_stop_times.get((trip_id, stop_id))
-                delay_text = None
-                early_text = None
                 if scheduled_arrival_str:
                     try:
+                        # build scheduled datetime anchored to arrival_unix date
+                        arr_dt = datetime.fromtimestamp(arrival_unix)
                         h, m, s = map(int, scheduled_arrival_str.split(":"))
-                        # Handle hours beyond 24 by using modulo arithmetic:
-                        sched_dt = datetime.now().replace(hour=h % 24, minute=m, second=s, microsecond=0)
-                        # If the scheduled time is already past, assume it's tomorrow.
-                        if sched_dt < datetime.now():
-                            sched_dt += timedelta(days=1)
+                        extra_days = h // 24
+                        h %= 24
+                        sched_dt = datetime(arr_dt.year, arr_dt.month, arr_dt.day, h, m, s) \
+                                + timedelta(days=extra_days)
+
                         diff_min = (arrival_unix - sched_dt.timestamp()) // 60
                         if diff_min > 0:
                             delay_text = f"En retard (prévu à {sched_dt.strftime('%I:%M %p')})"
                         elif diff_min < 0:
                             early_text = f"En avance (prévu à {sched_dt.strftime('%I:%M %p')})"
-                    except Exception as e:
-                        pass
+                    except Exception:
+                        delay_text = early_text = None
+                else:
+                    delay_text = early_text = None
 
 
                 # occupancy
