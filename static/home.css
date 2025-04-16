@@ -71,14 +71,17 @@ margin-left: 1rem;
 
 
 
-#logsArea {
-    background-color: #333;       
-    color: #f1f1f1;               
-    padding: 20px;                
-    border: 1px solid #444;       
-    border-radius: 12px;           
-    height: 650px;                
-    overflow-y: auto;             
-    margin-top: 20px;             
+#logsArea pre {
+    background-color: #333;       /* Your background color */
+    color: #f1f1f1;               /* Your text color */
+    padding: 20px;                /* Adjust padding as needed */
+    border: 1px solid #444;       /* Your border style */
+    border-radius: 12px;          /* Rounded corners */
+    height: 650px;                /* Fixed height for the log area */
+    overflow-y: auto;             /* Vertical scrolling if needed */
+    overflow-x: hidden;           /* Prevent horizontal scrolling */
+    white-space: pre-wrap;        /* Wrap text and preserve line breaks */
+    word-wrap: break-word;        /* Allow long words to break */
+    box-sizing: border-box;       /* Include padding & border in the element's width */
   }
     

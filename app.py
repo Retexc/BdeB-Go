@@ -294,6 +294,7 @@ def admin_dashboard():
     # Render your admin dashboard (home.html)
     return render_template("home.html")
 
+
 app.config['APP_RUNNING'] = False
 main_app_logs = []
 app_process = None  # This will hold the subprocess.Popen object

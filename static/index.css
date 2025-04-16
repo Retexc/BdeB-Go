@@ -351,7 +351,7 @@ opacity: 0.2;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #0052cc;
+  background: #163F7D;
   color: #fff;
   font-size: 25px;
   padding: 12px;
@@ -447,7 +447,7 @@ opacity: 0.2;
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: #4d6ba6;
+  background: #4da66f;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -521,7 +521,7 @@ opacity: 0.2;
 }
 
 /* MULTISLOT:
-SLOT1: ./static/assets/images/Printemps - Banner Big.png from 2025-03-19 to 2025-03-19
-SLOT2: ./static/assets/images/265.jpg from 2026-03-05 to 2026-09-03
+SLOT1: ./static/assets/images/pexels-pixabay-259698.jpg from 2025-11-01 to 2026-02-28
+SLOT2: ./static/assets/images/Printemps - Banner Big.png from 2025-04-15 to 2025-05-28
 SLOT3: ./static/assets/images/pexels-timmossholder-3359733.jpg from 2025-09-01 to 2025-12-01
-SLOT4: ./static/assets/images/Winter Banner.png from 2025-12-21 to 2026-03-18 */
+SLOT4: ./static/assets/images/bdeb.jpeg from 2025-07-01 to 2025-08-31 */
