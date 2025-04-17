@@ -233,10 +233,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
     import time
     from datetime import datetime, timedelta
 
-    # The combos we care about. Each tuple is (gtfs_route, stop_id, final_key).
-    # 'gtfs_route' is what your GTFS/trips store as route_id (like "180", "171", "164").
-    # 'stop_id' is the actual stop in your data. 
-    # 'final_key' is how you want to label it in the output, e.g. "180_Est", "180_Ouest".
+    # The combos we care about
     desired_combos = [
         ("171","50270","171_Est"),
         ("171","62374","171_Ouest"),
@@ -246,221 +243,152 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
         ("164","62374","164_Ouest"),
     ]
 
-    # We'll store direction/location strings for each final_key
-    # e.g. "171_Est" => direction="Est", location="Collège de Bois-de-Boulogne"
     combo_info = {
-        "171_Est": {
-            "direction": "Est",
-            "location": "Collège de Bois-de-Boulogne",
-        },
-        "171_Ouest": {
-            "direction": "Ouest",
-            "location": "Henri-Bourassa/du Bois-de-Boulogne",
-        },
-        "180_Est": {
-            "direction": "Est",
-            "location": "Collège de Bois-de-Boulogne",
-        },
-        "180_Ouest": {
-            "direction": "Ouest",
-            "location": "Henri-Bourassa/du Bois-de-Boulogne",
-        },
-        "164_Est": {
-            "direction": "Est",
-            "location": "Collège de Bois-de-Boulogne",
-        },
-        "164_Ouest": {
-            "direction": "Ouest",
-            "location": "Henri-Bourassa/du Bois-de-Boulogne", 
-        },
+        "171_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
+        "171_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
+        "180_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
+        "180_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
+        "164_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
+        "164_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
     }
 
     closest_buses = { combo[2]: None for combo in desired_combos }
 
-    # ================
-    # 1) REAL-TIME
-    # ================
+    # 1) Real‑time updates
     for entity in trip_entities:
-        if entity.HasField("trip_update"):
-            t_update = entity.trip_update
-            route_id = t_update.trip.route_id  # e.g. "180"
-            trip_id = t_update.trip.trip_id
+        if not entity.HasField("trip_update"):
+            continue
 
+        t_update = entity.trip_update
+        route_id = t_update.trip.route_id
+        trip_id  = t_update.trip.trip_id
 
-            if route_id not in ["171","180","164"]:
+        if route_id not in ["171","180","164"]:
+            continue
+        if not validate_trip(trip_id, route_id, stm_trips):
+            continue
+
+        w_str = stm_trips.get(trip_id, {}).get("wheelchair_accessible", "0")
+        wheelchair_accessible = (w_str == "1")
+
+        for stop_time in t_update.stop_time_update:
+            arrival_unix = stop_time.arrival.time if stop_time.HasField("arrival") else None
+            if not arrival_unix:
                 continue
 
-            # Check trip validity
-            if not validate_trip(trip_id, route_id, stm_trips):
+            stop_id = stop_time.stop_id
+            final_key = None
+            for (gtfs_route, wanted_stop, key_name) in desired_combos:
+                if route_id == gtfs_route and stop_id == wanted_stop:
+                    final_key = key_name
+                    break
+            if not final_key:
                 continue
 
-            # wheelchair
-            trip_info = stm_trips.get(trip_id, {})
-            w_str = trip_info.get("wheelchair_accessible", "0")
-            wheelchair_accessible = (w_str == "1")
+            # Minutes until arrival (floor)
+            now_ts = time.time()
+            minutes_to_arrival = (arrival_unix - now_ts) // 60
 
-            for stop_time in t_update.stop_time_update:
-                arrival_unix = stop_time.arrival.time if stop_time.HasField("arrival") else None
-                if not arrival_unix:
-                    continue
+            # —— UPDATED EARLY/LATE LOGIC —— 
+            scheduled_arrival_str = stm_stop_times.get((trip_id, stop_id))
+            delay_text = None
+            early_text = None
+            if scheduled_arrival_str:
+                try:
+                    # 1) Build the scheduled datetime
+                    h, m, s = map(int, scheduled_arrival_str.split(":"))
+                    sched_dt = datetime.now().replace(hour=h % 24, minute=m, second=s, microsecond=0)
+                    if sched_dt < datetime.now():
+                        sched_dt += timedelta(days=1)
 
-                # See if (route_id, stop_id) is one of our combos
-                stop_id = stop_time.stop_id
-                # We find a matching tuple in desired_combos
-                # e.g. ("180","62374","180_Ouest")
-                final_key = None
-                for (gtfs_route, wanted_stop, key_name) in desired_combos:
-                    if route_id == gtfs_route and stop_id == wanted_stop:
-                        final_key = key_name
-                        break
-                if final_key is None:
-                    # Not a combo we track
-                    continue
+                    # 2) Convert arrival_unix to datetime
+                    predicted_dt = datetime.fromtimestamp(arrival_unix)
 
-                # Now we compute arrival_time
-                now_ts = time.time()
-                minutes_to_arrival = (arrival_unix - now_ts) // 60
+                    # 3) Compare directly
+                    if predicted_dt > sched_dt:
+                        delay_text = f"En retard (prévu à {sched_dt.strftime('%I:%M %p')})"
+                    elif predicted_dt < sched_dt:
+                        early_text = f"En avance (prévu à {sched_dt.strftime('%I:%M %p')})"
+                except Exception:
+                    pass
 
-                # If we have a scheduled arrival
-                scheduled_arrival_str = stm_stop_times.get((trip_id, stop_id))
-                if scheduled_arrival_str:
-                    try:
-                        # build scheduled datetime anchored to arrival_unix date
-                        arr_dt = datetime.fromtimestamp(arrival_unix)
-                        h, m, s = map(int, scheduled_arrival_str.split(":"))
-                        extra_days = h // 24
-                        h %= 24
-                        sched_dt = datetime(arr_dt.year, arr_dt.month, arr_dt.day, h, m, s) \
-                                + timedelta(days=extra_days)
+            # Occupancy
+            pos_info = positions_dict.get((route_id, trip_id), {})
+            raw_occ = pos_info.get("occupancy")
+            occ_str = stm_map_occupancy_status(raw_occ) if raw_occ else "Unknown"
 
-                        diff_min = (arrival_unix - sched_dt.timestamp()) // 60
-                        if diff_min > 0:
-                            delay_text = f"En retard (prévu à {sched_dt.strftime('%I:%M %p')})"
-                        elif diff_min < 0:
-                            early_text = f"En avance (prévu à {sched_dt.strftime('%I:%M %p')})"
-                    except Exception:
-                        delay_text = early_text = None
-                else:
-                    delay_text = early_text = None
+            at_stop_flag = isinstance(minutes_to_arrival, (int, float)) and minutes_to_arrival < 2
 
+            bus_obj = {
+                "route_id": route_id,
+                "trip_id": trip_id,
+                "stop_id": stop_id,
+                "arrival_time": minutes_to_arrival,
+                "occupancy": occ_str,
+                "direction": combo_info[final_key]["direction"],
+                "location": combo_info[final_key]["location"],
+                "delayed_text": delay_text,
+                "early_text": early_text,
+                "at_stop": at_stop_flag,
+                "wheelchair_accessible": wheelchair_accessible
+            }
 
-                # occupancy
-                pos_info = positions_dict.get((route_id, trip_id), {})
-                raw_occ = pos_info.get("occupancy")
-                occ_str = stm_map_occupancy_status(raw_occ) if raw_occ else "Unknown"
+            existing = closest_buses[final_key]
+            if existing is None or (
+                isinstance(existing["arrival_time"], (int, float)) and
+                isinstance(minutes_to_arrival, (int, float)) and
+                minutes_to_arrival < existing["arrival_time"]
+            ):
+                closest_buses[final_key] = bus_obj
 
-                at_stop_flag = (isinstance(minutes_to_arrival, (int,float)) and minutes_to_arrival < 2)
-
-                # Build bus object
-                direction_str = combo_info[final_key]["direction"]
-                location_str  = combo_info[final_key]["location"]
-
-                bus_obj = {
-                    "route_id": route_id,
-                    "trip_id": trip_id,
-                    "stop_id": stop_id,
-                    "arrival_time": minutes_to_arrival,  # e.g. 25 (minutes)
-                    "occupancy": occ_str,
-                    "direction": direction_str,
-                    "location": location_str,
-                    "delayed_text": delay_text,
-                    "early_text": early_text, 
-                    "at_stop": at_stop_flag,
-                    "wheelchair_accessible": wheelchair_accessible
-                }
-
-                existing = closest_buses[final_key]
-                if existing is None:
-                    closest_buses[final_key] = bus_obj
-                else:
-                    # keep earliest arrival
-                    if (isinstance(existing["arrival_time"], (int,float))
-                        and isinstance(minutes_to_arrival, (int,float))
-                        and minutes_to_arrival < existing["arrival_time"]):
-                        closest_buses[final_key] = bus_obj
-
-    # ================
-    # 2) FALLBACK
-    # ================
+    # 2) Fallback to schedule-only if no real-time found
     now = datetime.now()
     for (gtfs_route, wanted_stop, final_key) in desired_combos:
         if closest_buses[final_key] is None:
-            # We didn't find real-time data for that route+stop
             nextScheduled = None
-            # find all trips that have route_id=gtfs_route
-            route_trip_ids = {tid for tid, data in stm_trips.items() if data["route_id"] == gtfs_route}
-
+            route_trip_ids = {
+                tid for tid, data in stm_trips.items() if data["route_id"] == gtfs_route
+            }
             for (trip_id, stop_id), schedTimeStr in stm_stop_times.items():
-                if trip_id not in route_trip_ids:
+                if trip_id not in route_trip_ids or stop_id != wanted_stop:
                     continue
-                if stop_id != wanted_stop:
-                    continue
-
-                # parse time
                 try:
                     parts = schedTimeStr.split(":")
-                    if len(parts)<2:
-                        continue
                     hours = int(parts[0])
-                    minutes = int(parts[1])
-                    seconds = int(parts[2]) if len(parts)>2 else 0
-                    extra_days = 0
-                    if hours>=24:
-                        extra_days = hours//24
-                        hours = hours%24
-                    schedDt = datetime(now.year, now.month, now.day, hours, minutes, seconds)
-                    if extra_days>0:
-                        schedDt += timedelta(days=extra_days)
-                    if schedDt<= now:
+                    mins  = int(parts[1])
+                    secs  = int(parts[2]) if len(parts) > 2 else 0
+                    extra = hours // 24
+                    hours = hours % 24
+                    schedDt = datetime(now.year, now.month, now.day, hours, mins, secs)
+                    if extra:
+                        schedDt += timedelta(days=extra)
+                    if schedDt <= now:
                         schedDt += timedelta(days=1)
-                    if nextScheduled is None or schedDt<nextScheduled:
+                    if nextScheduled is None or schedDt < nextScheduled:
                         nextScheduled = schedDt
                 except:
                     continue
 
-            if nextScheduled is not None:
-                arrival_str = nextScheduled.strftime("%I:%M %p")
-            else:
-                arrival_str = "Indisponible (Route annulée)"
-
-            # Build fallback bus object
-            direction_str = combo_info[final_key]["direction"]
-            location_str  = combo_info[final_key]["location"]
-            fallback_bus = {
+            arrival_str = nextScheduled.strftime("%I:%M %p") if nextScheduled else "Indisponible"
+            fallback = {
                 "route_id": gtfs_route,
                 "trip_id": "N/A",
                 "stop_id": wanted_stop,
                 "arrival_time": arrival_str,
                 "occupancy": "Unknown",
-                "direction": direction_str,
-                "location": location_str,
+                "direction": combo_info[final_key]["direction"],
+                "location": combo_info[final_key]["location"],
                 "delayed_text": None,
                 "early_text": None,
                 "at_stop": False,
                 "wheelchair_accessible": False
             }
-            closest_buses[final_key] = fallback_bus
+            closest_buses[final_key] = fallback
 
-    # ================
-    # 3) Convert to a list
-    # ================
-    # Return them in the order you want (e.g. 171_Est, 171_Ouest, 180_Est, 180_Ouest, 164_Est, 164_Ouest).
+    # 3) Return in desired order
     order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est"]
-    result = []
-    for key in order:
-        if closest_buses[key] is not None:
-            result.append(closest_buses[key])
-    return result
+    return [closest_buses[k] for k in order if closest_buses[k] is not None]
 
-
-
-
-
-
-
-
-
-    return buses
 
 def debug_print_stm_occupancy_status(desired_routes, stm_trips):
     entities = fetch_stm_vehicle_positions()
