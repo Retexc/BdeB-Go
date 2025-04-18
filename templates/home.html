@@ -37,15 +37,30 @@
     </div>
     <div class="main-content">
       <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- Title & state on the left -->
         <div class="text-title">
           <h1 class="Title">Tableau d’affichage en temps réel</h1>
-          <h3 class="Etat">État : Actif</h3>
+          <h3 class="Etat">État : Arrêté</h3>
         </div>
-        <button id="startApp" type="button" class="btn btn-primary" 
-        style="margin-top: 4rem;">
-        <img src="../static/assets/images/play_arrow.svg" alt="Parametres" style="width:16px; height:16px; margin-bottom: 2px;">
-        Démarrer</button>
+      
+        <!-- Button group container on the right -->
+        <div class="d-flex">
+          <a href="http://127.0.0.1:5000/"
+             target="_blank"
+             class="btn btn-secondary me-2 mt-4">
+            Accéder au tableau
+          </a>
+          <button id="startApp"
+                  type="button"
+                  class="btn btn-primary mt-4">
+            <img src="../static/assets/images/play_arrow.svg"
+                 alt="Play"
+                 style="width:16px; height:16px; margin-bottom:2px;">
+            Démarrer
+          </button>
+        </div>
       </div>
+      
       <!-- Logs Area -->
       <div id="logsArea" class="logs-area">
         <pre id="logPre">Console logs will be displayed here...</pre>

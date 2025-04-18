@@ -181,6 +181,21 @@
                   </form>
                 </div>
               {% endif %}
+              <div class="auto-update-panel">
+                <h5>Auto‑mise à jour</h5>
+                <form action="/admin/auto_update_settings" method="post">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="autoEnabled"
+                           name="enabled" {{ 'checked' if auto_cfg.enabled }}>
+                    <label class="form-check-label" for="autoEnabled">
+                      Activer la mise à jour automatique
+                    </label>
+                  </div>
+                  <input type="time" id="autoTime" name="time" value="{{ auto_cfg.time }}">
+                  <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </form>
+              </div>
+              
             </div>
             
               

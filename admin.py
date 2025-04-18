@@ -6,6 +6,7 @@ import threading
 import json
 import zipfile
 import shutil
+import time
 import re
 from datetime import datetime
 import logging
@@ -29,6 +30,7 @@ GITHUB_REPO       = "https://github.com/Retexc/BdeB-GTFS.git"
 CSS_FILE_PATH     = "./static/index.css"
 STATIC_IMAGES_DIR = "./static/assets/images"
 UPDATE_INFO_FILE  = "./gtfs_update_info.json"
+AUTO_UPDATE_CFG   = os.path.join(INSTALL_DIR, "auto_update_config.json")
 
 main_app_logs = []
 app_process    = None
@@ -42,6 +44,23 @@ def capture_app_logs(process):
         main_app_logs.append(line.rstrip())
     app.config['APP_RUNNING'] = False
     logger.info("Main app process ended.")
+
+# ----- Auto update info persistence -----
+
+def load_auto_update_cfg():
+    # default: enabled, start at 20:00
+    cfg = {"enabled": True, "time": "20:00"}
+    if os.path.exists(AUTO_UPDATE_CFG):
+        try:
+            with open(AUTO_UPDATE_CFG, "r") as f:
+                cfg.update(json.load(f))
+        except:
+            pass
+    return cfg
+
+def save_auto_update_cfg(cfg):
+    with open(AUTO_UPDATE_CFG, "w") as f:
+        json.dump(cfg, f, indent=2)
 
 # ----- GTFS update info persistence -----
 
@@ -182,35 +201,49 @@ def admin_settings():
         update_available = False
 
     last_checked = datetime.now().strftime("%Y‑%m‑%d %H:%M:%S")
+    auto_cfg      = load_auto_update_cfg()
     return render_template(
         "settings.html",
         update_info      = info,
         update_available = update_available,
-        last_checked     = last_checked
+        last_checked     = last_checked,
+        auto_cfg         = auto_cfg 
     )
+
+def perform_app_update():
+    # identical to your route’s subprocess calls
+    if os.path.isdir(os.path.join(INSTALL_DIR, ".git")):
+        subprocess.check_call(["git", "-C", INSTALL_DIR, "pull"],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    else:
+        subprocess.check_call(["git", "clone", GITHUB_REPO, INSTALL_DIR],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # update pip & requirements
+    subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    req = os.path.join(INSTALL_DIR, "requirements.txt")
+    if os.path.exists(req):
+        subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "-r", req],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 @app.route("/admin/app_update", methods=["POST"])
 def admin_app_update():
     try:
-        if os.path.isdir(os.path.join(INSTALL_DIR, ".git")):
-            subprocess.check_call(["git", "-C", INSTALL_DIR, "pull"],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        else:
-            subprocess.check_call(["git", "clone", GITHUB_REPO, INSTALL_DIR],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-
-        subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"],
-                              stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        req = os.path.join(INSTALL_DIR, "requirements.txt")
-        if os.path.exists(req):
-            subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "-r", req],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-
-        flash(f"Application mise à jour avec succès ! ({datetime.now().strftime('%Y‑%m‑%d %H:%M:%S')})", "success")
+        perform_app_update()
+        flash(f"Application mise à jour ! ({datetime.now():%Y‑%m‑%d %H:%M:%S})", "success")
     except subprocess.CalledProcessError as e:
         flash(f"Erreur lors de la mise à jour : {e}", "danger")
-
     return redirect(url_for("admin_settings"))
+
+@app.route("/admin/auto_update_settings", methods=["POST"])
+def auto_update_settings():
+    enabled = bool(request.form.get("enabled"))
+    time_str = request.form.get("time", "20:00")
+    cfg = {"enabled": enabled, "time": time_str}
+    save_auto_update_cfg(cfg)
+    flash("Paramètres de mise à jour automatique enregistrés", "success")
+    return redirect(url_for("admin_settings"))
+
 
 @app.route("/admin/update_gtfs", methods=["POST"])
 def admin_update_gtfs():
@@ -300,6 +333,34 @@ def admin_status():
 @app.route("/admin/logs_data")
 def logs_data():
     return "\n".join(main_app_logs)
+
+def auto_update_worker():
+    while True:
+        cfg = load_auto_update_cfg()
+        if cfg.get("enabled"):
+            now = datetime.now()
+            # only after cfg['time']
+            cutoff = datetime.strptime(cfg["time"], "%H:%M").time()
+            if now.time() >= cutoff:
+                try:
+                    # compare local vs remote HEAD
+                    local  = subprocess.check_output(
+                        ["git", "-C", INSTALL_DIR, "rev-parse", "HEAD"],
+                        universal_newlines=True
+                    ).strip()
+                    remote = subprocess.check_output(
+                        ["git", "ls-remote", GITHUB_REPO, "HEAD"],
+                        shell=True, universal_newlines=True
+                    ).split()[0]
+                    if local != remote:
+                        logger.info("Auto‑update: new commit detected, pulling…")
+                        perform_app_update()
+                except Exception as e:
+                    logger.error("Auto‑update error: %s", e)
+        # sleep for 1 hour
+        time.sleep(3600)
+
+threading.Thread(target=auto_update_worker, daemon=True).start()
 
 if __name__ == "__main__":
     # Run the admin dashboard on port 5001; the main display app runs on 5000 via /admin/start
