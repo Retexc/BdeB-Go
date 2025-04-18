@@ -1,5 +1,6 @@
 # utils.py
-
+import holidays
+from datetime import datetime, date
 import os
 import csv
 from datetime import datetime
@@ -20,10 +21,23 @@ def load_no_service_days(filepath="no_service_days.txt"):
 
 
 def is_service_unavailable():
-    """Check if today is a no-service day or weekend."""
-    today = datetime.today().date()
+    """Weekend OR Québec statutory holiday OR manually‑listed date."""
+    today = date.today()
+    # weekends
+    if today.weekday() >= 5:
+        return True
+
+    # auto Québec holidays
+    qc_holidays = holidays.Canada(prov='QC')
+    if today in qc_holidays:
+        return True
+
+    # manually‑added special dates
     no_service_dates = load_no_service_days()
-    return (today.weekday() >= 5) or (today in no_service_dates)
+    if today in no_service_dates:
+        return True
+
+    return False
 
 
 def load_csv_dict(filepath):
