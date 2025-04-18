@@ -15,11 +15,11 @@ from utils import is_service_unavailable
 from stm import (
     fetch_stm_alerts,
     fetch_stm_realtime_data,
-    fetch_stm_positions_dict,      # new helper to get lat/lon
+    fetch_stm_positions_dict,      
     load_stm_gtfs_trips,
     load_stm_stop_times,
     load_stm_routes,
-    process_stm_trip_updates,       # merges arrival + positions
+    process_stm_trip_updates,       
     stm_map_occupancy_status,
     debug_print_stm_occupancy_status,
     validate_trip
@@ -198,7 +198,6 @@ def api_data():
                 try:
                     scheduled_dt = datetime.fromisoformat(st)
                     if scheduled_dt > now:
-                        # Skip this alert since its scheduled time is in the future.
                         continue
                 except Exception as e:
                     pass
@@ -291,7 +290,6 @@ def raw_stm_alerts():
 
 @app.route("/admin")
 def admin_dashboard():
-    # Render your admin dashboard (home.html)
     return render_template("home.html")
 
 
@@ -306,7 +304,6 @@ def capture_app_logs(process):
         if not line:  # Process terminated and stdout closed.
             break
         main_app_logs.append(line.rstrip())
-    # Optionally, mark the app as no longer running when process ends:
     app.config['APP_RUNNING'] = False
 
 @app.route('/admin/start', methods=['POST'])
@@ -315,9 +312,8 @@ def admin_start():
     if not app.config['APP_RUNNING']:
         try:
             # Spawn the main application as a subprocess.
-            # Replace the command below with the actual command you use to launch your main app.
             cmd = [PYTHON_EXEC, "-u", "app.py"]  
-            # For example, if your main app is also in app.py and you want to run it in non-debug mode.
+           
             app_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -336,11 +332,13 @@ def admin_start():
 
 @app.route('/admin/logs_data')
 def logs_data():
-    # Return the logs as plain text.
-    # In a real app, you might read from a log file.
     return "\n".join(main_app_logs)
 
+from waitress import serve
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False, host="127.0.0.1", port=5000)
+    serve(app,
+          host="127.0.0.1",
+          port=5000,
+          threads=8)
 
 #serve(app, host="0.0.0.0", port=5000)

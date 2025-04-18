@@ -260,6 +260,7 @@ def admin_start():
         try:
             cmd = [
                 PYTHON_EXEC, "-u", "-m", "waitress",
+                "--threads=8",
                 "--host=127.0.0.1", "--port=5000", "app:app"
             ]
             app_process = subprocess.Popen(
