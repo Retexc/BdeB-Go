@@ -207,7 +207,7 @@ def admin_settings():
         update_info      = info,
         update_available = update_available,
         last_checked     = last_checked,
-        auto_cfg         = auto_cfg 
+        auto_cfg         = auto_cfg, 
     )
 
 def perform_app_update():
