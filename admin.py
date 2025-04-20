@@ -363,5 +363,20 @@ def auto_update_worker():
 threading.Thread(target=auto_update_worker, daemon=True).start()
 
 if __name__ == "__main__":
-    # Run the admin dashboard on port 5001; the main display app runs on 5000 via /admin/start
-    app.run(debug=True, use_reloader=False, host="127.0.0.1", port=5001)
+    # If FLASK_ENV=development, use the Flask dev server:
+    if os.getenv("FLASK_ENV") == "development":
+        app.run(
+            debug=True,
+            use_reloader=True,      # reload on code change
+            host="127.0.0.1",
+            port=5001
+        )
+    else:
+        # Production: use Waitress
+        from waitress import serve
+        serve(
+            app,
+            host="0.0.0.0",
+            port=5001,
+            threads=8
+        )
