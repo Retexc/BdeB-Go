@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connexion – BdeB‑GTFS Manager</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7"
+      crossorigin="anonymous"
+    />
+
+    <!-- Your custom login styles -->
+    <link rel="stylesheet" href="../static/login.css" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="../static/assets/icons/icon.ico" />
+  </head>
+  <body>
+    <!-- full‑screen background image -->
+    <div class="login-bg"></div>
+
+    <!-- login card -->
+    <div class="login-card shadow-lg">
+      <div class="text-center mb-4">
+        <!-- replace `logo.svg` with your B‑logo file -->
+        <img src="../static/assets/images/logo-menu.svg" alt="B logo" class="login-logo" />
+      </div>
+      <h1 class="h4 text-white text-center mb-1">Bonjour</h1>
+      <p class="text-muted text-center mb-4">Entrer votre identifiant de connexion</p>
+
+      <form action="/admin/login" method="post">
+        <div class="mb-3">
+          <input
+            type="text"
+            name="username"
+            class="form-control form-control-lg"
+            placeholder="Utilisateur"
+            required
+          />
+        </div>
+        <div class="mb-3">
+          <input
+            type="password"
+            name="password"
+            class="form-control form-control-lg"
+            placeholder="Mot de passe"
+            required
+          />
+        </div>
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="remember"
+              name="remember"
+            />
+            <label class="form-check-label text-white-50" for="remember">
+              Se souvenir de moi
+            </label>
+          </div>
+          <a href="/forgot-password" class="text-warning small">Mot de passe oublié ?</a>
+        </div>
+        <button type="submit" class="btn btn-warning btn-lg w-100">Se connecter</button>
+      </form>
+    </div>
+
+    <!-- optional Bootstrap JS -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>

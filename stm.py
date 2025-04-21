@@ -289,26 +289,20 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
             now_ts = time.time()
             minutes_to_arrival = (arrival_unix - now_ts) // 60
 
-            # —— UPDATED EARLY/LATE LOGIC —— 
+            # —— SIMPLIFIED LATE‑ONLY LOGIC —— 
             scheduled_arrival_str = stm_stop_times.get((trip_id, stop_id))
             delay_text = None
-            early_text = None
             if scheduled_arrival_str:
                 try:
-                    # 1) Build the scheduled datetime
+                    # scheduled datetime today (or tomorrow if already past)
                     h, m, s = map(int, scheduled_arrival_str.split(":"))
                     sched_dt = datetime.now().replace(hour=h % 24, minute=m, second=s, microsecond=0)
                     if sched_dt < datetime.now():
                         sched_dt += timedelta(days=1)
 
-                    # 2) Convert arrival_unix to datetime
                     predicted_dt = datetime.fromtimestamp(arrival_unix)
-
-                    # 3) Compare directly
                     if predicted_dt > sched_dt:
                         delay_text = f"En retard (prévu à {sched_dt.strftime('%I:%M %p')})"
-                    elif predicted_dt < sched_dt:
-                        early_text = f"En avance (prévu à {sched_dt.strftime('%I:%M %p')})"
                 except Exception:
                     pass
 
@@ -328,7 +322,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
                 "direction": combo_info[final_key]["direction"],
                 "location": combo_info[final_key]["location"],
                 "delayed_text": delay_text,
-                "early_text": early_text,
+                "early_text": None,                 # always None now
                 "at_stop": at_stop_flag,
                 "wheelchair_accessible": wheelchair_accessible
             }
@@ -354,14 +348,10 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
                     continue
                 try:
                     parts = schedTimeStr.split(":")
-                    hours = int(parts[0])
+                    hours = int(parts[0]) % 24
                     mins  = int(parts[1])
                     secs  = int(parts[2]) if len(parts) > 2 else 0
-                    extra = hours // 24
-                    hours = hours % 24
                     schedDt = datetime(now.year, now.month, now.day, hours, mins, secs)
-                    if extra:
-                        schedDt += timedelta(days=extra)
                     if schedDt <= now:
                         schedDt += timedelta(days=1)
                     if nextScheduled is None or schedDt < nextScheduled:
@@ -388,6 +378,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
     # 3) Return in desired order
     order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est"]
     return [closest_buses[k] for k in order if closest_buses[k] is not None]
+
 
 
 def debug_print_stm_occupancy_status(desired_routes, stm_trips):

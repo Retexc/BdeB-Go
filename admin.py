@@ -8,13 +8,39 @@ import zipfile
 import shutil
 import time
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
+from functools import wraps
+from flask_session import Session
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
 
 app = Flask(__name__)
 app.secret_key = "replace-with-your-secure-secret-key"
 app.config['APP_RUNNING'] = False
+
+app.config["SQLALCHEMY_DATABASE_URI"]        = "sqlite:///admin_users.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Create the SQLAlchemy db instance
+db = SQLAlchemy(app)
+
+
+class User(db.Model):
+    __tablename__ = "users"
+    id            = db.Column(db.Integer, primary_key=True)
+    username      = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+
+    def set_password(self, pw):
+        self.password_hash = generate_password_hash(pw)
+
+    def check_password(self, pw):
+        return check_password_hash(self.password_hash, pw)
+
 
 # Logging
 logging.basicConfig(
@@ -22,6 +48,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("AdminDashboard")
+
+app.permanent_session_lifetime = timedelta(minutes=10)
 
 # Paths & constants
 PYTHON_EXEC       = sys.executable
@@ -32,8 +60,58 @@ STATIC_IMAGES_DIR = "./static/assets/images"
 UPDATE_INFO_FILE  = "./gtfs_update_info.json"
 AUTO_UPDATE_CFG   = os.path.join(INSTALL_DIR, "auto_update_config.json")
 
+app.config['SESSION_TYPE']       = 'filesystem'
+app.config['SESSION_FILE_DIR']   = os.path.join(INSTALL_DIR, 'flask_sessions')
+app.config['SESSION_PERMANENT']  = False
+# Optional: shrink the file‑session lifetime to match your 10 min rule
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
+
+# wipe any old sessions on startup
+if os.path.isdir(app.config['SESSION_FILE_DIR']):
+    shutil.rmtree(app.config['SESSION_FILE_DIR'])
+os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
+
+# bind the extension
+Session(app)
+
 main_app_logs = []
 app_process    = None
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            # preserve where we wanted to go
+            return redirect(url_for("login", next=request.path))
+        return f(*args, **kwargs)
+    return decorated
+
+@app.before_request
+def session_management():
+    # skip if not logged in or hitting login/logout itself
+    if request.endpoint in ("login", "logout", "static"):
+        return
+    if not session.get("logged_in"):
+        return
+
+    now = datetime.utcnow()
+    last = session.get("last_activity", now.timestamp())
+    if now - datetime.fromtimestamp(last) > app.permanent_session_lifetime:
+        session.clear()
+        flash("Session expirée : veuillez vous reconnecter.", "warning")
+        return redirect(url_for("login"))
+
+    # update timestamp
+    session["last_activity"] = now.timestamp()
+
+@app.before_request
+def require_login_for_admin():
+    # allow static assets and the login/logout endpoints
+    if request.path.startswith("/admin") and request.endpoint not in ("login","logout","static"):
+        if not session.get("logged_in"):
+            return redirect(url_for("login", next=request.path))
+
+
 
 def capture_app_logs(process):
     """Continuously read stdout from the main app process."""
@@ -134,7 +212,35 @@ def copy_to_static_folder(src_path):
 
 # ----- Routes -----
 
+@app.route("/admin/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        # look up the user by username
+        user = User.query.filter_by(username=request.form["username"]).first()
+
+        if user and user.check_password(request.form["password"]):
+            session.permanent = True
+            session["logged_in"] = True
+            session["last_activity"] = datetime.utcnow().timestamp()
+            flash("Vous êtes connecté !", "success")
+            return redirect(request.args.get("next") or url_for("admin_home"))
+
+        flash("Nom d’utilisateur ou mot de passe invalide", "danger")
+
+    return render_template("login.html")
+
+
+
+@app.route("/admin/logout")
+@login_required
+def logout():
+    session.clear()
+    flash("Vous êtes déconnecté .", "info")
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def admin_home():
     return render_template("home.html")
 
