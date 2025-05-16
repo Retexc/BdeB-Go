@@ -127,15 +127,15 @@ opacity: 0.2;
 }
 
 .frame-1.canceled .direction,
-.frame-1.canceled .location,
-.frame-1.canceled .buttonBlueBuses,
-.frame-1.canceled .buttonBlueBuses.buttonPinkOverride {
+.frame-1.canceled .location {
   color: #777 !important;
 }
 
 .frame-1.canceled .direction-icon,
 .frame-1.canceled .time-remaining,
-.frame-1.canceled .delay-cell {
+.frame-1.canceled .delay-cell,
+.frame-1.canceled .buttonBlueBuses,
+.frame-1.canceled .buttonBlueBuses.buttonPinkOverride{
   opacity: 0.5 !important;
 }
 
