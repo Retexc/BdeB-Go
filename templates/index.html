@@ -63,8 +63,18 @@
 
         // Update current time
         const timeElement = document.querySelector('.time');
-        const currentTimeParts = data.current_time.split(':');
-        timeElement.textContent = `${currentTimeParts[0]}:${currentTimeParts[1]} ${currentTimeParts[2].split(' ')[1]}`;
+        const parts      = data.current_time.split(':');
+        const hhmm       = `${parts[0]}:${parts[1]}`;
+        const ampm       = parts[2].split(' ')[1];
+
+        timeElement.innerHTML = `
+          <img
+            src="/static/assets/icons/bdeb.svg"
+            class="bdeb-logo"
+            alt="BdeB logo"
+          />
+          ${hhmm} ${ampm}
+        `;
 
         // ===================
         //  STM BUSES
@@ -82,7 +92,9 @@
         data.buses.forEach((bus) => {
           const busDiv = document.createElement('div');
           // Apply "frame-1" for each row; also handle canceled
-          busDiv.className = `frame-1 ${bus.arrival_time === 'Indisponible (Route annulée)' ? 'canceled' : ''}`;
+          const isCanceled = bus.canceled === true 
+                || bus.arrival_time === 'Indisponible (Route annulée)';
+          busDiv.className = `frame-1${isCanceled ? ' canceled' : ''}`;
 
           // Build occupancy icons
           let occupancyIcons = '';
@@ -441,7 +453,15 @@ data.next_trains.forEach((train) => {
 <body>
     <div class="scaling-container">
   <div class="main-container">
-    <span class="time">{{ current_time }}</span>
+    <span class="time">
+      <img
+        src="/static/assets/icons/bdeb.svg"
+        class="bdeb-logo"
+        alt="BdeB logo"
+      />
+      <span class="time-text">{{ current_time }}</span>
+    </span>
+
     <div class="frame"><!-- STM buses go here --></div>
     <div class="train-frame"><!-- EXO trains go here -->
     </div>

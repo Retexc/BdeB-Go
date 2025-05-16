@@ -40,21 +40,29 @@ opacity: 0.2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px; 
-  padding: 10px; 
+  gap: 15px;  
 }
 
 .time {
-  display: block;
-  width: 1920px;
-  margin: 0 auto 10px auto;
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #000;
+  padding: 15px 40px 10px;
+  margin: 0 0 10px;
   color: #fff;
-  font-size: 32px; 
-  font-weight: 900;
-  margin-top: 15px;
-  padding-right: 40px;
+  font-size: 32px;
+  font-weight: 900;              /* make nested text default to white */
 }
+
+.bdeb-logo {
+  width: 230px;
+  height: auto;
+}
+
+
 
 /* ========== STM & EXO FRAMES ========== */
 .frame, .train-frame {
@@ -68,7 +76,7 @@ opacity: 0.2;
 }
 
 .frame {
-  margin-top: 80px; 
+  margin-top: 95px; 
 }
 
 .train-frame {
@@ -112,9 +120,30 @@ opacity: 0.2;
   border-bottom: none;
 }
 
-.canceled {
-  opacity: 0.5;
+.frame-1.canceled {
+  opacity: 1 !important;
 }
+
+.frame-1.canceled .direction,
+.frame-1.canceled .location,
+.frame-1.canceled .buttonBlueBuses,
+.frame-1.canceled .buttonBlueBuses.buttonPinkOverride {
+  color: #777 !important;
+}
+
+.frame-1.canceled .direction-icon,
+.frame-1.canceled .time-remaining,
+.frame-1.canceled .delay-cell {
+  opacity: 0.5 !important;
+}
+
+.frame-1.canceled .alert-annule {
+  opacity: 1 !important;
+  filter: none !important;
+  background-color: #A91F10;  
+  color: #ffffff;              
+}
+
 
 /* ========== COLUMNS ========== */
 .bus-col-route {
@@ -351,8 +380,9 @@ opacity: 0.2;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #163F7D;
-  color: #fff;
+  background: #ff8329;
+  color: #000000;
+  font-weight: 800;
   font-size: 25px;
   padding: 12px;
   white-space: nowrap;
@@ -392,10 +422,14 @@ opacity: 0.2;
   color: #000000;;
 }
 
+.alert-annule {
+  background-color: #A91F10;
+  color: #ffffff;;
+}
+
 .alert-relocalise {
-  background-color: #e9f7ef;
-  color: #27ae60;
-  border-color: #2ecc71;
+  background-color: #27ae60;
+  color: #ffffff;
 }
 
 

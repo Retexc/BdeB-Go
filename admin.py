@@ -51,7 +51,7 @@ logger = logging.getLogger("AdminDashboard")
 
 app.permanent_session_lifetime = timedelta(minutes=10)
 
-# Paths & constants
+
 PYTHON_EXEC       = sys.executable
 INSTALL_DIR       = os.path.dirname(os.path.abspath(__file__))
 GITHUB_REPO       = "https://github.com/Retexc/BdeB-GTFS.git"
@@ -63,15 +63,14 @@ AUTO_UPDATE_CFG   = os.path.join(INSTALL_DIR, "auto_update_config.json")
 app.config['SESSION_TYPE']       = 'filesystem'
 app.config['SESSION_FILE_DIR']   = os.path.join(INSTALL_DIR, 'flask_sessions')
 app.config['SESSION_PERMANENT']  = False
-# Optional: shrink the file‑session lifetime to match your 10 min rule
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=10)
 
-# wipe any old sessions on startup
+
 if os.path.isdir(app.config['SESSION_FILE_DIR']):
     shutil.rmtree(app.config['SESSION_FILE_DIR'])
 os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
 
-# bind the extension
+
 Session(app)
 
 main_app_logs = []
@@ -81,14 +80,12 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logged_in"):
-            # preserve where we wanted to go
             return redirect(url_for("login", next=request.path))
         return f(*args, **kwargs)
     return decorated
 
 @app.before_request
 def session_management():
-    # skip if not logged in or hitting login/logout itself
     if request.endpoint in ("login", "logout", "static"):
         return
     if not session.get("logged_in"):
@@ -215,7 +212,6 @@ def copy_to_static_folder(src_path):
 @app.route("/admin/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        # look up the user by username
         user = User.query.filter_by(username=request.form["username"]).first()
 
         if user and user.check_password(request.form["password"]):
@@ -317,14 +313,12 @@ def admin_settings():
     )
 
 def perform_app_update():
-    # identical to your route’s subprocess calls
     if os.path.isdir(os.path.join(INSTALL_DIR, ".git")):
         subprocess.check_call(["git", "-C", INSTALL_DIR, "pull"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     else:
         subprocess.check_call(["git", "clone", GITHUB_REPO, INSTALL_DIR],
                               stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    # update pip & requirements
     subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"],
                           stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     req = os.path.join(INSTALL_DIR, "requirements.txt")
@@ -445,7 +439,6 @@ def auto_update_worker():
         cfg = load_auto_update_cfg()
         if cfg.get("enabled"):
             now = datetime.now()
-            # only after cfg['time']
             cutoff = datetime.strptime(cfg["time"], "%H:%M").time()
             if now.time() >= cutoff:
                 try:
@@ -463,7 +456,6 @@ def auto_update_worker():
                         perform_app_update()
                 except Exception as e:
                     logger.error("Auto‑update error: %s", e)
-        # sleep for 1 hour
         time.sleep(3600)
 
 threading.Thread(target=auto_update_worker, daemon=True).start()
@@ -473,7 +465,7 @@ if __name__ == "__main__":
     if os.getenv("FLASK_ENV") == "development":
         app.run(
             debug=True,
-            use_reloader=True,      # reload on code change
+            use_reloader=True,      
             host="127.0.0.1",
             port=5001
         )

@@ -72,9 +72,7 @@ def merge_alerts_into_buses(buses, stm_alerts):
         route_id = bus.get("route_id", "").strip()
         bus_location = bus.get("location", "").strip()
         for alert in stm_alerts:
-            # Check if the bus's route appears in the alert's routes field.
             if route_id in alert.get("routes", ""):
-                # Check if the bus's location is part of the alert's stop field.
                 if bus_location in alert.get("stop", ""):
                     desc = alert.get("description", "").lower()
                     if "déplacé" in desc:
@@ -83,6 +81,10 @@ def merge_alerts_into_buses(buses, stm_alerts):
                     elif "relocalisé" in desc:
                         bus["location"] = f"{bus_location} <span class='alert-badge alert-relocalise'>Arrêt relocalisé</span>"
                         break
+                    elif "annulé" in desc:
+                        bus["location"] = f"{bus_location} <span class='alert-badge alert-annule'>Arrêt annulé</span>"
+                        bus["canceled"] = True 
+                        break                    
     return buses
 
 # ====================================================================
