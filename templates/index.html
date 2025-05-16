@@ -18,16 +18,12 @@
       const container = document.querySelector('.scaling-container');
       const designWidth  = 1920;
       const designHeight = 1080;
-
       const windowWidth  = window.innerWidth;
       const windowHeight = window.innerHeight;
-
-      // Scale down if the browser is smaller, but never scale above 1
       const scaleX = windowWidth  / designWidth;
       const scaleY = windowHeight / designHeight;
       const scale  = Math.min(scaleX, scaleY);
-
-      // Center the container
+      
       container.style.transform = `translate(-50%, -50%) scale(${scale})`;
     }
 
@@ -35,18 +31,14 @@
     window.addEventListener('resize', scaleContent);
     window.addEventListener('DOMContentLoaded', scaleContent);
 
-    /* 2) Your existing code that hides the preloader */
     document.addEventListener('DOMContentLoaded', () => {
       const preloader = document.querySelector('.preloader');
       const mainContent = document.querySelector('.main-container');
 
-      // Option A: Hide main content until loader finishes
       mainContent.style.display = 'none';
 
-      // Option B: Listen for the animation end, then hide the preloader
       const bWrapper = document.querySelector('.b-wrapper');
       bWrapper.addEventListener('animationend', () => {
-        // Fade out the entire overlay
         preloader.classList.add('fade-out');
       });
 
@@ -91,7 +83,7 @@
         // Render each bus row
         data.buses.forEach((bus) => {
           const busDiv = document.createElement('div');
-          // Apply "frame-1" for each row; also handle canceled
+          // Apply "frame-1" for each row;
           const isCanceled = bus.canceled === true 
                 || bus.arrival_time === 'Indisponible (Route annulée)';
           busDiv.className = `frame-1${isCanceled ? ' canceled' : ''}`;
@@ -149,7 +141,7 @@
           const delayedText = bus.delayed_text ? 
             `<span class="delayed-text">${bus.delayed_text}</span>` : '';
 
-          // Early text
+          // Early text 
           const earlyText = bus.early_text ? 
             `<span class="early-text">${bus.early_text}</span>` : '';
 
@@ -235,7 +227,7 @@
 //  EXO TRAINS
 // ===================
 const trainContainer = document.querySelector('.train-frame');
-trainContainer.innerHTML = ''; // Clear old content
+trainContainer.innerHTML = ''; 
 
 const exoLogoDiv = document.createElement('div');
 exoLogoDiv.className = "exo-logo-container";
@@ -250,10 +242,9 @@ data.next_trains.forEach((train) => {
   // If there's "no_service_text", hide icons
   let hideIcons = !!train.no_service_text; // true if no_service_text is present
 
-  // Build occupancy icons if not no-service
+  // Build occupancy icons
   let occupancyIcons = '';
   if (!hideIcons) {
-    // (same occupancy logic as before)
     if (train.occupancy === "MANY_SEATS_AVAILABLE") {
             occupancyIcons = `
               <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
@@ -419,7 +410,7 @@ data.next_trains.forEach((train) => {
         const allAlerts = data.alerts.map(a => {
         if (a.routes === "Custom" && a.stop === "Message") {
           return `${a.header}: ${a.description}`;
-          // Normal STM
+          //  STM
         } else if (a.routes) {
           return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
           // EXO
@@ -470,22 +461,18 @@ data.next_trains.forEach((train) => {
     </div>
   </div>
   <div class="logo-container">
-    <!-- <img src="/static/assets/images/B.png" alt="Transport Logos"> -->
   </div>
 
   <div id="alertContainer" class="alert-banner" style="display: none;">
     <div class="alert-marquee">
-      <img src="/static/assets/icons/warning.png" class="alert-icon" alt="Alert">
+      <img src="/static/assets/icons/warning.svg" class="alert-icon" alt="Alert">
       <span class="alert-text"></span>
     </div>
   </div>
 <!-- 1) LOADER OVERLAY -->
 <div class="preloader">
-    <!-- B Logo Wrapper -->
     <div class="b-wrapper">
-      <!-- Your B SVG (white fill recommended so it “expands” in white) -->
       <svg xmlns="http://www.w3.org/2000/svg" width="162" height="187" viewBox="0 0 162 187" fill="white" class="b-logo">
-        <!-- (Same structure as your snippet, but fill="white" so it covers the screen when scaled) -->
         <mask id="mask0_1790_213173" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="159" height="187">
           <mask id="mask1_1790_213173" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="162" height="187">
             <path d="M161.108 0H0L0 186.673H161.108L161.108 0Z" fill="white"/>

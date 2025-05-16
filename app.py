@@ -65,7 +65,7 @@ def merge_alerts_into_buses(buses, stm_alerts):
     """
     For each bus row, check if there's a matching STM alert that references the same
     route and stop (based on the processed alert's "routes" and "stop" fields). If the
-    alert description contains "déplacé" or "relocalisé", append a styled HTML badge
+    alert description contains "annulé","déplacé" or "relocalisé", append a styled HTML badge
     next to the bus's location.
     """
     for bus in buses:

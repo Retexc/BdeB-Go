@@ -45,7 +45,7 @@ def process_stm_alerts(stm_alerts_data, weather_api_key):
     allowed_directions = {"W", "E"}
     allowed_stop_codes = {"50270", "62374"}
 
-    # Mapping for friendly stop names.
+    # Mapping stop names.
     stop_code_to_name = {
         "50270": "Collège de Bois-de-Boulogne",
         "62374": "Henri-Bourassa/du Bois-de-Boulogne"  # Adjust as necessary.

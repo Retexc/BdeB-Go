@@ -14,7 +14,6 @@ html, body {
 }
 
 /* ========== MAIN CONTAINER ========== */
-    /* The scaling container is your 1920×1080 "canvas" */
 .scaling-container {
   width: 1920px;
   height: 1080px;
@@ -49,17 +48,20 @@ opacity: 0.2;
   align-items: center;
   width: 100%;
   box-sizing: border-box;
-  background-color: #000;
+  background-color: #000000ba;
   padding: 15px 40px 10px;
   margin: 0 0 10px;
   color: #fff;
   font-size: 32px;
-  font-weight: 900;              /* make nested text default to white */
+  font-weight: 900;
+  z-index: 1;
+  position: relative;             
 }
 
 .bdeb-logo {
   width: 230px;
   height: auto;
+  margin-left: -12px;
 }
 
 
@@ -76,7 +78,7 @@ opacity: 0.2;
 }
 
 .frame {
-  margin-top: 95px; 
+  margin-top: 108px; 
 }
 
 .train-frame {
@@ -113,7 +115,7 @@ opacity: 0.2;
   gap: 10px; 
   width: 100%;
   padding-bottom: 5px; 
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #6d6d6d;
 }
 
 .frame-1:last-child {
@@ -158,7 +160,7 @@ opacity: 0.2;
 }
 
 .bus-col-info, .train-col-info, .train-col-route, .bus-col-route {
-  margin-left: 30px; /* adjust the value as needed */
+  margin-left: 30px; 
 }
 
 .bus-col-status {
@@ -169,7 +171,7 @@ opacity: 0.2;
   display: grid;
   grid-template-columns: 285px 140px 128px 24px 95px;
   align-items: center;
-  gap: 15px; /* reduced gap */
+  gap: 15px; 
 }
 
 .train-col-route {
@@ -192,7 +194,7 @@ opacity: 0.2;
   display: grid;
   grid-template-columns: 285px 140px 130px 45px 45px;
   align-items: center;
-  gap: 10px; /* reduced gap */
+  gap: 10px; 
   margin-right: 35px;
 }
 
@@ -207,7 +209,7 @@ opacity: 0.2;
 
 .occupancy-cell {
   display: flex;
-  gap: 3px; /* reduced gap */
+  gap: 3px; 
 }
 
 .wheelchair-cell,
@@ -554,8 +556,15 @@ opacity: 0.2;
   100% { opacity: 0; }
 }
 
+/*
+  IMPORTANT!!! DO NOT REMOVE/EDIT THIS SECTION.
+  THOSE ARE THE SLOTS FOR THE BACKGROUND IMAGES.
+  EDITING THE SLOTS WILL BREAK THE BACKGROUND IMAGES IN THE ADMIN DASHBOARD.
+  */
 /* MULTISLOT:
 SLOT1: ./static/assets/images/pexels-pixabay-259698.jpg from 2025-11-01 to 2026-02-28
-SLOT2: ./static/assets/images/Printemps - Banner Big.png from 2025-04-15 to 2025-05-28
+SLOT2: ./static/assets/images/Printemps - Banner Big.png from 2025-04-15 to 2025-05-15
 SLOT3: ./static/assets/images/pexels-timmossholder-3359733.jpg from 2025-09-01 to 2025-12-01
-SLOT4: ./static/assets/images/bdeb.jpeg from 2025-07-01 to 2025-08-31 */
+SLOT4: ./static/assets/images/bdeb.jpeg from 2025-05-16 to 2025-08-31 */
+
+
