@@ -43,6 +43,13 @@ logging.basicConfig(
 )
 import requests
 from config import WEATHER_API_KEY
+
+_weather_cache = {
+    "ts":   0,     # last fetch timestamp
+    "data": None,  # cached weather dict
+}
+
+CACHE_TTL = 5 * 60  # seconds (5 minutes)
 logger = logging.getLogger('BdeB-GTFS')
 app = Flask(__name__)
 # ====================================================================
@@ -53,6 +60,33 @@ stm_trips = load_stm_gtfs_trips("STM/trips.txt", routes_map)
 stm_stop_times = load_stm_stop_times("STM/stop_times.txt")
 exo_trips = load_exo_gtfs_trips("Exo/Train/trips.txt")
 exo_stop_times = load_exo_stop_times("Exo/Train/stop_times.txt")
+
+def get_weather():
+    """Fetch weather from WeatherAPI at most once per CACHE_TTL."""
+    now = time.time()
+    # if cache is stale, refresh it
+    if now - _weather_cache["ts"] > CACHE_TTL:
+        try:
+            resp = requests.get(
+                f"http://api.weatherapi.com/v1/current.json"
+                f"?key={WEATHER_API_KEY}"
+                "&q=Montreal,QC"
+                "&aqi=no"
+                "&lang=fr",
+                timeout=5
+            ).json()
+            _weather_cache["data"] = {
+                "icon": "https:" + resp["current"]["condition"]["icon"],
+                "text":  resp["current"]["condition"]["text"],
+                "temp":  int(round(resp["current"]["temp_c"])),
+            }
+        except Exception:
+            # leave last good data or None
+            pass
+        _weather_cache["ts"] = now
+
+    return _weather_cache["data"] or {"icon":"", "text":"", "temp":""}
+
 
 @app.route("/debug-occupancy")
 def debug_occupancy():
@@ -151,23 +185,7 @@ def index():
     
     current_time = time.strftime("%I:%M:%S %p")
     active_bg    = get_active_background("./static/index.css")
-
-    try:
-        w = requests.get(
-            f"http://api.weatherapi.com/v1/current.json"
-            f"?key={WEATHER_API_KEY}"
-            f"&q=Montreal,QC"
-            f"&aqi=no"
-            f"&lang=fr",                
-            timeout=5
-        ).json()
-        weather = {
-            "icon":  "https:" + w["current"]["condition"]["icon"],
-            "text":  w["current"]["condition"]["text"],
-            "temp":  int(round(w["current"]["temp_c"]))
-        }
-    except Exception:
-        weather = {"icon":"", "text":"", "temp":""}
+    weather = get_weather()
 
     return render_template(
         "index.html",
@@ -272,29 +290,14 @@ def api_data():
             train["delayed_text"] = None
             train["early_text"] = None
 
-    try:
-        w = requests.get(
-            f"http://api.weatherapi.com/v1/current.json"
-            f"?key={WEATHER_API_KEY}"
-            f"&q=Montreal,QC"
-            f"&aqi=no"
-            f"&lang=fr",                
-            timeout=5
-        ).json()
-        weather = {
-            "icon": "https:" + w["current"]["condition"]["icon"],
-            "text":  w["current"]["condition"]["text"],
-            "temp":  int(round(w["current"]["temp_c"]))
-        }
-    except:
-        weather = {"icon":"", "text":"", "temp":""}
+    weather = get_weather()
 
     return {
         "buses":       buses,
         "next_trains": exo_trains,
         "current_time": time.strftime("%I:%M:%S %p"),
         "alerts":      filtered_alerts,
-        "weather":     weather        # ← add here
+        "weather":     weather        
     }
 
 # ====================================================================
