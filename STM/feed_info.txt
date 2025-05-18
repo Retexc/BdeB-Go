@@ -1,3 +1,2 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2b1671c0971827a42fcce72d1d9e6499b3e4d68a03945e7d11e88d341dfdcb38
-size 158
+feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date
+"Société de transport de Montréal",http://www.stm.info,fr,20250106,20250615

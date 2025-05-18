@@ -1,3 +1,2 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9c95afd7189f216a9e39a3f16d6dbea6643c980ac0bc7fd14920c974fc54e5ef
-size 154
+feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date
+TRAINS,https://exo.quebec/fr/planifier-trajet/train,fr,20250106,20250622

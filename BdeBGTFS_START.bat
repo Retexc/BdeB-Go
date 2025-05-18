@@ -1,14 +1,16 @@
 @echo off
-rem ─ Change directory to where your admin.py lives
 cd /d "%~dp0"
 
-rem ─ OPTIONAL: activate your virtualenv if you have one
-if exist "%~dp0venv\Scripts\activate.bat" (
-  call "%~dp0venv\Scripts\activate.bat"
+if exist "venv\Scripts\activate.bat" (
+  call "venv\Scripts\activate.bat"
 )
 
-rem ─ Serve the admin Flask app with Waitress
-waitress-serve --host=0.0.0.0 --port=5001 admin:app
+rem ─ Open the admin in the default browser
+echo Opening BdeB-GTFS Manager at http://127.0.0.1:5001/ in your browser...
+start "" "http://127.0.0.1:5001/"
 
-rem ─ Pause so you can see any errors
+rem ─ Serve the admin Flask app with Waitress bound to localhost
+echo Starting Waitress on http://127.0.0.1:5001/
+waitress-serve --host=127.0.0.1 --port=5001 admin:app
+
 pause

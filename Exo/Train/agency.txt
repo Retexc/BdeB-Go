@@ -1,3 +1,2 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:1defb646581b6c319b2ce0343f0d25fe16f52281ba9f3f4be0b81adafa3ed905
-size 249
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_fare_url
+TRAINS,exo-Réseau de transport métropolitain,https://exo.quebec/fr/planifier-trajet/train,America/Montreal,fr,https://exo.quebec/fr/titres-tarifs/titres-metropolitains
