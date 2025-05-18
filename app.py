@@ -41,6 +41,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+import requests
+from config import WEATHER_API_KEY
 logger = logging.getLogger('BdeB-GTFS')
 app = Flask(__name__)
 # ====================================================================
@@ -148,12 +150,31 @@ def index():
     )
     
     current_time = time.strftime("%I:%M:%S %p")
-    active_bg = get_active_background("./static/index.css")
+    active_bg    = get_active_background("./static/index.css")
+
+    try:
+        w = requests.get(
+            f"http://api.weatherapi.com/v1/current.json"
+            f"?key={WEATHER_API_KEY}"
+            f"&q=Montreal,QC"
+            f"&aqi=no"
+            f"&lang=fr",                
+            timeout=5
+        ).json()
+        weather = {
+            "icon":  "https:" + w["current"]["condition"]["icon"],
+            "text":  w["current"]["condition"]["text"],
+            "temp":  int(round(w["current"]["temp_c"]))
+        }
+    except Exception:
+        weather = {"icon":"", "text":"", "temp":""}
+
     return render_template(
         "index.html",
-        next_trains=exo_trains,
-        current_time=current_time,
-        active_bg=active_bg
+        next_trains  = exo_trains,
+        current_time = current_time,
+        active_bg    = active_bg,
+        weather      = weather        
     )
 
 # ====================================================================
@@ -251,11 +272,29 @@ def api_data():
             train["delayed_text"] = None
             train["early_text"] = None
 
+    try:
+        w = requests.get(
+            f"http://api.weatherapi.com/v1/current.json"
+            f"?key={WEATHER_API_KEY}"
+            f"&q=Montreal,QC"
+            f"&aqi=no"
+            f"&lang=fr",                
+            timeout=5
+        ).json()
+        weather = {
+            "icon": "https:" + w["current"]["condition"]["icon"],
+            "text":  w["current"]["condition"]["text"],
+            "temp":  int(round(w["current"]["temp_c"]))
+        }
+    except:
+        weather = {"icon":"", "text":"", "temp":""}
+
     return {
-        "buses": buses,
+        "buses":       buses,
         "next_trains": exo_trains,
         "current_time": time.strftime("%I:%M:%S %p"),
-        "alerts": filtered_alerts
+        "alerts":      filtered_alerts,
+        "weather":     weather        # ← add here
     }
 
 # ====================================================================

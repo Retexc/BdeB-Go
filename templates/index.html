@@ -48,25 +48,42 @@
         mainContent.style.display = 'block';
       });
     });  
-    async function refreshData() {
-      try {
-        const response = await fetch('/api/data'); // Call the API endpoint
-        const data = await response.json();
 
-        // Update current time
-        const timeElement = document.querySelector('.time');
-        const parts      = data.current_time.split(':');
-        const hhmm       = `${parts[0]}:${parts[1]}`;
-        const ampm       = parts[2].split(' ')[1];
+async function refreshData() {
+  try {
+    const response = await fetch('/api/data');
+    const data     = await response.json();
 
-        timeElement.innerHTML = `
-          <img
-            src="/static/assets/icons/bdeb.svg"
-            class="bdeb-logo"
-            alt="BdeB logo"
-          />
-          ${hhmm} ${ampm}
-        `;
+    // ← ADD THIS LINE to grab weather out of the payload
+    const weather  = data.weather || { icon: '', text: '', temp: '' };
+
+    // Now update the time + weather + logo
+    const timeElement = document.querySelector('.time');
+    const parts       = data.current_time.split(':');
+    const hhmm        = `${parts[0]}:${parts[1]}`;
+    const ampm        = parts[2].split(' ')[1];
+
+    timeElement.innerHTML = `
+      <!-- BdeB logo -->
+      <img src="/static/assets/icons/bdeb.svg"
+           class="bdeb-logo"
+           alt="BdeB logo" />
+
+      <!-- Weather icon + temp + description -->
+      ${weather.icon ? `
+        <img src="${weather.icon}"
+             class="weather-icon"
+             alt="${weather.text}" />
+        <span class="weather-text">
+          ${weather.temp}°C ${weather.text}
+        </span>
+      ` : ''}
+
+      <!-- Clock -->
+      <span class="time-text">
+        ${hhmm} ${ampm}
+      </span>
+    `;
 
         // ===================
         //  STM BUSES
@@ -445,13 +462,18 @@ data.next_trains.forEach((train) => {
     <div class="scaling-container">
   <div class="main-container">
     <span class="time">
-      <img
-        src="/static/assets/icons/bdeb.svg"
-        class="bdeb-logo"
-        alt="BdeB logo"
-      />
+      <img src="/static/assets/icons/bdeb.svg" class="bdeb-logo" alt="BdeB logo" />
+    
+      <!-- Weather: icon + temp°C + description -->
+      {% if weather.icon %}
+        <img src="{{ weather.icon }}" class="weather-icon" alt="{{ weather.text }}" />
+        <span class="weather-text">{{ weather.temp }}°C {{ weather.text }}</span>
+      {% endif %}
+    
+      <!-- Clock -->
       <span class="time-text">{{ current_time }}</span>
     </span>
+    
 
     <div class="frame"><!-- STM buses go here --></div>
     <div class="train-frame"><!-- EXO trains go here -->
