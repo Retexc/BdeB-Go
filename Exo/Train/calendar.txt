@@ -1,0 +1,5 @@
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+TRAIN-H25-TRKPI-Semaine-10,1,1,1,1,1,0,0,20250507,20250622
+TRAIN-H25-TRKPI-Samedi-02,0,0,0,0,0,1,0,20250507,20250622
+TRAIN-H25-TRKPI-Dimanche-02,0,0,0,0,0,0,1,20250507,20250622
+TRAIN-H25-TRKPI-Fête-1-01,0,0,0,0,0,0,0,20250507,20250622
