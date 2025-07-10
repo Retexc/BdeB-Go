@@ -16,12 +16,15 @@ setup(
         "Flask-Session>=0.4",
         "Flask-SQLAlchemy>=2.5",
         "werkzeug>=2.0",
-        # if you use any others, add them here...
+        # tray‐launcher dependencies
+        "pystray>=0.19.5",
+        "Pillow>=11.0.0",
+        "winotify>=0.1.0",
     ],
     entry_points={
         "console_scripts": [
-            # this lets you do: `bdeb-gfts = bdeb_gfts.main:main`
             "bdeb-gts = bdeb_gtfs.main:main",
+            "bdeb-tray = bdeb_gtfs.tray_launcher:main",
         ],
     },
     python_requires=">=3.7",
