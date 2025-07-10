@@ -17,7 +17,7 @@ from tkinter import ttk
 import shutil
 import sys
 from waitress import serve
-from app import app 
+from src.bdeb_gtfs.main import app 
 
 class TextHandler(logging.Handler):
     """Custom logging handler that outputs to a Tkinter Text widget"""

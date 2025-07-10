@@ -1,5 +1,5 @@
 # init_db.py
-from admin import app, db, User
+from bdeb_gtfs.admin import app, db, User
 
 with app.app_context():
     db.create_all()

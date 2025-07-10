@@ -1,5 +1,5 @@
 
-from utils import get_weather_alerts
+from .utils import get_weather_alerts
 
 def get_text(text_source):
     """

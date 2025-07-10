@@ -1,0 +1,6 @@
+flask>=2.0
+waitress>=2.0
+requests>=2.0
+Flask-Session>=0.4
+Flask-SQLAlchemy>=2.5
+werkzeug>=2.0

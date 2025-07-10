@@ -1,48 +1,39 @@
 # app.py
+import os, sys, time, json, logging, subprocess, threading, re
+from datetime import datetime
+# src/bdeb_gfts/main.py
 
 from flask import Flask, render_template, request, jsonify
-import time
-import sys
-import os, json
-from datetime import datetime
-import re
-import logging
-import subprocess
-import threading
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config import WEATHER_API_KEY
-from utils import is_service_unavailable
-from stm import (
+# ────── PACKAGE IMPORTS ───────────────────────────────────────
+from bdeb_gtfs.config            import WEATHER_API_KEY
+from bdeb_gtfs.utils             import is_service_unavailable
+
+from bdeb_gtfs.loaders.stm       import (
     fetch_stm_alerts,
     fetch_stm_realtime_data,
-    fetch_stm_positions_dict,      
+    fetch_stm_positions_dict,
     load_stm_gtfs_trips,
     load_stm_stop_times,
     load_stm_routes,
-    process_stm_trip_updates,       
+    process_stm_trip_updates,
     stm_map_occupancy_status,
     debug_print_stm_occupancy_status,
-    validate_trip
+    validate_trip,
 )
-from exo import (
+
+from bdeb_gtfs.loaders.exo       import (
     fetch_exo_alerts,
     fetch_exo_realtime_data,
     load_exo_gtfs_trips,
     load_exo_stop_times,
     process_exo_vehicle_positions,
-    process_exo_train_schedule_with_occupancy
-)
-from alerts import (
-    process_stm_alerts,
-    process_exo_alerts
+    process_exo_train_schedule_with_occupancy,
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-import requests
-from config import WEATHER_API_KEY
+from bdeb_gtfs.alerts            import process_stm_alerts, process_exo_alerts
+
+# ────────────────────────────────────────────────────────────────
+
 
 _weather_cache = {
     "ts":   0,     # last fetch timestamp
@@ -52,14 +43,50 @@ _weather_cache = {
 CACHE_TTL = 5 * 60  # seconds (5 minutes)
 logger = logging.getLogger('BdeB-GTFS')
 app = Flask(__name__)
+
+PACKAGE_DIR    = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT   = os.path.abspath(os.path.join(PACKAGE_DIR, os.pardir, os.pardir))
+GTFS_BASE      = os.path.join(PROJECT_ROOT, "GTFS")
+STM_DIR        = os.path.join(GTFS_BASE, "STM")
+EXO_TRAIN_DIR  = os.path.join(GTFS_BASE, "Exo", "Train")
+
+os.makedirs(STM_DIR,       exist_ok=True)
+os.makedirs(EXO_TRAIN_DIR, exist_ok=True)
+
+# ─── check for required GTFS files ────────────────────────────
+required_stm = ["routes.txt", "trips.txt", "stop_times.txt"]
+required_exo = ["trips.txt",   "stop_times.txt"]
+
+missing = []
+for fname in required_stm:
+    if not os.path.isfile(os.path.join(STM_DIR, fname)):
+        missing.append(f"STM/{fname}")
+for fname in required_exo:
+    if not os.path.isfile(os.path.join(EXO_TRAIN_DIR, fname)):
+        missing.append(f"Exo/Train/{fname}")
+
+if missing:
+    print("Fichiers GTFS manquants:")
+    for m in missing:
+        print(f"   • {m}")
+    print("\nS'il-vous-plaît, téléchargez les fichiers manquants dans le menu paramètres et relancez l'application.")
+    sys.exit(1)
+# ────────────────────────────────────────────────────────────────
+
 # ====================================================================
 # Load static GTFS data once at startup
 # ====================================================================
-routes_map = load_stm_routes("STM/routes.txt")
-stm_trips = load_stm_gtfs_trips("STM/trips.txt", routes_map)
-stm_stop_times = load_stm_stop_times("STM/stop_times.txt")
-exo_trips = load_exo_gtfs_trips("Exo/Train/trips.txt")
-exo_stop_times = load_exo_stop_times("Exo/Train/stop_times.txt")
+stm_routes_fp      = os.path.join(STM_DIR,       "routes.txt")
+stm_trips_fp       = os.path.join(STM_DIR,       "trips.txt")
+stm_stop_times_fp  = os.path.join(STM_DIR,       "stop_times.txt")
+exo_trips_fp       = os.path.join(EXO_TRAIN_DIR, "trips.txt")
+exo_stop_times_fp  = os.path.join(EXO_TRAIN_DIR, "stop_times.txt")
+
+routes_map      = load_stm_routes(stm_routes_fp)
+stm_trips       = load_stm_gtfs_trips(stm_trips_fp,      routes_map)
+stm_stop_times  = load_stm_stop_times(stm_stop_times_fp)
+exo_trips       = load_exo_gtfs_trips(exo_trips_fp)
+exo_stop_times  = load_exo_stop_times(exo_stop_times_fp)
 
 def get_weather():
     """Fetch weather from WeatherAPI at most once per CACHE_TTL."""

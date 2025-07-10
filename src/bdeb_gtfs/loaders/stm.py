@@ -10,7 +10,7 @@ from config import (
     STM_VEHICLE_POSITIONS_ENDPOINT,
     STM_ALERTS_ENDPOINT
 )
-from utils import load_csv_dict  
+from ..utils import load_csv_dict  
 # Cache for calendar data
 _calendar_data = None
 _calendar_dates_data = None
@@ -144,7 +144,7 @@ def load_stm_routes(routes_file):
 
 def load_stm_stop_times(filepath):
     stop_times = {}
-    with open(filepath, mode="r", encoding="utf-8") as file:
+    with open(filepath, mode="r", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
         for row in reader:
             key = (row["trip_id"], row["stop_id"])
@@ -153,7 +153,7 @@ def load_stm_stop_times(filepath):
 
 def load_stm_gtfs_trips(filepath, routes_map):
     trips_data = {}
-    with open(filepath, mode="r", encoding="utf-8") as file:
+    with open(filepath, mode="r", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
         for row in reader:
             trip_id = row["trip_id"]

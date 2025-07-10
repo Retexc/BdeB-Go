@@ -28,7 +28,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Create the SQLAlchemy db instance
 db = SQLAlchemy(app)
 
-
+with app.app_context():
+    db.create_all()
+    
 class User(db.Model):
     __tablename__ = "users"
     id            = db.Column(db.Integer, primary_key=True)
@@ -394,7 +396,7 @@ def admin_start():
             cmd = [
                 PYTHON_EXEC, "-u", "-m", "waitress",
                 "--threads=8",
-                "--host=127.0.0.1", "--port=5000", "app:app"
+                "--host=127.0.0.1", "--port=5000", "bdeb_gtfs.main:app"
             ]
             app_process = subprocess.Popen(
                 cmd, cwd=INSTALL_DIR,

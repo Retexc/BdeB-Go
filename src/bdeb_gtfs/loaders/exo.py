@@ -8,7 +8,7 @@ from config import (
     EXO_VEHICLE_POSITION_URL,
     EXO_ALERTS_URL,
 )
-from utils import load_csv_dict
+from ..utils     import load_csv_dict
 import logging
 logger = logging.getLogger('BdeB-GTFS.exo')
 
@@ -50,7 +50,7 @@ def fetch_exo_alerts():
 def load_exo_gtfs_trips(filepath):
     """Load Exo trips with full trip_id (including suffixes)."""
     trips_data = {}
-    with open(filepath, mode="r", encoding="utf-8") as file:
+    with open(filepath, mode="r", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
         for row in reader:
             trips_data[row["trip_id"]] = {  
@@ -63,7 +63,7 @@ def load_exo_gtfs_trips(filepath):
 
 def load_exo_stop_times(filepath):
     stop_times_data = []
-    with open(filepath, mode="r", encoding="utf-8") as file:
+    with open(filepath, mode="r", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
         for row in reader:
             stop_times_data.append(row)
@@ -297,7 +297,7 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
 
     filtered_schedule = [train for train in closest_trains.values() if train]
 
-    from exo import exo_map_train_details, stop_id_map
+    from .exo import exo_map_train_details, stop_id_map
     prioritized_schedule = exo_map_train_details(filtered_schedule, exo_trips, stop_id_map)
 
     for train in prioritized_schedule:
