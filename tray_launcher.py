@@ -5,13 +5,22 @@ import subprocess
 import webbrowser
 import tkinter as tk
 from PIL import Image, ImageTk
-
+import ctypes
+import requests
 from pystray import Icon, MenuItem, Menu
 from PIL import Image
 from winotify import Notification, audio
 
 # ───────────────────────────────────────────────────────────────────────────────
 # CONFIG
+
+SW_HIDE = 0
+SW_SHOW = 5 
+
+console_hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+if console_hwnd:
+    ctypes.windll.user32.ShowWindow(console_hwnd, SW_HIDE)
+
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC       = os.path.join(REPO_ROOT, "src")
 ADMIN_APP = "bdeb_gtfs.admin:app"
@@ -66,6 +75,13 @@ def start_admin():
     toast.set_audio(audio.Default, loop=False)
     toast.show()
 
+def stop_main_via_admin():
+    try:
+        # fire the POST to /admin/stop so the Admin app tears down the main server
+        requests.post("http://127.0.0.1:5001/admin/stop", timeout=2)
+    except requests.RequestException:
+        pass
+
 def stop_admin():
     global admin_proc
     if admin_proc and admin_proc.poll() is None:
@@ -80,22 +96,35 @@ def stop_admin():
         toast.set_audio(audio.Default, loop=False)
         toast.show()        
 
-def restart_admin(icon, item):
-    stop_admin()
-    start_admin()
+def show_console(icon, item):
+    if console_hwnd:
+        ctypes.windll.user32.ShowWindow(console_hwnd, SW_SHOW)
+
+def hide_console(icon, item):
+    if console_hwnd:
+        ctypes.windll.user32.ShowWindow(console_hwnd, SW_HIDE)
+
 
 def exit_app(icon, item):
+    try:
+        stop_main_via_admin()
+    except Exception:
+        pass
     stop_admin()
+    if console_hwnd:
+        ctypes.windll.user32.ShowWindow(console_hwnd, SW_HIDE)
     icon.stop()
+    os._exit(0)
 
     
 
 # ───────────────────────────────────────────────────────────────────────────────
 def create_tray():
     menu = Menu(
-        MenuItem("Redemarrer l'application", lambda icon, item: restart_admin()),
+        MenuItem("Afficher la console", show_console),
+        MenuItem("Cacher la console",  hide_console),
         Menu.SEPARATOR,
-        MenuItem("Quitter l'application",          exit_app)
+        MenuItem("Quitter l'application",        exit_app),
     )
 
     icon = Icon("BdeB-GTFS Manager", img, "BdeB-GTFS Admin", menu)

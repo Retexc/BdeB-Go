@@ -55,12 +55,15 @@ app.permanent_session_lifetime = timedelta(minutes=10)
 
 
 PYTHON_EXEC       = sys.executable
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, os.pardir, os.pardir))
 INSTALL_DIR       = os.path.dirname(os.path.abspath(__file__))
 GITHUB_REPO       = "https://github.com/Retexc/BdeB-GTFS.git"
-CSS_FILE_PATH     = "./static/index.css"
-STATIC_IMAGES_DIR = "./static/assets/images"
-UPDATE_INFO_FILE  = "./gtfs_update_info.json"
+CSS_FILE_PATH     = os.path.join(BASE_DIR, "static", "index.css")
+STATIC_IMAGES_DIR = os.path.join(BASE_DIR, "static", "assets", "images")
+UPDATE_INFO_FILE  = os.path.join(PROJECT_ROOT, "gtfs_update_info.json")
 AUTO_UPDATE_CFG   = os.path.join(INSTALL_DIR, "auto_update_config.json")
+STATIC_IMAGES_DIR = os.path.join(BASE_DIR, "static", "assets", "images")
 
 app.config['SESSION_TYPE']       = 'filesystem'
 app.config['SESSION_FILE_DIR']   = os.path.join(INSTALL_DIR, 'flask_sessions')
@@ -271,7 +274,10 @@ def update_background():
         os.makedirs(STATIC_IMAGES_DIR, exist_ok=True)
         save_path = os.path.join(STATIC_IMAGES_DIR, file.filename)
         file.save(save_path)
-        new_path = f"./static/assets/images/{file.filename}"
+        new_path = url_for(
+            'static',
+            filename=f"assets/images/{file.filename}"
+        )
 
     slots = parse_slots_from_css(CSS_FILE_PATH)
     if new_path:
@@ -360,13 +366,15 @@ def admin_update_gtfs():
         flash("Merci de télécharger un fichier ZIP GTFS.", "warning")
         return redirect(url_for("admin_settings"))
 
-    tmp = os.path.join(os.getcwd(), z.filename)
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__),"..",".."))
+    tmp = os.path.join(PROJECT_ROOT, z.filename)
     z.save(tmp)
 
+    GTFS_BASE = os.path.join(PROJECT_ROOT, "GTFS")
     if transport == "stm":
-        target = os.path.join(os.getcwd(), "STM")
+        target = os.path.join(GTFS_BASE, "STM")
     else:
-        target = os.path.join(os.getcwd(), "Exo", "Train")
+        target = os.path.join(GTFS_BASE, "Exo", "Train")
     os.makedirs(target, exist_ok=True)
 
     try:
