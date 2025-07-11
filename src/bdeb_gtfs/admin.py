@@ -10,7 +10,7 @@ import time
 import re
 from datetime import datetime, timedelta
 import logging
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
 from functools import wraps
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
@@ -64,6 +64,7 @@ STATIC_IMAGES_DIR = os.path.join(BASE_DIR, "static", "assets", "images")
 UPDATE_INFO_FILE  = os.path.join(PROJECT_ROOT, "gtfs_update_info.json")
 AUTO_UPDATE_CFG   = os.path.join(INSTALL_DIR, "auto_update_config.json")
 STATIC_IMAGES_DIR = os.path.join(BASE_DIR, "static", "assets", "images")
+SPA_DIR = os.path.join(BASE_DIR, 'static', 'admin')
 
 app.config['SESSION_TYPE']       = 'filesystem'
 app.config['SESSION_FILE_DIR']   = os.path.join(INSTALL_DIR, 'flask_sessions')
@@ -213,6 +214,14 @@ def copy_to_static_folder(src_path):
     return dest.replace("\\", "/")
 
 # ----- Routes -----
+
+@app.route('/admin/', defaults={'path': ''})
+@app.route('/admin/<path:path>')
+def admin_spa(path):
+    # if requesting an asset (js/css), serve that, else always index.html
+    if path and os.path.exists(os.path.join(SPA_DIR, path)):
+        return send_from_directory(SPA_DIR, path)
+    return send_from_directory(SPA_DIR, 'index.html')
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def login():

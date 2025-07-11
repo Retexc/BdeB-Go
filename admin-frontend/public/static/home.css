@@ -1,0 +1,88 @@
+
+@font-face {
+    font-family: 'AtlasGrotesk';
+    src: url('/static/fonts/AtlasGrotesk-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'AtlasGrotesk';
+    src: url('/static/fonts/AtlasGrotesk-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'AtlasGrotesk';
+    src: url('/static/fonts/AtlasGrotesk-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  body {
+    font-family: 'AtlasGrotesk', sans-serif;
+    background-color: #181818;
+  }  
+
+  .main-content { 
+    padding: 30px;
+    width: 100%;
+  }
+
+/* Sidebar styling */
+.sidebar {
+    height: 100vh;
+    width: 300px;               
+    background-color: #080913;   
+    color: #fff;
+    font-weight: 700;
+  }
+  
+.sidebar .nav-link {
+color: #ffffff;
+padding: 10px 10px;
+margin-top: 2rem;
+margin-left: 1rem;
+}
+
+
+.logo {
+    margin-top: 3.5rem;
+    margin-left: 1.8rem;
+    height: auto;
+}
+
+.Title {
+    color: white;
+    font-size: 40px;
+    font-family: Atlas Grotesk;
+    font-weight: 500;
+    word-wrap: break-word;
+    margin-top: 5rem;
+}
+
+.Etat {
+    color: white;
+    font-size: 24px;
+    font-family: Atlas Grotesk;
+    font-weight: 500;
+    word-wrap: break-word;
+}
+
+
+
+#logsArea pre {
+    background-color: #333;       /* Your background color */
+    color: #f1f1f1;               /* Your text color */
+    padding: 20px;                /* Adjust padding as needed */
+    border: 1px solid #444;       /* Your border style */
+    border-radius: 12px;          /* Rounded corners */
+    height: 650px;                /* Fixed height for the log area */
+    overflow-y: auto;             /* Vertical scrolling if needed */
+    overflow-x: hidden;           /* Prevent horizontal scrolling */
+    white-space: pre-wrap;        /* Wrap text and preserve line breaks */
+    word-wrap: break-word;        /* Allow long words to break */
+    box-sizing: border-box;       /* Include padding & border in the element's width */
+  }
+    
