@@ -26,9 +26,13 @@ function onSubmit() {
 /* nothing here—everything is in utility classes */
 </style>
 
-<!-- admin-frontend/src/views/Login.vue -->
 <template>
 <div class="min-h-screen bg-center bg-cover bg-no-repeat"
      :style="{ backgroundImage: `url(${bgImg})` }">
+     <div class="flex items-center justify-start h-screen">
+        <div
+          class="relative z-10 bg-[#080913] w-2/5 h-full p-8 overflow-hidden"
+     ></div>
     </div>
+  </div>
 </template>
