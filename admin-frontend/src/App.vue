@@ -1,9 +1,10 @@
 <script setup>
 import Login from './views/Login.vue'
+import Home from './views/Home.vue'
 </script>
 
 <template>
-  <Login />
+  <Home />
 </template>
 
 
