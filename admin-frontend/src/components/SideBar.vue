@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-screen">
     <div
-      class="w-64 text-white bg-[#0A0A0A] border-r border-gray-200 justify-items-start"
+      class="w-64 text-white bg-[#0A0A0A] border-r justify-items-start"
     >
       <div class="py-4 px-6">
         <a href="/">
