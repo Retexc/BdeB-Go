@@ -2,7 +2,7 @@
 <div class="flex max-h-screen bg-[#0f0f0f]">
   <side-bar />
 
-  <div class="flex-1 flex flex-col p-6 space-y-6 mt-18">
+  <div class="flex-1 flex flex-col p-6 space-y-6 mt-18 ml-5">
     <div class="flex items-center justify-between w-full">
       <div class="space-y-1">
         <h2 class="text-4xl font-bold text-white">Console</h2>
