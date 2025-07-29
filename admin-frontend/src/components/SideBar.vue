@@ -1,3 +1,13 @@
+<script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+function logout() {
+  // clear session/cookie, then:
+  router.push('/login')
+}
+</script>
+
 <template>
   <div class="flex min-h-screen">
     <div class="w-64 text-white bg-[#0A0A0A] justify-items-start">
@@ -11,9 +21,10 @@
         </a>
       </div>
       <div class="mb-10">
-        <a
-          href="/admin/home"
+        <router-link
+          to="/console"
           class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-amber-300"
+          active-class="text-amber-300"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -31,12 +42,12 @@
           </svg>
 
           Console
-        </a>
+        </router-link>
       </div>
 
       <div class="mb-10">
-        <a
-          href="/admin/home"
+        <router-link
+          to="/background"
           class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-amber-300"
         >
           <svg
@@ -55,11 +66,11 @@
           </svg>
 
           Fond d’écran
-        </a>
+        </router-link>
       </div>
       <div class="mb-10">
-        <a
-          href="/admin/home"
+        <router-link
+          to="/settings"
           class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-amber-300"
         >
           <svg
@@ -83,11 +94,11 @@
           </svg>
 
           Paramètres
-        </a>
+        </router-link>
       </div>
       <div class="mb-10">
-        <a
-          href="/admin/home"
+        <router-link
+          to="/login"
           class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-red-600"
         >
           <svg
@@ -106,7 +117,7 @@
           </svg>
 
           Déconnexion
-        </a>
+        </router-link>
       </div>
     </div>
   </div>

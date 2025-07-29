@@ -1,18 +1,18 @@
 <template>
   <div>
     <!-- Label -->
-    <label class="block text-lg font-bold text-white mb-2 ">
-      Image
-    </label>
 
     <!-- Row: readonly text box + import button -->
     <div class="flex items-center gap-2">
+      <label class="block text-lg font-bold text-white mb-2">
+        Fichier GTFS (ZIP) :
+      </label>
       <!-- shows the chosen file’s path/name -->
       <input
         v-model="fileName"
         type="text"
         readonly
-        placeholder="Aucune image sélectionnée"
+        placeholder="Aucune fichier sélectionnée"
         class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none"
       />
 
@@ -37,7 +37,7 @@
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0l-3 3m3-3l3 3"
           />
         </svg>
-        Importer une image
+        Importer
       </button>
 
       <!-- hidden native file input -->
@@ -53,21 +53,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref } from "vue";
 
-const fileName = ref('')
-const uploader = ref(null)
+const fileName = ref("");
+const uploader = ref(null);
 
 function pickFile() {
-  uploader.value.click()
+  uploader.value.click();
 }
 
 function onFileSelected(ev) {
-  const file = ev.target.files[0]
+  const file = ev.target.files[0];
   if (file) {
     // file.name is just the filename;
     // ev.target.value might give the full path in some browsers
-    fileName.value = file.name
+    fileName.value = file.name;
     // If you need to preview or upload:
     // const reader = new FileReader()
     // reader.onload = () => { previewSrc.value = reader.result }

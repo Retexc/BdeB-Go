@@ -10,7 +10,7 @@ import time
 import re
 from datetime import datetime, timedelta
 import logging
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, jsonify, request, redirect, url_for, session, flash, send_from_directory
 from functools import wraps
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
@@ -109,10 +109,22 @@ def session_management():
 
 @app.before_request
 def require_login_for_admin():
-    # allow static assets and the login/logout endpoints
-    if request.path.startswith("/admin") and request.endpoint not in ("login","logout","static"):
-        if not session.get("logged_in"):
-            return redirect(url_for("login", next=request.path))
+    # Always allow:
+    #  • any static file under /admin/…/assets
+    #  • the SPA itself (index.html) under /admin/*
+    #  • the POST /admin/login that your Vue form submits
+    if request.path.startswith("/admin/") and request.method == "GET":
+        # let serve_spa handle it
+        return
+
+    # allow your login‑POST and logout
+    if request.endpoint in ("login_api", "logout"):
+        return
+
+    # everything else under /admin/… needs a session
+    if request.path.startswith("/admin") and not session.get("logged_in"):
+        return jsonify({"error": "unauthorized"}), 401
+
 
 
 
@@ -215,49 +227,20 @@ def copy_to_static_folder(src_path):
 
 # ----- Routes -----
 
-@app.route('/admin/', defaults={'path': ''})
-@app.route('/admin/<path:path>')
-def admin_spa(path):
-    # if requesting an asset (js/css), serve that, else always index.html
-    if path and os.path.exists(os.path.join(SPA_DIR, path)):
-        return send_from_directory(SPA_DIR, path)
-    return send_from_directory(SPA_DIR, 'index.html')
-
-@app.route("/admin/login", methods=["GET", "POST"])
+@app.route("/admin/login", methods=["POST"])
 def login():
-    if request.method == "POST":
-        user = User.query.filter_by(username=request.form["username"]).first()
+    """Called by your Vue Login.vue when the user submits the form."""
+    user = User.query.filter_by(username=request.form["username"]).first()
+    if user and user.check_password(request.form["password"]):
+        session.permanent      = True
+        session["logged_in"]   = True
+        session["last_activity"] = datetime.utcnow().timestamp()
+        return jsonify({"success": True}), 200
 
-        if user and user.check_password(request.form["password"]):
-            session.permanent = True
-            session["logged_in"] = True
-            session["last_activity"] = datetime.utcnow().timestamp()
-            flash("Vous êtes connecté !", "success")
-            return redirect(request.args.get("next") or url_for("admin_home"))
-
-        flash("Nom d’utilisateur ou mot de passe invalide", "danger")
-
-    return render_template("login.html")
+    return jsonify({"success": False, "message": "Nom d’utilisateur ou mot de passe invalide"}), 401
 
 
 
-@app.route("/admin/logout")
-@login_required
-def logout():
-    session.clear()
-    flash("Vous êtes déconnecté .", "info")
-    return redirect(url_for("login"))
-
-
-@app.route("/")
-@login_required
-def admin_home():
-    return render_template("home.html")
-
-@app.route("/admin/background")
-def admin_background():
-    slots = parse_slots_from_css(CSS_FILE_PATH)
-    return render_template("background.html", slots=slots)
 
 @app.route("/admin/update_background", methods=["POST"])
 def update_background():
@@ -304,30 +287,7 @@ def update_background():
     flash(f"Background du slot {idx+1} mis à jour avec succès !", "success")
     return redirect(url_for("admin_background"))
 
-@app.route("/admin/settings")
-def admin_settings():
-    info = load_gtfs_update_info()
-    try:
-        local  = subprocess.check_output(
-            ["git", "-C", INSTALL_DIR, "rev-parse", "HEAD"], universal_newlines=True
-        ).strip()
-        remote = subprocess.check_output(
-            ["git", "ls-remote", GITHUB_REPO, "HEAD"],
-            shell=True, universal_newlines=True
-        ).split()[0]
-        update_available = (local != remote)
-    except:
-        update_available = False
 
-    last_checked = datetime.now().strftime("%Y‑%m‑%d %H:%M:%S")
-    auto_cfg      = load_auto_update_cfg()
-    return render_template(
-        "settings.html",
-        update_info      = info,
-        update_available = update_available,
-        last_checked     = last_checked,
-        auto_cfg         = auto_cfg, 
-    )
 
 def perform_app_update():
     if os.path.isdir(os.path.join(INSTALL_DIR, ".git")):
@@ -497,3 +457,16 @@ if __name__ == "__main__":
             port=5001,
             threads=8
         )
+
+SPA_DIST = os.path.join(
+    os.path.dirname(__file__),
+    "..", "admin-frontend", "dist"
+)
+
+@app.route("/admin/", defaults={"path": ""})
+@app.route("/admin/<path:path>")
+def serve_spa(path):
+    full_path = os.path.join(SPA_DIST, path)
+    if path and os.path.exists(full_path):
+        return send_from_directory(SPA_DIST, path)
+    return send_from_directory(SPA_DIST, "index.html")

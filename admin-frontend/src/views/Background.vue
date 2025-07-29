@@ -1,7 +1,7 @@
 <script setup>
 import ActionButtons from "../components/ActionButtons.vue";
 import ConsoleLog from "../components/ConsoleLog.vue";
-import SideBar from "../components/SideBar.vue";
+import { motion } from "motion-v";
 import ImagePicker from "../components/ImagePicker.vue";
 import ImageSelectorField from "../components/ImageSelectorField.vue";
 import DateSelectorField from "../components/DateSelectorField.vue";
@@ -16,9 +16,14 @@ function startProcess() {
 </script>
 
 <template>
-  <div class="flex max-h-screen bg-[#0f0f0f]">
-    <side-bar />
-
+  <motion.div class="flex max-h-screen bg-[#0f0f0f]"
+            :initial="{ opacity: 0, y: 20, filter: 'blur(10px)' }"
+          :animate="{
+            opacity: 1,
+            y: 0,
+            filter: 'blur(0px)',
+            transition: { duration: 0.5 },
+          }">
     <div class="flex-1 flex flex-col p-6 space-y-6 mt-18 ml-5 mr-5">
       <div class="flex items-center justify-between w-full">
         <div class="space-y-1 w-full">
@@ -81,7 +86,7 @@ function startProcess() {
         </div>
       </div>
     </div>
-  </div>
+ </motion.div>
 </template>
 
 <style scoped>
