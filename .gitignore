@@ -3,4 +3,7 @@ __pycache__/
 
 *.pyc
 STM/
-Exo/
+Exo/node_modules/
+dist/
+.env
+*.log
