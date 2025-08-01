@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:frontend": "vite",
+    "dev:backend": "cross-env FLASK_APP=../src/bdeb_gtfs/admin.py FLASK_ENV=development flask run --port 5001",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -13,6 +15,7 @@
     "@heroicons/vue": "^2.2.0",
     "@tailwindcss/vite": "^4.1.11",
     "axios": "^1.10.0",
+    "crossenv": "^0.0.2-security",
     "motion-v": "^1.5.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
@@ -21,6 +24,8 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
     "vite": "^7.0.4"

@@ -1,19 +1,8 @@
 <template>
-    <div class="grid grid-cols-4 gap-4">
-    <img
-      v-for="(img, i) in images"
-      :key="i"
-      :src="img"
-      class="w-48 rounded-lg shadow-lg"
-      alt="Preview"
-    />        
-    </div>
+<div class="rounded border-2 border-dashed border-gray text-white font-bold justify-center items-center flex flex-col">
+<h3>Les images les plus récentes s'afficheront ici</h3>
+</div>
 </template>
 <script setup>
-const images = [
-  './assets/images/background.png',
-  './assets/images/background.png',
-  './assets/images/background.png',
-  './assets/images/background.png',
-]
+
 </script>

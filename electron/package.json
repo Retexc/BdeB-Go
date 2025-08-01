@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "main.js",
   "scripts": {
+    "dev":     "concurrently \"npm --prefix ../admin-frontend run dev\" \"npm run start\"", 
     "start": "cross-env NODE_ENV=development electron .",
     "dist": "cross-env NODE_ENV=production electron-builder"
   },

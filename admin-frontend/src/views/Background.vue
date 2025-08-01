@@ -1,30 +1,163 @@
 <script setup>
-import ActionButtons from "../components/ActionButtons.vue";
-import ConsoleLog from "../components/ConsoleLog.vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { motion } from "motion-v";
-import ImagePicker from "../components/ImagePicker.vue";
 import ImageSelectorField from "../components/ImageSelectorField.vue";
-import DateSelectorField from "../components/DateSelectorField.vue";
-import ConfirmButton from "../components/ConfirmButton.vue";
-function goToTableau() {
-  // e.g. this.$router.push('/tableau')
+import placeholderBg from '../assets/images/background.png'
+
+// --- state ---
+const previewImage = ref('')
+const recentImages = ref([])
+const slots = ref([])
+const MAX_RECENTS = 4
+
+// --- persistence helpers ---
+function addToRecent(url) {
+  if (!url) return
+  // dedupe
+  recentImages.value = recentImages.value.filter(i => i !== url)
+  // prepend
+  recentImages.value.unshift(url)
+  // cap
+  if (recentImages.value.length > MAX_RECENTS) {
+    recentImages.value = recentImages.value.slice(0, MAX_RECENTS)
+  }
 }
 
-function startProcess() {
-  // your start logic...
+// persist recents to localStorage whenever they change
+watch(
+  recentImages,
+  (v) => {
+    try {
+      localStorage.setItem('recentBgImages', JSON.stringify(v.slice(0, MAX_RECENTS)))
+    } catch {}
+  },
+  { deep: true }
+)
+
+// --- mount: load recentImages + slot ---
+onMounted(async () => {
+  // load recents
+  try {
+    const stored = localStorage.getItem('recentBgImages')
+    if (stored) {
+      recentImages.value = JSON.parse(stored).slice(0, MAX_RECENTS)
+    }
+  } catch (e) {
+    console.warn('failed to load recentImages', e)
+  }
+
+  // load existing background slot (for preview)
+  try {
+    const r = await fetch('/admin/backgrounds')
+    if (r.ok) {
+      const data = await r.json()
+      slots.value = Array.isArray(data) ? data : []
+      if (slots.value[0] && slots.value[0].path) {
+        previewImage.value = slots.value[0].path
+      }
+    }
+  } catch (e) {
+    console.warn('failed to load slots', e)
+  }
+})
+
+/**
+ * Persist the current previewImage as the active slot (no end date).
+ */
+async function persistCurrentAsSlot() {
+  if (!previewImage.value) return
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const newSlot = {
+    path: previewImage.value,
+    start: today,
+    end: null, // no expiration
+  }
+  // replace first slot, keep up to 4
+  slots.value = [newSlot, ...(slots.value.slice(1) || [])].slice(0, 4)
+  try {
+    await fetch('/admin/backgrounds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slots: slots.value }),
+    })
+  } catch (err) {
+    console.error('persist slot error', err)
+  }
+}
+
+/**
+ * Upload a new file, preview immediately, then persist.
+ */
+async function handleFileUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+
+  // previous preview goes to recents
+  if (previewImage.value) {
+    addToRecent(previewImage.value)
+  }
+
+  // show local blob preview
+  const localUrl = URL.createObjectURL(file)
+  // revoke old blob if applicable (optional)
+  if (previewImage.value && previewImage.value.startsWith('blob:')) {
+    URL.revokeObjectURL(previewImage.value)
+  }
+  previewImage.value = localUrl
+
+  // upload
+  const form = new FormData()
+  form.append('image', file)
+  try {
+    const res = await fetch('/admin/backgrounds/import', {
+      method: 'POST',
+      body: form,
+    })
+    const body = await res.json()
+    if (res.ok && body.url) {
+      // replace preview with persistent URL
+      previewImage.value = body.url
+      // persist as active slot
+      await persistCurrentAsSlot()
+    } else {
+      console.warn('import failed', body)
+    }
+  } catch (err) {
+    console.error('upload error', err)
+  }
+}
+
+/**
+ * Clicked a recent thumbnail: swap into preview and persist.
+ */
+async function selectRecent(url) {
+  if (!url || url === previewImage.value) return
+
+  // current preview becomes recent
+  if (previewImage.value) {
+    addToRecent(previewImage.value)
+  }
+  // remove chosen from recents so it doesn't immediately bounce back
+  recentImages.value = recentImages.value.filter(i => i !== url)
+
+  previewImage.value = url
+  await persistCurrentAsSlot()
 }
 </script>
 
 <template>
-  <motion.div class="flex max-h-screen bg-[#0f0f0f]"
-            :initial="{ opacity: 0, y: 20, filter: 'blur(10px)' }"
-          :animate="{
-            opacity: 1,
-            y: 0,
-            filter: 'blur(0px)',
-            transition: { duration: 0.5 },
-          }">
+  <motion.div
+    class="flex max-h-screen bg-[#0f0f0f]"
+    :initial="{ opacity: 0, y: 20, filter: 'blur(10px)' }"
+    :animate="{
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.5 },
+    }"
+  >
     <div class="flex-1 flex flex-col p-6 space-y-6 mt-18 ml-5 mr-5">
+      <!-- Header -->
       <div class="flex items-center justify-between w-full">
         <div class="space-y-1 w-full">
           <h2 class="text-4xl font-bold text-white">Fond d'écran</h2>
@@ -35,61 +168,72 @@ function startProcess() {
         </div>
       </div>
 
-      <div class="flex items-end space-x-6 justify-between">
-        <!-- big preview fixed at 16rem high -->
+      <!-- Preview + Recents -->
+      <div class="flex items-end space-x-6 ">
+        <!-- big preview -->
         <img
-          src="../assets/images/background.png"
+          v-if="previewImage"
+          :src="previewImage"
+          alt="background"
+          class="h-74 object-cover rounded-lg"
+        />
+        <img
+          v-else
+          :src="placeholderBg"
           alt="background"
           class="h-74 object-cover rounded-lg"
         />
 
-        <!-- auto‑height column, bottom‑aligned by the parent -->
-        <div class="flex flex-col space-y-2 gap-4">
+        <!-- recent images + import button -->
+        <div class="flex-1 flex flex-col space-y-2 gap-4 bg-gray-700 rounded p-6">
           <h2 class="text-2xl font-bold text-white">Images récentes</h2>
-          <ImagePicker />
+
+          <!-- if there are recent images, show them -->
+          <div
+            v-if="recentImages.length"
+            class="flex space-x-12 overflow-x-auto py-2"
+          >
+            <img
+              v-for="img in recentImages"
+              :key="img"
+              :src="img"
+              alt="thumbnail"
+              class="w-36 h-24 object-cover rounded-lg cursor-pointer"
+              @click="selectRecent(img)"
+            />
+          </div>
+
+          <!-- otherwise show the dashed placeholder -->
+          <div
+            v-else
+            class="rounded border-2 border-dashed border-gray-600 text-gray-400 font-bold justify-center items-center flex flex-col py-12 p-2"
+          >
+            <h3>Les images les plus récentes s'afficheront ici</h3>
+          </div>
+
+          
         </div>
       </div>
+
+      <!-- Settings -->
       <div class="flex flex-col gap-4">
         <h2 class="text-2xl font-bold text-white">Paramètres</h2>
         <hr class="border-t border-[#404040] mt-3" />
-        <image-selector-field />
-        <label class="inline-flex items-center space-x-2">
-          <span class="text-white font-bold">
-            Définir cette image comme image par défaut ?</span
-          >
-          <input
-            type="checkbox"
-            v-model="remember"
-            class="h-5 w-5 border-gray-600 rounded bg-gray-800 checked:bg-yellow-400 checked:border-yellow-400 focus:ring-2 focus:ring-yellow-500"
-          />
-        </label>
-        <div class="flex items-end space-x-2 justify-between">
-          <date-selector-field />
-          <confirm-button>
-            <template #icon>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-6 mr-1"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
-              </svg>
-            </template>
-          </confirm-button>
+
+        <ImageSelectorField
+          type="file"
+          accept="image/*"
+          @change="handleFileUpload"
+        />
+
         </div>
       </div>
-    </div>
- </motion.div>
+
+  </motion.div>
 </template>
 
 <style scoped>
+/* your existing scoped styles */
 .home-page {
   padding: 2rem;
   text-align: center;

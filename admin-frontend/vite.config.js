@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+console.log("[DEBUG] Using Vite config from", __dirname);
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -8,11 +10,16 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      './': {
+      '/admin': {
         target: 'http://127.0.0.1:5001',
         changeOrigin: true,
         secure: false,
-      }
-    }
-  }
+      },
+      '/static': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

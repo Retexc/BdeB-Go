@@ -211,7 +211,8 @@ def index():
     )
     
     current_time = time.strftime("%I:%M:%S %p")
-    active_bg    = get_active_background("./static/index.css")
+    css_path = os.path.join(app.static_folder, "index.css")
+    active_bg = get_active_background(css_path)
     weather = get_weather()
 
     return render_template(

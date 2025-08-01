@@ -1,36 +1,86 @@
 <script setup>
-import ActionButtons from "../components/ActionButtons.vue";
-import ConsoleLog from "../components/ConsoleLog.vue";
 import { motion } from "motion-v";
-import ImagePicker from "../components/ImagePicker.vue";
-import ImageSelectorField from "../components/ImageSelectorField.vue";
 import ImportField from "../components/ImportField.vue";
-import DateSelectorField from "../components/DateSelectorField.vue";
 import ConfirmButton from "../components/ConfirmButton.vue";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 const tabs = [
   { id: "gtfs", label: "GTFS" },
   { id: "update", label: "Mise à jour" },
   { id: "about", label: "À propos" },
 ];
 
-// track which one is active
 const active = ref("gtfs");
 
-function goToTableau() {}
+const stmLastUpdate = ref("N/A");
+const exoLastUpdate = ref("N/A");
 
-function startProcess() {}
+async function uploadGTFS(transport, file) {
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("transport", transport);
+  formData.append("gtfs_zip", file);
+
+  try {
+    const res = await fetch("/admin/update_gtfs", {
+      method: "POST",
+      body: formData,
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      console.error("Upload error:", body.error);
+      // show error to user as needed
+      return;
+    }
+    // success: update the displayed last update
+    if (transport === "stm") {
+      stmLastUpdate.value = body.updated_at;
+    } else {
+      exoLastUpdate.value = body.updated_at;
+    }
+  } catch (e) {
+    console.error("Network error uploading GTFS:", e);
+  }
+}
+
+async function fetchLastUpdates() {
+  try {
+    const res = await fetch("/admin/gtfs_update_info");
+    if (res.ok) {
+      const data = await res.json();
+      stmLastUpdate.value = data.stm || "N/A";
+      exoLastUpdate.value = data.exo || "N/A";
+    }
+  } catch (e) {
+    console.warn("Failed to load GTFS info:", e);
+  }
+}
+
+function onStmFileChange(e) {
+  const file = e.target.files[0];
+  uploadGTFS("stm", file);
+}
+
+function onExoFileChange(e) {
+  const file = e.target.files[0];
+  uploadGTFS("exo", file);
+}
+
+onMounted(() => {
+  fetchLastUpdates();
+});
 </script>
 
 <template>
-  <motion.div class="flex max-h-screen bg-[#0f0f0f]"
-            :initial="{ opacity: 0, y: 20, filter: 'blur(10px)' }"
-          :animate="{
-            opacity: 1,
-            y: 0,
-            filter: 'blur(0px)',
-            transition: { duration: 0.5 },
-          }">
+  <motion.div
+    class="flex max-h-screen bg-[#0f0f0f]"
+    :initial="{ opacity: 0, y: 20, filter: 'blur(10px)' }"
+    :animate="{
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.5 },
+    }"
+  >
     <div class="flex-1 flex flex-col p-6 space-y-6 mt-18 ml-5 mr-5">
       <div class="space-y-1 w-full">
         <h2 class="text-4xl font-bold text-white">Paramètres</h2>
@@ -108,8 +158,15 @@ function startProcess() {}
             />
             <hr class="border-t border-[#404040] mt-3" />
             <div class="flex flex-col space-y-2">
-              <import-field />
-              <p class="text-sm text-white">Dernière mise à jour : N/A</p>
+              <ImportField
+                transport="stm"
+                placeholder="GTFS STM (.zip)"
+                @done="(file) => uploadGTFS('stm', file)"
+                @error="(err) => console.error('STM import error', err)"
+              />
+              <p class="text-sm text-white">
+                Dernière mise à jour : {{ stmLastUpdate }}
+              </p>
             </div>
 
             <img
@@ -119,8 +176,15 @@ function startProcess() {}
             />
             <hr class="border-t border-[#404040] mt-3" />
             <div class="flex flex-col space-y-2">
-              <import-field />
-              <p class="text-sm text-white">Dernière mise à jour : N/A</p>
+              <ImportField
+                transport="exo"
+                placeholder="GTFS EXO (.zip)"
+                @done="(file) => uploadGTFS('exo', file)"
+                @error="(err) => console.error('EXO import error', err)"
+              />
+              <p class="text-sm text-white">
+                Dernière mise à jour : {{ exoLastUpdate }}
+              </p>
             </div>
           </div>
         </div>

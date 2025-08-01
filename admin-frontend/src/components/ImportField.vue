@@ -9,9 +9,10 @@
       </label>
       <!-- shows the chosen file’s path/name -->
       <input
-        v-model="fileName"
-        type="text"
-        readonly
+        ref="fileInput"
+        type="file"
+        accept=".zip"
+        @change="onFileChange"
         placeholder="Aucune fichier sélectionnée"
         class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none"
       />
@@ -19,7 +20,7 @@
       <!-- opens OS file picker -->
       <button
         type="button"
-        @click="pickFile"
+        @click="trigger"
         class="inline-flex items-center px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 font-bold"
       >
         <!-- upload icon -->
@@ -41,37 +42,60 @@
       </button>
 
       <!-- hidden native file input -->
-      <input
-        ref="uploader"
-        type="file"
-        accept="image/*"
-        class="hidden"
-        @change="onFileSelected"
-      />
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref } from 'vue'
 
-const fileName = ref("");
-const uploader = ref(null);
+const props = defineProps({
+  transport: { type: String, required: true }, // 'stm' or 'exo'
+  placeholder: { type: String, default: 'Aucun fichier sélectionné' },
+  uploadUrl: { type: String, default: '/admin/update_gtfs' },
+})
+const emit = defineEmits(['start', 'done', 'error'])
 
-function pickFile() {
-  uploader.value.click();
+const fileInput = ref(null)
+const selectedName = ref('')
+
+function trigger() {
+  fileInput.value?.click()
 }
 
-function onFileSelected(ev) {
-  const file = ev.target.files[0];
-  if (file) {
-    // file.name is just the filename;
-    // ev.target.value might give the full path in some browsers
-    fileName.value = file.name;
-    // If you need to preview or upload:
-    // const reader = new FileReader()
-    // reader.onload = () => { previewSrc.value = reader.result }
-    // reader.readAsDataURL(file)
+async function onFileChange(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+
+  if (!file.name.toLowerCase().endsWith('.zip')) {
+    emit('error', { transport: props.transport, message: 'Seuls les .zip sont acceptés' })
+    return
+  }
+
+  selectedName.value = file.name
+  emit('start', { transport: props.transport, filename: file.name })
+
+  const form = new FormData()
+  form.append('transport', props.transport)
+  form.append('gtfs_zip', file)
+
+  try {
+    const res = await fetch(props.uploadUrl, {
+      method: 'POST',
+      body: form,
+    })
+    const body = await res.json()
+    if (res.ok) {
+      emit('done', { transport: props.transport, updated_at: body.updated_at, result: body })
+    } else {
+      emit('error', { transport: props.transport, message: body.error || 'Échec de l\'import' })
+    }
+  } catch (err) {
+    emit('error', { transport: props.transport, message: err.message || 'Erreur réseau' })
+  } finally {
+    // allow re-selecting same file if needed
+    if (fileInput.value) fileInput.value.value = ''
   }
 }
 </script>

@@ -1,9 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { motion } from 'motion-v'
-import ConsoleLog from '../components/ConsoleLog.vue'
-import playIcon  from '../assets/images/play_arrow.svg'
-import stopIcon  from '../assets/images/stop.svg'
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { motion } from "motion-v";
+import ConsoleLog from "../components/ConsoleLog.vue";
+import playIcon from "../assets/images/play_arrow.svg";
+import stopIcon from "../assets/images/stop.svg";
 
 const running     = ref(false)
 let   statusTimer = null
@@ -18,7 +18,12 @@ async function updateStatus() {
   }
 }
 
+function goToExternal() {
+   window.open('http://127.0.0.1:5000/', '_blank', 'noopener')
+}
+// **Mark async** so we can `await` the fetch
 async function toggleApp() {
+    console.log('🔘 button clicked, running =', running.value)
   const url = running.value ? '/admin/stop' : '/admin/start'
   try {
     const resp = await fetch(url, { method: 'POST' })
@@ -29,8 +34,9 @@ async function toggleApp() {
   updateStatus()
 }
 
-const btnLabel       = computed(() => running.value ? 'Arrêter' : 'Démarrer')
-const btnIcon        = computed(() => running.value ? stopIcon  : playIcon)
+// now only **one** of each computed
+const btnLabel       = computed(() => running.value ? 'Arrêter'   : 'Démarrer')
+const btnIcon        = computed(() => running.value ? stopIcon    : playIcon)
 const btnClass       = computed(() =>
   running.value
     ? 'bg-red-600 hover:bg-red-700'
@@ -60,20 +66,23 @@ onBeforeUnmount(() => {
         <h1 class="text-2xl font-bold text-white">
           Tableau d’affichage en temps réel
         </h1>
-        <h3 :class="['mt-1', statusTextColor]">
-          {{ statusText }}
-        </h3>
+        <span class="text-white font-bold">État :</span>
+        <span :class="running ? 'text-green-400' : 'text-red-400'">
+          {{ running ? " En cours" : " Arrêté" }}
+        </span>
       </div>
       <div class="flex space-x-2">
-        <a
-          href="http://127.0.0.1:5000"
-          target="_blank"
-          class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        <button
+          v-if="running"
+          @click="goToExternal"
+          class="btn btn-link bg-blue-600 font-black rounded p-2"
         >
           Accéder au tableau
-        </a>
+        </button>
+
         <button
           @click="toggleApp"
+          :disabled="loading"
           :class="['px-4 py-2 text-white rounded', btnClass]"
         >
           <img
@@ -81,10 +90,9 @@ onBeforeUnmount(() => {
             class="inline w-4 h-4 mr-1 align-text-bottom"
             alt=""
           />
-          {{ btnLabel }}
+          {{ running ? "Arrêter" : "Démarrer" }}
         </button>
       </div>
-      
     </div>
 
     <!-- ─── Animated Console Section ─── -->
@@ -94,10 +102,11 @@ onBeforeUnmount(() => {
         opacity: 1,
         y: 0,
         filter: 'blur(0px)',
-        transition: { duration: 0.6 }
+        transition: { duration: 0.6 },
       }"
-      class="flex-1 "
-    >      <ConsoleLog />
+      class="flex-1"
+    >
+      <ConsoleLog />
     </motion.div>
   </div>
 </template>
