@@ -366,7 +366,7 @@ def admin_update_gtfs():
         flash("Merci de télécharger un fichier ZIP GTFS.", "warning")
         return redirect(url_for("serve_spa", path=""))
 
-    GTFS_ROOT = PROJECT_ROOT / "GTFS"
+    GTFS_ROOT = PROJECT_ROOT / "backend" / "GTFS"
     stm_dir = GTFS_ROOT / "stm"
     exo_dir = GTFS_ROOT / "exo"
 
