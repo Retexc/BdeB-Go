@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BdeB-GTFS</title>
+    <link rel="stylesheet" href="./static/index.css" />
+
+    <script>
+async function applyActiveBackground() {
+  try {
+    const res = await fetch("http://127.0.0.1:5001/admin/backgrounds");
+    if (!res.ok) return;
+    const slots = await res.json();
+
+    const now = new Date();
+    const active = slots.find(s => {
+      if (!s?.path) return false;
+      if (s.end && new Date(s.end) < now) return false;
+      return true;
+    });
+
+    const bgPath = (active && active.path) || '/static/assets/images/Printemps - Banner Big.png';
+    const container = document.querySelector('.scaling-container');
+    if (container) {
+      container.style.setProperty('--active-bg', `url(${bgPath})`);
+    }
+  } catch (err) {
+    console.warn('Could not apply active background', err);
+  }
+}
+
+function scaleContent() {
+  const container = document.querySelector('.scaling-container');
+  const designWidth = 1920;
+  const designHeight = 1080;
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  const scaleX = windowWidth / designWidth;
+  const scaleY = windowHeight / designHeight;
+  const scale = Math.min(scaleX, scaleY);
+
+  if (container) {
+    container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyActiveBackground();
+  scaleContent();
+  setInterval(applyActiveBackground, 15000);
+  const preloader = document.querySelector('.preloader');
+  const mainContent = document.querySelector('.main-container');
+
+  mainContent.style.display = 'none';
+
+  const bWrapper = document.querySelector('.b-wrapper');
+  bWrapper?.addEventListener('animationend', () => {
+    preloader.classList.add('fade-out');
+  });
+
+  preloader?.addEventListener('transitionend', () => {
+    preloader.style.display = 'none';
+    mainContent.style.display = 'block';
+  });
+});
+
+window.addEventListener('resize', scaleContent);
+      window.addEventListener("DOMContentLoaded", scaleContent);
+
+      document.addEventListener("DOMContentLoaded", () => {
+        applyActiveBackground();
+        const preloader = document.querySelector(".preloader");
+        const mainContent = document.querySelector(".main-container");
+
+        mainContent.style.display = "none";
+
+        const bWrapper = document.querySelector(".b-wrapper");
+        bWrapper.addEventListener("animationend", () => {
+          preloader.classList.add("fade-out");
+        });
+
+        // Once the overlay is faded out, remove it from the DOM and show main content
+        preloader.addEventListener("transitionend", () => {
+          preloader.style.display = "none";
+          mainContent.style.display = "block";
+        });
+      });
+
+      async function refreshData() {
+        try {
+          const response = await fetch("/api/data");
+          const data = await response.json();
+
+          // ← ADD THIS LINE to grab weather out of the payload
+          const weather = data.weather || { icon: "", text: "", temp: "" };
+
+          // Now update the time + weather + logo
+          const timeElement = document.querySelector(".time");
+          const parts = data.current_time.split(":");
+          const hhmm = `${parts[0]}:${parts[1]}`;
+          const ampm = parts[2].split(" ")[1];
+
+          timeElement.innerHTML = `
+      <!-- BdeB logo -->
+      <img src="/static/assets/icons/bdeb.svg"
+           class="bdeb-logo"
+           alt="BdeB logo" />
+
+      <!-- Weather icon + temp + description -->
+      ${
+        weather.icon
+          ? `
+        <img src="${weather.icon}"
+             class="weather-icon"
+             alt="${weather.text}" />
+        <span class="weather-text">
+          ${weather.temp}°C ${weather.text}
+        </span>
+      `
+          : ""
+      }
+
+      <!-- Clock -->
+      <span class="time-text">
+        ${hhmm} ${ampm}
+      </span>
+    `;
+
+          // ===================
+          //  STM BUSES
+          // ===================
+          const frameContainer = document.querySelector(".frame");
+          frameContainer.innerHTML = ""; // Clear old content
+
+          // STM Logo
+          const stmLogoDiv = document.createElement("div");
+          stmLogoDiv.className = "stm-logo-container";
+          stmLogoDiv.innerHTML = `<img src="/static/assets/icons/STM.png" alt="STM logo" class="stm-logo">`;
+          frameContainer.appendChild(stmLogoDiv);
+
+          // Render each bus row
+          data.buses.forEach((bus) => {
+            const busDiv = document.createElement("div");
+            // Apply "frame-1" for each row;
+            const isCanceled =
+              bus.canceled === true ||
+              bus.arrival_time === "Indisponible (Route annulée)";
+            busDiv.className = `frame-1${isCanceled ? " canceled" : ""}`;
+
+            // Build occupancy icons
+            let occupancyIcons = "";
+            if (bus.occupancy === "MANY_SEATS_AVAILABLE") {
+              occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+            } else if (bus.occupancy === "FEW_SEATS_AVAILABLE") {
+              occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+            } else if (bus.occupancy === "STANDING_ROOM_ONLY") {
+              occupancyIcons = `
+              <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+            } else if (bus.occupancy === "FULL") {
+              occupancyIcons = `
+              <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+            `;
+            } else {
+              // Unknown
+              occupancyIcons = `
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+            `;
+            }
+
+            // Build final icons row
+            let iconsHTML = occupancyIcons;
+            if (bus.wheelchair_accessible) {
+              iconsHTML += `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`;
+            }
+            if (bus.at_stop) {
+              iconsHTML += `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`;
+            }
+
+            // Delay text
+            const delayedText = bus.delayed_text
+              ? `<span class="delayed-text">${bus.delayed_text}</span>`
+              : "";
+
+            // Early text
+            const earlyText = bus.early_text
+              ? `<span class="early-text">${bus.early_text}</span>`
+              : "";
+
+            // Time (or "Annulé")
+            let timeStr = "";
+            let showSignal = false;
+            if (typeof bus.arrival_time === "number") {
+              timeStr = `${bus.arrival_time} min`;
+              showSignal = true;
+            } else {
+              timeStr =
+                bus.arrival_time === "Indisponible (Route annulée)"
+                  ? "Annulé"
+                  : bus.arrival_time;
+            }
+
+            busDiv.innerHTML = `
+          <!-- Column 1: Route Button -->
+          <div class="bus-col-route">
+          <div class="buttonBlueBuses ${
+            bus.route_id === "171" ? "buttonPinkOverride" : ""
+          }">
+            <span class="frame-2">${bus.route_id}</span>
+          </div>
+          </div>
+
+          <!-- Column 2: Direction + Location -->
+          <div class="bus-col-info">
+            <span class="direction">
+              <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+              ${bus.direction}
+            </span>
+            <span class="location">${bus.location}</span>
+          </div>
+
+          <!-- Column 3: Status line -->
+          <div class="bus-col-status">
+            <div class="status-line">
+
+              <!-- Delayed/Early text -->
+              <div class="delay-cell">
+                ${
+                  bus.delayed_text
+                    ? `<span class="delayed-text">${bus.delayed_text}</span>`
+                    : ""
+                }
+                ${
+                  bus.early_text
+                    ? `<span class="early-text">${bus.early_text}</span>`
+                    : ""
+                }
+              </div>
+
+              <!-- Time Cell -->
+              <div class="time-cell">
+                <span class="time-remaining">${timeStr}</span>
+                ${
+                  showSignal
+                    ? `<img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />`
+                    : ""
+                }
+              </div>
+
+              <!-- Occupancy Cell -->
+              <div class="occupancy-cell">
+                ${occupancyIcons}
+              </div>
+
+              <!-- Wheelchair Cell -->
+              <div class="wheelchair-cell">
+                ${
+                  bus.wheelchair_accessible
+                    ? `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`
+                    : `<img src="/static/assets/icons/invisible.png" class="wheelchair" alt="">`
+                }
+              </div>
+
+              <!-- Bus Cell (at_stop) -->
+              <div class="bus-cell">
+                ${
+                  bus.at_stop
+                    ? `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`
+                    : `<img src="/static/assets/icons/invisible.png" class="blinking-bus" alt="">`
+                }
+              </div>
+
+            </div>
+          </div>
+        `;
+            frameContainer.appendChild(busDiv);
+          });
+
+          // ===================
+          //  EXO TRAINS
+          // ===================
+          const trainContainer = document.querySelector(".train-frame");
+          trainContainer.innerHTML = "";
+
+          const exoLogoDiv = document.createElement("div");
+          exoLogoDiv.className = "exo-logo-container";
+          exoLogoDiv.innerHTML = `<img src="/static/assets/icons/exo_white.png" alt="Exo logo" class="exo-logo">`;
+          trainContainer.appendChild(exoLogoDiv);
+
+          data.next_trains.forEach((train) => {
+            console.log("Train:", train);
+            const trainDiv = document.createElement("div");
+            trainDiv.className = "frame-1";
+
+            // If there's "no_service_text", hide icons
+            let hideIcons = !!train.no_service_text; // true if no_service_text is present
+
+            // Build occupancy icons
+            let occupancyIcons = "";
+            if (!hideIcons) {
+              if (train.occupancy === "MANY_SEATS_AVAILABLE") {
+                occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+              } else if (train.occupancy === "FEW_SEATS_AVAILABLE") {
+                occupancyIcons = `
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/green-person.png" alt="Light occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+              } else if (train.occupancy === "STANDING_ROOM_ONLY") {
+                occupancyIcons = `
+              <img src="/static/assets/icons/yellow-person.png" alt="Medium occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/yellow-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/gray-person.png" alt="" class="occupancy-icon">
+            `;
+              } else if (train.occupancy === "FULL") {
+                occupancyIcons = `
+              <img src="/static/assets/icons/red-person.png" alt="Full occupancy" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+              <img src="/static/assets/icons/red-person.png" alt="" class="occupancy-icon">
+            `;
+              } else {
+                // Unknown
+                occupancyIcons = `
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+              <img src="/static/assets/icons/invisible-person.png" class="occupancy-icon">
+            `;
+              }
+            } else {
+              // If no service, fill with invisible placeholders or just empty
+              occupancyIcons = `
+      <img src="/static/assets/icons/invisible.png" class="occupancy-icon">
+      <img src="/static/assets/icons/invisible.png" class="occupancy-icon">
+      <img src="/static/assets/icons/invisible.png" class="occupancy-icon">
+      <img src="/static/assets/icons/invisible.png" class="occupancy-icon">
+    `;
+            }
+
+            // Similarly, hide wheelchair or bike if no_service_text
+            let bikeIconHTML = "";
+            bikeIconHTML = `
+      <div class="bike-wheelchair-container">
+        <img src="/static/assets/icons/bike.png" alt="Bike" class="anim-bike">
+        <img src="/static/assets/icons/wheelchair.png" alt="Wheelchair" class="anim-wheelchair">
+      </div>
+    `;
+
+            // Hide train icon if no service
+            let trainIcon = "";
+            if (!hideIcons && train.at_stop) {
+              trainIcon = `<img src="/static/assets/icons/train.png" class="blinking-train" alt="Train at stop">`;
+            } else {
+              trainIcon = `<img src="/static/assets/icons/invisible.png" class="blinking-train" alt="">`;
+            }
+
+            // Build delayed/early text
+            const delayedText = train.delayed_text
+              ? `<span class="delayed-text">${train.delayed_text}</span>`
+              : "";
+            const earlyText = train.early_text
+              ? `<span class="early-text">${train.early_text}</span>`
+              : "";
+
+            // If no_service_text is present, the time might say "N/A"
+            const timeStr = train.display_time || "Unknown";
+
+            trainDiv.innerHTML = `
+    <!-- Column 1: Route Button -->
+    <div class="train-col-route">
+      <div class="${
+        train.route_id === "4"
+          ? "buttonSJ"
+          : train.route_id === "6"
+          ? "buttonMA"
+          : "defaultButton"
+      }">
+        <span class="frame-2-black">${
+          train.route_id === "4"
+            ? "SJ"
+            : train.route_id === "6"
+            ? "MA"
+            : train.route_id
+        }</span>
+      </div>
+    </div>
+
+    <!-- Column 2: Direction + Location -->
+    <div class="train-col-info">
+      <span class="direction">
+        <img src="/static/assets/icons/arrow_circle_white.png" alt="Direction Icon" class="direction-icon">
+        ${train.direction || "Unknown"}
+      </span>
+      <span class="location">${train.location || "Unknown"}</span>
+    </div>
+
+    <!-- Column 3: Status Line with 5 Columns -->
+    <div class="train-col-status">
+      <div class="status-line">
+        <!-- 1) Delay/Early Cell -->
+        <div class="delay-cell">
+          ${delayedText}
+          ${earlyText}
+        </div>
+
+        <!-- 2) Time Cell -->
+        <div class="time-cell">
+          ${
+            train.no_service_text
+              ? `<span class="no-service-text">${train.no_service_text}</span>`
+              : `<span class="time-remaining">${timeStr}</span>`
+          }
+          ${
+            !train.no_service_text && timeStr.includes("min")
+              ? `<img src="/static/assets/icons/signal.png" alt="Signal" class="blinking-signal" />`
+              : ""
+          }
+        </div>
+
+        <!-- 3) Occupancy Cell -->
+        <div class="occupancy-cell">
+          ${occupancyIcons}
+        </div>
+
+        <!-- 4) Wheelchair & Bike Icon Cell -->
+        <div class="wheelchair-cell">
+          ${bikeIconHTML}
+        </div>
+
+        <!-- 5) Train Icon Cell -->
+        <div class="bus-cell">
+          ${trainIcon}
+        </div>
+      </div>
+    </div>
+  `;
+
+            trainContainer.appendChild(trainDiv);
+          });
+
+          updateAlerts(data);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        }
+      }
+
+      function updateAlerts(data) {
+        const alertContainer = document.getElementById("alertContainer");
+        const alertText = document.querySelector(".alert-text");
+        const marquee = document.querySelector(".alert-marquee");
+
+        if (data.alerts && data.alerts.length > 0) {
+          alertContainer.style.display = "block";
+
+          // Combine all alerts into a single scrolling text
+          const allAlerts = data.alerts
+            .map((a) => {
+              if (a.routes === "Custom" && a.stop === "Message") {
+                return `${a.header}: ${a.description}`;
+                //  STM
+              } else if (a.routes) {
+                return `Ligne(s) : ${a.routes} (${a.stop}): ${a.header} - ${a.description}`;
+                // EXO
+              } else if (a.train_route) {
+                return `Train ${a.train_route}: ${a.header} - ${a.description}`;
+              } else {
+                // Fallback for custom alerts that don't have a train_route
+                return `${a.header}: ${a.description}`;
+              }
+            })
+            .join(" ••• ");
+
+          alertText.textContent = allAlerts;
+
+          // Adjust marquee speed
+          const baseSpeed = 20;
+          const minSpeed = 15;
+          const maxSpeed = 50;
+          const textLength = allAlerts.length;
+          const duration = Math.min(
+            maxSpeed,
+            Math.max(minSpeed, textLength / 8)
+          );
+          marquee.style.animation = `marquee ${duration}s linear infinite`;
+        } else {
+          alertContainer.style.display = "none";
+        }
+      }
+
+      setInterval(refreshData, 30000); // Refresh every 30s
+      document.addEventListener("DOMContentLoaded", refreshData);
+    </script>
+  </head>
+
+  <body>
+    <div class="scaling-container">
+      <div class="main-container">
+        <span class="time">
+          <img
+            src="/static/assets/icons/bdeb.svg"
+            class="bdeb-logo"
+            alt="BdeB logo"
+          />
+
+          <!-- Weather: icon + temp°C + description -->
+          {% if weather.icon %}
+          <img
+            src="{{ weather.icon }}"
+            class="weather-icon"
+            alt="{{ weather.text }}"
+          />
+          <span class="weather-text"
+            >{{ weather.temp }}°C {{ weather.text }}</span
+          >
+          {% endif %}
+
+          <!-- Clock -->
+          <span class="time-text">{{ current_time }}</span>
+        </span>
+
+        <div class="frame"><!-- STM buses go here --></div>
+        <div class="train-frame"><!-- EXO trains go here --></div>
+        <div class="footer-text">Données fournies par la STM et Exo</div>
+      </div>
+      <div class="logo-container"></div>
+
+      <div id="alertContainer" class="alert-banner" style="display: none">
+        <div class="alert-marquee">
+          <img
+            src="/static/assets/icons/warning.svg"
+            class="alert-icon"
+            alt="Alert"
+          />
+          <span class="alert-text"></span>
+        </div>
+      </div>
+      <!-- 1) LOADER OVERLAY -->
+      <div class="preloader">
+        <div class="b-wrapper">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="162"
+            height="187"
+            viewBox="0 0 162 187"
+            fill="white"
+            class="b-logo"
+          >
+            <mask
+              id="mask0_1790_213173"
+              style="mask-type: alpha"
+              maskUnits="userSpaceOnUse"
+              x="0"
+              y="0"
+              width="159"
+              height="187"
+            >
+              <mask
+                id="mask1_1790_213173"
+                style="mask-type: luminance"
+                maskUnits="userSpaceOnUse"
+                x="0"
+                y="0"
+                width="162"
+                height="187"
+              >
+                <path
+                  d="M161.108 0H0L0 186.673H161.108L161.108 0Z"
+                  fill="white"
+                />
+              </mask>
+              <g mask="url(#mask1_1790_213173)">
+                <path
+                  d="M-1.85059 186.673L-1.85059 0H98.0804C135.347 0.0828362 149.814 21.3752 155.064 34.188C159.602 45.0734 160.162 57.2024 156.648 68.4588C153.48 78.2125 147.541 86.8391 139.55 93.2887C147.542 99.7382 153.481 108.365 156.648 118.12C160.146 129.342 159.619 141.429 155.16 152.308C149.897 165.073 135.431 186.494 98.1751 186.59L-1.85059 186.673Z"
+                  fill="white"
+                />
+              </g>
+            </mask>
+            <g mask="url(#mask0_1790_213173)">
+              <rect
+                x="-2158.4"
+                y="-1199.37"
+                width="4480.15"
+                height="2552.75"
+                fill="white"
+              />
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
