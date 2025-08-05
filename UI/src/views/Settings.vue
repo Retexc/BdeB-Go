@@ -22,8 +22,9 @@ const remoteHash = ref("");
 
 const icons = {
   idle: new URL("../assets/icons/status_good.png", import.meta.url).href,
-  checking: new URL("../assets/icons/status_updating.png", import.meta.url).href, 
-  up_to_date: new URL("../assets/icons/status_good.png", import.meta.url).href, 
+  checking: new URL("../assets/icons/status_updating.png", import.meta.url)
+    .href,
+  up_to_date: new URL("../assets/icons/status_good.png", import.meta.url).href,
   available: new URL("../assets/icons/status_important.png", import.meta.url)
     .href,
   updating: new URL("../assets/icons/status_updating.png", import.meta.url)
@@ -129,6 +130,7 @@ function onExoFileChange(e) {
 }
 
 onMounted(() => {
+  checkForUpdates();
   fetchLastUpdates();
 });
 </script>

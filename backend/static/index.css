@@ -576,23 +576,23 @@ opacity: 0.2;
 [
   {
     "path": "/static/assets/images/College_de_Bois-de-Boulogne_-_banner.jpg",
-    "start": "2025-08-04",
+    "start": "2025-08-05",
     "end": null
   },
   {
     "path": "/static/assets/images/green-abstract-3d-3840x2160-21975.jpg",
-    "start": "2025-08-04",
+    "start": "2025-08-05",
     "end": null
   },
   {
+    "end": null,
+    "path": "/static/assets/images/green-abstract-3d-3840x2160-21975.jpg",
+    "start": "2025-08-04"
+  },
+  {
+    "end": null,
     "path": "/static/assets/images/waves-purple-3840x2160-11757.png",
-    "start": "2025-08-04",
-    "end": null
-  },
-  {
-    "path": "/static/assets/images/abstract-purple-mb-3840x2160.jpg",
-    "start": "2025-08-04",
-    "end": null
+    "start": "2025-08-04"
   }
 ]
 */
