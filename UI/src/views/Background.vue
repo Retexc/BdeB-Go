@@ -1,137 +1,116 @@
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { motion } from "motion-v";
 import ImageSelectorField from "../components/ImageSelectorField.vue";
-import placeholderBg from '../assets/images/background.png'
+import placeholderBg from '../assets/images/background.png';
 
-// --- state ---
-const previewImage = ref('')
-const recentImages = ref([])
-const slots = ref([])
-const MAX_RECENTS = 4
-const defaultBackground = '../assets/images/background.png'
-// --- persistence helpers ---
+const previewImage = ref('');
+const recentImages = ref([]);
+const slots = ref([]);
+const MAX_RECENTS = 4;
+const defaultBackground = '../assets/images/background.png';
+
 function onPreviewError(e) {
-  e.target.src = defaultBackground
+  e.target.src = defaultBackground;
 }
 
 function addToRecent(url) {
-  if (!url) return
-  // dedupe
-  recentImages.value = recentImages.value.filter(i => i !== url)
-  // prepend
-  recentImages.value.unshift(url)
-  // cap
+  if (!url) return;
+  if (url.startsWith('blob:')) return;
+
+  recentImages.value = recentImages.value.filter(i => i !== url);
+  recentImages.value.unshift(url);
   if (recentImages.value.length > MAX_RECENTS) {
-    recentImages.value = recentImages.value.slice(0, MAX_RECENTS)
+    recentImages.value.length = MAX_RECENTS;
   }
 }
 
-// persist recents to localStorage whenever they change
+
 watch(
   recentImages,
-  (v) => {
+  v => {
     try {
-      localStorage.setItem('recentBgImages', JSON.stringify(v.slice(0, MAX_RECENTS)))
+      localStorage.setItem('recentBgImages', JSON.stringify(v.slice(0, MAX_RECENTS)));
     } catch {}
   },
   { deep: true }
-)
+);
 
-// --- mount: load recentImages + slot ---
 onMounted(async () => {
-  // load recents
   try {
-    const stored = localStorage.getItem('recentBgImages')
+    const stored = localStorage.getItem('recentBgImages');
     if (stored) {
-      recentImages.value = JSON.parse(stored).slice(0, MAX_RECENTS)
+      recentImages.value = JSON.parse(stored).slice(0, MAX_RECENTS);
     }
   } catch (e) {
-    console.warn('failed to load recentImages', e)
+    console.warn('failed to load recentImages', e);
   }
 
-  // load existing background slot (for preview)
   try {
-    const r = await fetch('/admin/backgrounds')
+    const r = await fetch('/admin/backgrounds');
     if (r.ok) {
-      const data = await r.json()
-      slots.value = Array.isArray(data) ? data : []
+      const data = await r.json();
+      slots.value = Array.isArray(data) ? data : [];
       if (slots.value[0] && slots.value[0].path) {
-        previewImage.value = slots.value[0].path
+        previewImage.value = slots.value[0].path;
       }
     }
   } catch (e) {
-    console.warn('failed to load slots', e)
+    console.warn('failed to load slots', e);
   }
-})
+});
 
-/**
- * Persist the current previewImage as the active slot (no end date).
- */
-async function persistCurrentAsSlot() {
-  if (!previewImage.value) return
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-  const newSlot = {
-    path: previewImage.value,
-    start: today,
-    end: null, // no expiration
+async function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const blobUrl = URL.createObjectURL(file);
+  previewImage.value = blobUrl;
+
+  // send to server
+  const form = new FormData();
+  form.append("image", file);
+
+  try {
+    const res = await fetch("/admin/backgrounds/import", {
+      method: "POST",
+      body: form
+    });
+    const data = await res.json();
+
+    if (data.status === "success") {
+      // now switch preview to the permanent URL
+      previewImage.value = data.url;
+      // update slots
+      slots.value = data.slots;
+      // store only the real URL in recents
+      addToRecent(data.url);
+    } else {
+      console.error("upload failed", data);
+    }
+  } catch (err) {
+    console.error("background import error", err);
   }
-  // replace first slot, keep up to 4
-  slots.value = [newSlot, ...(slots.value.slice(1) || [])].slice(0, 4)
+}
+
+
+async function selectRecent(url) {
+  if (!url || url === previewImage.value) return;
+  if (previewImage.value) addToRecent(previewImage.value);
+  recentImages.value = recentImages.value.filter(i => i !== url);
+  previewImage.value = url;
+  const today = new Date().toISOString().slice(0, 10);
+  const newSlot = { path: url, start: today, end: null };
+  slots.value = [newSlot, ...(slots.value.slice(1) || [])].slice(0, 4);
   try {
     await fetch('/admin/backgrounds', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slots: slots.value }),
-    })
+      body: JSON.stringify({ slots: slots.value })
+    });
   } catch (err) {
-    console.error('persist slot error', err)
+    console.error('persist slot error', err);
   }
-}
-
-/**
- * Upload a new file, preview immediately, then persist.
- */
-function handleFileUpload(e) {
-  const file = e.target.files[0];
-  if (!file) {
-    if (previousBlob) URL.revokeObjectURL(previousBlob);
-    previewImage.value = "";
-    previousBlob = null;
-    return;
-  }
-
-  // push current preview into recents if any
-  if (previewImage.value) {
-    recentImages.value.unshift(previewImage.value);
-    if (recentImages.value.length > MAX_RECENTS) {
-      recentImages.value.length = MAX_RECENTS;
-    }
-  }
-
-  // revoke old blob
-  if (previousBlob) URL.revokeObjectURL(previousBlob);
-
-  const blobUrl = URL.createObjectURL(file);
-  previewImage.value = blobUrl;
-  previousBlob = blobUrl;
-}
-
-/**
- * Clicked a recent thumbnail: swap into preview and persist.
- */
-async function selectRecent(url) {
-  if (!url || url === previewImage.value) return
-
-  // current preview becomes recent
-  if (previewImage.value) {
-    addToRecent(previewImage.value)
-  }
-  // remove chosen from recents so it doesn't immediately bounce back
-  recentImages.value = recentImages.value.filter(i => i !== url)
-
-  previewImage.value = url
-  await persistCurrentAsSlot()
 }
 </script>
 
@@ -223,7 +202,6 @@ async function selectRecent(url) {
 </template>
 
 <style scoped>
-/* your existing scoped styles */
 .home-page {
   padding: 2rem;
   text-align: center;
