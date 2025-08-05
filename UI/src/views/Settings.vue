@@ -2,57 +2,90 @@
 import { motion } from "motion-v";
 import ImportField from "../components/ImportField.vue";
 import ConfirmButton from "../components/ConfirmButton.vue";
-import { ref, onMounted } from "vue";
-const tabs = [
-  { id: "gtfs", label: "GTFS" },
-  { id: "update", label: "Mise à jour" },
-  { id: "about", label: "À propos" },
-];
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 
+const tabs = [
+  { id: "gtfs",   label: "GTFS" },
+  { id: "update", label: "Mise à jour" },
+  { id: "about",  label: "À propos" },
+];
 const active = ref("gtfs");
 
-const stmLastUpdate = ref("N/A");
-const exoLastUpdate = ref("N/A");
+const stmLastUpdate  = ref("N/A");
+const exoLastUpdate  = ref("N/A");
 
-const updateState = ref("idle"); // "idle" | "checking" | "up_to_date" | "available" | "updating" | "error"
-const lastChecked = ref("N/A");
+const updateState   = ref("idle");        // "idle" | "checking" | "up_to_date" | "available" | "updating" | "error"
+const lastChecked   = ref("N/A");
 const updateMessage = ref("");
-const localHash = ref("");
-const remoteHash = ref("");
+const localHash     = ref("");
+const remoteHash    = ref("");
 
 const icons = {
-  idle: new URL("../assets/icons/status_good.png", import.meta.url).href,
-  checking: new URL("../assets/icons/status_updating.png", import.meta.url).href, 
-  up_to_date: new URL("../assets/icons/status_good.png", import.meta.url).href, 
-  available: new URL("../assets/icons/status_important.png", import.meta.url)
-    .href,
-  updating: new URL("../assets/icons/status_updating.png", import.meta.url)
-    .href,
-  error: new URL("../assets/icons/status_warning.png", import.meta.url).href,
+  idle:      new URL("../assets/icons/status_good.png",      import.meta.url).href,
+  checking:  new URL("../assets/icons/status_updating.png",  import.meta.url).href,
+  up_to_date:new URL("../assets/icons/status_good.png",      import.meta.url).href,
+  available: new URL("../assets/icons/status_important.png", import.meta.url).href,
+  updating:  new URL("../assets/icons/status_updating.png",  import.meta.url).href,
+  error:     new URL("../assets/icons/status_warning.png",   import.meta.url).href,
 };
+
+// --- Settings + scheduler state ---
+const settings = ref({
+  autoUpdateTime: "02:00"  
+});
+let updateTimeout = null;   
+
+function scheduleNextUpdate() {
+  if (updateTimeout !== null) {
+    clearTimeout(updateTimeout);
+    updateTimeout = null;
+  }
+
+  const time = settings.value.autoUpdateTime;
+  if (!time) return;
+
+  const [hour, minute] = time.split(":").map(s => parseInt(s, 10));
+  const now  = new Date();
+  let   next = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    hour,
+    minute,
+    0,
+    0
+  );
+
+  if (next.getTime() <= now.getTime()) {
+    next.setDate(next.getDate() + 1);
+  }
+
+  const msUntilNext = next.getTime() - now.getTime();
+  updateTimeout = setTimeout(async () => {
+    await checkForUpdates();
+    await performUpdate();
+    scheduleNextUpdate();  
+  }, msUntilNext);
+}
+
 
 async function checkForUpdates() {
   updateState.value = "checking";
   try {
-    const res = await fetch("/admin/check_update");
+    const res  = await fetch("/admin/check_update");
     const body = await res.json();
     if (!res.ok) {
-      updateState.value = "error";
+      updateState.value   = "error";
       updateMessage.value = body.error || "Erreur inconnue";
       return;
     }
-
-    localHash.value = body.local;
-    remoteHash.value = body.remote;
-    lastChecked.value = new Date().toLocaleString();
-
     if (body.up_to_date) {
       updateState.value = "up_to_date";
     } else {
       updateState.value = "available";
     }
   } catch (e) {
-    updateState.value = "error";
+    updateState.value   = "error";
     updateMessage.value = e.message;
   }
 }
@@ -61,40 +94,32 @@ async function performUpdate() {
   if (updateState.value !== "available") return;
   updateState.value = "updating";
   try {
-    const res = await fetch("/admin/app_update", { method: "POST" });
+    const res  = await fetch("/admin/app_update", { method: "POST" });
     const body = await res.json();
     if (res.ok && body.status === "success") {
-      updateState.value = "up_to_date";
+      updateState.value   = "up_to_date";
       updateMessage.value = body.message;
-      lastChecked.value = new Date().toLocaleString();
+      lastChecked.value   = new Date().toLocaleString();
     } else {
-      updateState.value = "error";
+      updateState.value   = "error";
       updateMessage.value = body.message || "Échec de la mise à jour";
     }
   } catch (e) {
-    updateState.value = "error";
+    updateState.value   = "error";
     updateMessage.value = e.message;
   }
 }
 
 async function uploadGTFS(transport, file) {
-  if (!file) return;
   const formData = new FormData();
-  formData.append("transport", transport);
-  formData.append("gtfs_zip", file);
-
+  formData.append("file", file);
   try {
-    const res = await fetch("/admin/update_gtfs", {
-      method: "POST",
-      body: formData,
-    });
+    const res  = await fetch("/admin/update_gtfs", { method: "POST", body: formData });
     const body = await res.json();
     if (!res.ok) {
       console.error("Upload error:", body.error);
-      // show error to user as needed
       return;
     }
-    // success: update the displayed last update
     if (transport === "stm") {
       stmLastUpdate.value = body.updated_at;
     } else {
@@ -103,6 +128,15 @@ async function uploadGTFS(transport, file) {
   } catch (e) {
     console.error("Network error uploading GTFS:", e);
   }
+}
+
+function onStmFileChange(e) {
+  const file = e.target.files[0];
+  uploadGTFS("stm", file);
+}
+function onExoFileChange(e) {
+  const file = e.target.files[0];
+  uploadGTFS("exo", file);
 }
 
 async function fetchLastUpdates() {
@@ -118,20 +152,26 @@ async function fetchLastUpdates() {
   }
 }
 
-function onStmFileChange(e) {
-  const file = e.target.files[0];
-  uploadGTFS("stm", file);
-}
-
-function onExoFileChange(e) {
-  const file = e.target.files[0];
-  uploadGTFS("exo", file);
-}
-
 onMounted(() => {
+  checkForUpdates();
   fetchLastUpdates();
+  scheduleNextUpdate();
+});
+
+watch(
+  () => settings.value.autoUpdateTime,
+  () => {
+    scheduleNextUpdate();
+  }
+);
+
+onBeforeUnmount(() => {
+  if (updateTimeout !== null) {
+    clearTimeout(updateTimeout);
+  }
 });
 </script>
+
 
 <template>
   <motion.div
@@ -292,7 +332,6 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-
             <div>
               <button
                 v-if="updateState === 'idle' || updateState === 'up_to_date'"
@@ -326,6 +365,22 @@ onMounted(() => {
                 Réessayer
               </button>
             </div>
+          </div>
+          <div class="flex flex-row items-center gap-2 mb-0 justify-between">
+            <div class="flex flex-col">
+              <h3 class="text-2xl font-bold text-white">
+                Mise à jour automatique
+              </h3>
+              <p class="text-xl text-white">
+                Heure durant laquelle l'application sera mise à jour
+                automatiquement tout les jours.
+              </p>
+            </div>
+            <input
+              type="time"
+              v-model="autoUpdateTime"
+              class="h-10 w-1/10 rounded border-gray-300 text-white font-bold focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 bg-gray-600 px-5"
+            />
           </div>
         </div>
         <div v-else-if="active === 'about'">
