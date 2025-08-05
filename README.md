@@ -12,5 +12,31 @@ BdeB-Go est une application d’affichage en temps réel des horaires de transpo
 
 ✅ Panneau d’administration pour gérer l’affichage
 
+## 🛠 Prérequis
+
+1. **Python 3.11+**  
+   - Pour exécuter le backend.  
+   - Installez-le depuis : https://www.python.org/downloads/
+
+2. **Node.js 16+ (LTS)**  
+   - Pour construire et servir l’interface d’administration.  
+   - Installez-le depuis : https://nodejs.org/ (version LTS recommandée)
+
+## 🚀 Installation et démarrage
+
+Ouvrez un terminal (PowerShell sous Windows et suivez ces étapes :
 
 
+# 1. Cloner le répositoire
+```
+git clone https://github.com/Retexc/BdeB-Go
+cd BdeB-Go
+```
+# 2. Ouvrez l'installateur
+```
+.\setup.ps1
+```
+# 3. Lancer l’application
+```
+.\run.ps1
+```
