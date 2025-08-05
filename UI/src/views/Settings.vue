@@ -5,48 +5,56 @@ import ConfirmButton from "../components/ConfirmButton.vue";
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 
 const tabs = [
-  { id: "gtfs",   label: "GTFS" },
+  { id: "gtfs", label: "GTFS" },
   { id: "update", label: "Mise à jour" },
-  { id: "about",  label: "À propos" },
+  { id: "about", label: "À propos" },
 ];
 const active = ref("gtfs");
 
-const stmLastUpdate  = ref("N/A");
-const exoLastUpdate  = ref("N/A");
+const stmLastUpdate = ref("N/A");
+const exoLastUpdate = ref("N/A");
 
-const updateState   = ref("idle");        // "idle" | "checking" | "up_to_date" | "available" | "updating" | "error"
-const lastChecked   = ref("N/A");
+const updateState = ref("idle"); // "idle" | "checking" | "up_to_date" | "available" | "updating" | "error"
+const lastChecked = ref("N/A");
 const updateMessage = ref("");
-const localHash     = ref("");
-const remoteHash    = ref("");
+const localHash = ref("");
+const remoteHash = ref("");
 
 const icons = {
-  idle:      new URL("../assets/icons/status_good.png",      import.meta.url).href,
-  checking:  new URL("../assets/icons/status_updating.png",  import.meta.url).href,
-  up_to_date:new URL("../assets/icons/status_good.png",      import.meta.url).href,
-  available: new URL("../assets/icons/status_important.png", import.meta.url).href,
-  updating:  new URL("../assets/icons/status_updating.png",  import.meta.url).href,
-  error:     new URL("../assets/icons/status_warning.png",   import.meta.url).href,
+  idle: new URL("../assets/icons/status_good.png", import.meta.url).href,
+  checking: new URL("../assets/icons/status_updating.png", import.meta.url)
+    .href,
+  up_to_date: new URL("../assets/icons/status_good.png", import.meta.url).href,
+  available: new URL("../assets/icons/status_important.png", import.meta.url)
+    .href,
+  updating: new URL("../assets/icons/status_updating.png", import.meta.url)
+    .href,
+  error: new URL("../assets/icons/status_warning.png", import.meta.url).href,
 };
 
 // --- Settings + scheduler state ---
 const settings = ref({
-  autoUpdateTime: "02:00"  
+  autoUpdateTime: "02:00",
 });
-let updateTimeout = null;   
+let updateTimeout = null;
 
 function scheduleNextUpdate() {
   if (updateTimeout !== null) {
+    console.log("[Scheduler] Clearing previous timeout:", updateTimeout);
     clearTimeout(updateTimeout);
     updateTimeout = null;
   }
 
   const time = settings.value.autoUpdateTime;
-  if (!time) return;
+  console.log("[Scheduler] User-selected time is:", time);
+  if (!time) {
+    console.warn("[Scheduler] No time chosen, skipping scheduling");
+    return;
+  }
 
-  const [hour, minute] = time.split(":").map(s => parseInt(s, 10));
-  const now  = new Date();
-  let   next = new Date(
+  const [hour, minute] = time.split(":").map((s) => parseInt(s, 10));
+  const now = new Date();
+  let next = new Date(
     now.getFullYear(),
     now.getMonth(),
     now.getDate(),
@@ -61,21 +69,24 @@ function scheduleNextUpdate() {
   }
 
   const msUntilNext = next.getTime() - now.getTime();
+  console.log(
+    `[Scheduler] Scheduling next update at ${next.toLocaleString()} ` +
+      `(in ${Math.round(msUntilNext / 1000)}s)`
+  );
   updateTimeout = setTimeout(async () => {
+    console.log("[Scheduler] ⏰ Timeout fired! Running update check now.");
     await checkForUpdates();
     await performUpdate();
-    scheduleNextUpdate();  
+    scheduleNextUpdate(); // schedule tomorrow
   }, msUntilNext);
 }
-
-
 async function checkForUpdates() {
   updateState.value = "checking";
   try {
-    const res  = await fetch("/admin/check_update");
+    const res = await fetch("/admin/check_update");
     const body = await res.json();
     if (!res.ok) {
-      updateState.value   = "error";
+      updateState.value = "error";
       updateMessage.value = body.error || "Erreur inconnue";
       return;
     }
@@ -85,7 +96,7 @@ async function checkForUpdates() {
       updateState.value = "available";
     }
   } catch (e) {
-    updateState.value   = "error";
+    updateState.value = "error";
     updateMessage.value = e.message;
   }
 }
@@ -94,18 +105,18 @@ async function performUpdate() {
   if (updateState.value !== "available") return;
   updateState.value = "updating";
   try {
-    const res  = await fetch("/admin/app_update", { method: "POST" });
+    const res = await fetch("/admin/app_update", { method: "POST" });
     const body = await res.json();
     if (res.ok && body.status === "success") {
-      updateState.value   = "up_to_date";
+      updateState.value = "up_to_date";
       updateMessage.value = body.message;
-      lastChecked.value   = new Date().toLocaleString();
+      lastChecked.value = new Date().toLocaleString();
     } else {
-      updateState.value   = "error";
+      updateState.value = "error";
       updateMessage.value = body.message || "Échec de la mise à jour";
     }
   } catch (e) {
-    updateState.value   = "error";
+    updateState.value = "error";
     updateMessage.value = e.message;
   }
 }
@@ -114,7 +125,10 @@ async function uploadGTFS(transport, file) {
   const formData = new FormData();
   formData.append("file", file);
   try {
-    const res  = await fetch("/admin/update_gtfs", { method: "POST", body: formData });
+    const res = await fetch("/admin/update_gtfs", {
+      method: "POST",
+      body: formData,
+    });
     const body = await res.json();
     if (!res.ok) {
       console.error("Upload error:", body.error);
@@ -160,10 +174,14 @@ onMounted(() => {
 
 watch(
   () => settings.value.autoUpdateTime,
-  () => {
-    scheduleNextUpdate();
+  (newTime, oldTime) => {
+    console.log(
+      `[Watcher] autoUpdateTime changed from ${oldTime} to ${newTime}`
+    )
+    scheduleNextUpdate()
   }
-);
+)
+
 
 onBeforeUnmount(() => {
   if (updateTimeout !== null) {
@@ -171,7 +189,6 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
 
 <template>
   <motion.div
@@ -378,7 +395,7 @@ onBeforeUnmount(() => {
             </div>
             <input
               type="time"
-              v-model="autoUpdateTime"
+              v-model="settings.autoUpdateTime"
               class="h-10 w-1/10 rounded border-gray-300 text-white font-bold focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 bg-gray-600 px-5"
             />
           </div>
