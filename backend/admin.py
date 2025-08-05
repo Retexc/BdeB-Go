@@ -47,7 +47,7 @@ PYTHON_EXEC = sys.executable
 BASE_DIR = Path(__file__).resolve().parent  
 PROJECT_ROOT = BASE_DIR.parent   
 INSTALL_DIR = BASE_DIR  
-GITHUB_REPO = "https://github.com/Retexc/BdeB-GTFS.git"
+GITHUB_REPO = "https://github.com/Retexc/BdeB-Go.git"
 
 CSS_FILE_PATH = BASE_DIR / "static" / "index.css"
 STATIC_IMAGES_DIR = BASE_DIR / "static" / "assets" / "images"
