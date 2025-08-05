@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bdeb-GTFS Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+    <link rel="stylesheet" href="../static/home.css">
+    <link rel="icon" href="/static/assets/icons/icon.ico">
+  </head>
+  <body>
+    <div class="d-flex">
+      <div class="sidebar">
+        <img class="logo" src="../static/assets/images/logo-menu.svg" alt="Bdeblogo">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active d-flex align-items-center" href="#">
+              <img src="../static/assets/images/home.svg" alt="Home" style="width:30px; height:30px; margin-right:10px;">
+              <span>Accueil</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active d-flex align-items-center" href="/admin/background">
+              <img src="../static/assets/images/background.svg" alt="Fond_ecran" style="width:30px; height:30px; margin-right:10px;">
+              <span>Fond d’écran</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active d-flex align-items-center" href="/admin/settings">
+              <img src="../static/assets/images/settings.svg" alt="Parametres" style="width:30px; height:30px; margin-right:10px;">
+              <span>Paramètres</span>
+            </a>
+          </li>  
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center text-danger" href="/admin/logout">
+              <img src="../static/assets/icons/logout.svg"
+                   alt="Déconnexion"
+                   style="width:30px; height:30px; margin-right:10px;">
+              <span>Déconnexion</span>
+            </a>
+          </li>
+        </ul>
+        
+    </div>
+    <div class="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-title">
+          <h1 class="Title">Tableau d’affichage en temps réel</h1>
+          <h3 class="Etat">État : Arrêté</h3>
+        </div>
+      
+        <!-- Button group container on the right -->
+        <div class="d-flex">
+          <a href="http://127.0.0.1:5000/"
+             target="_blank"
+             class="btn btn-secondary me-2 mt-4">
+            Accéder au tableau
+          </a>
+          <button id="startApp"
+                  type="button"
+                  class="btn btn-primary mt-4">
+            <img src="../static/assets/images/play_arrow.svg"
+                 alt="Play"
+                 style="width:16px; height:16px; margin-bottom:2px;">
+            Démarrer
+          </button>
+        </div>
+      </div>
+      
+      <!-- Logs Area -->
+      <div id="logsArea" class="logs-area">
+        <pre id="logPre">Console logs will be displayed here...</pre>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Function to update the UI (start/stop button and state text)
+    async function updateUI() {
+  try {
+    const response = await fetch('/admin/status');
+    const data     = await response.json();
+    const startButton = document.getElementById('startApp');
+    const etatElement = document.querySelector('.Etat');
+
+    if (data.running) {
+      // we're in “running” mode → show the “Arrêter” button
+      startButton.innerHTML = `
+        <img src="../static/assets/images/stop.svg" alt="Stop"
+             style="width:16px;height:16px;margin-bottom:2px;">
+        Arrêter
+      `;
+      startButton.classList.remove('btn-primary');
+      startButton.classList.add('btn-danger');
+      etatElement.innerText = "État : Actif";
+      etatElement.style.color = "green";
+
+      startButton.onclick = async function() {
+        try {
+          const stopResponse = await fetch('/admin/stop', { method: 'POST' });
+          const stopData     = await stopResponse.json();
+
+          if (stopData.status === 'stopped' || stopData.status === 'not_running') {
+            console.log("Application stopped successfully!");
+          } else {
+            console.error("Error stopping application:", stopData.error);
+          }
+        } catch (stopError) {
+          console.error("Error stopping application:", stopError);
+        }
+        updateUI();
+      };
+
+    } else {
+      // we're in “stopped” mode → show the “Démarrer” button
+      startButton.innerHTML = `
+        <img src="../static/assets/images/play_arrow.svg" alt="Play"
+             style="width:16px;height:16px;margin-bottom:2px;">
+        Démarrer
+      `;
+      startButton.classList.remove('btn-danger');
+      startButton.classList.add('btn-primary');
+      etatElement.innerText = "État : Arrêté";
+      etatElement.style.color = "red";
+
+      startButton.onclick = async function() {
+        try {
+          const startResponse = await fetch('/admin/start', { method: 'POST' });
+          const startData     = await startResponse.json();
+
+          if (startData.status === 'started' || startData.status === 'already_running') {
+            console.log("Application started successfully!");
+          } else {
+            console.error("Error starting application:", startData.error);
+          }
+        } catch (startError) {
+          console.error("Error starting application:", startError);
+        }
+        updateUI();
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching status:", error);
+  }
+}
+
+// initial call
+updateUI();
+setInterval(updateUI, 2000);
+
+  
+    async function updateLogs() {
+      try {
+        const preElem = document.getElementById('logPre');
+        const isAtBottom = (preElem.scrollHeight - preElem.scrollTop - preElem.clientHeight) < 50;
+        const response = await fetch('/admin/logs_data');
+        const logs = await response.text();
+        
+        preElem.textContent = logs;
+        
+        if (isAtBottom) {
+          preElem.scrollTop = preElem.scrollHeight;
+        }
+      } catch (error) {
+        console.error("Error fetching logs:", error);
+      }
+    }
+    
+    updateLogs();
+    setInterval(updateLogs, 2000);
+  </script>
+  
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.min.js" integrity="sha384-VQqxDN0EQCkWoxt/0vsQvZswzTHUVOImccYmSyhJTp7kGtPed0Qcx8rK9h9YEgx+" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+  </body>
+</html>

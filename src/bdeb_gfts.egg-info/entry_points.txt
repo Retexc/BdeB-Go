@@ -1,2 +1,0 @@
-[console_scripts]
-bdeb-gts = bdeb_gfts.main:main
