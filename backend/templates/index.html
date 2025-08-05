@@ -191,10 +191,10 @@ window.addEventListener('resize', scaleContent);
             // Build final icons row
             let iconsHTML = occupancyIcons;
             if (bus.wheelchair_accessible) {
-              iconsHTML += `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`;
+              iconsHTML += `<img src="/static/assets/icons/wheelchair.svg" class="wheelchair" alt="Wheelchair Accessible">`;
             }
             if (bus.at_stop) {
-              iconsHTML += `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`;
+              iconsHTML += `<img src="/static/assets/icons/bus.svg" class="blinking-bus" alt="Bus at stop">`;
             }
 
             // Delay text
@@ -276,7 +276,7 @@ window.addEventListener('resize', scaleContent);
               <div class="wheelchair-cell">
                 ${
                   bus.wheelchair_accessible
-                    ? `<img src="/static/assets/icons/wheelchair.png" class="wheelchair" alt="Wheelchair Accessible">`
+                    ? `<img src="/static/assets/icons/wheelchair.svg" class="wheelchair" alt="Wheelchair Accessible">`
                     : `<img src="/static/assets/icons/invisible.png" class="wheelchair" alt="">`
                 }
               </div>
@@ -285,7 +285,7 @@ window.addEventListener('resize', scaleContent);
               <div class="bus-cell">
                 ${
                   bus.at_stop
-                    ? `<img src="/static/assets/icons/bus.png" class="blinking-bus" alt="Bus at stop">`
+                    ? `<img src="/static/assets/icons/bus.svg" class="blinking-bus" alt="Bus at stop">`
                     : `<img src="/static/assets/icons/invisible.png" class="blinking-bus" alt="">`
                 }
               </div>
@@ -369,15 +369,15 @@ window.addEventListener('resize', scaleContent);
             let bikeIconHTML = "";
             bikeIconHTML = `
       <div class="bike-wheelchair-container">
-        <img src="/static/assets/icons/bike.png" alt="Bike" class="anim-bike">
-        <img src="/static/assets/icons/wheelchair.png" alt="Wheelchair" class="anim-wheelchair">
+        <img src="/static/assets/icons/bike.svg" alt="Bike" class="anim-bike">
+        <img src="/static/assets/icons/wheelchair.svg" alt="Wheelchair" class="anim-wheelchair">
       </div>
     `;
 
             // Hide train icon if no service
             let trainIcon = "";
             if (!hideIcons && train.at_stop) {
-              trainIcon = `<img src="/static/assets/icons/train.png" class="blinking-train" alt="Train at stop">`;
+              trainIcon = `<img src="/static/assets/icons/train.svg" class="blinking-train" alt="Train at stop">`;
             } else {
               trainIcon = `<img src="/static/assets/icons/invisible.png" class="blinking-train" alt="">`;
             }
