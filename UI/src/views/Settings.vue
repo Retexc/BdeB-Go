@@ -3,7 +3,8 @@ import { motion } from "motion-v";
 import ImportField from "../components/ImportField.vue";
 import ConfirmButton from "../components/ConfirmButton.vue";
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
-
+import { Linkedin } from "lucide-vue-next";
+import { Github } from "lucide-vue-next";
 const tabs = [
   { id: "gtfs", label: "GTFS" },
   { id: "update", label: "Mise à jour" },
@@ -177,11 +178,10 @@ watch(
   (newTime, oldTime) => {
     console.log(
       `[Watcher] autoUpdateTime changed from ${oldTime} to ${newTime}`
-    )
-    scheduleNextUpdate()
+    );
+    scheduleNextUpdate();
   }
-)
-
+);
 
 onBeforeUnmount(() => {
   if (updateTimeout !== null) {
@@ -220,7 +220,7 @@ onBeforeUnmount(() => {
                 :class="[
                   'inline-block p-4 border-b-2 rounded-t-lg',
                   active === tab.id
-                    ? 'text-yellow-300 border-yellow-300'
+                    ? 'text-blue-400 border-blue-400'
                     : 'border-transparent hover:text-gray-600 hover:border-gray-300',
                 ]"
               >
@@ -253,7 +253,7 @@ onBeforeUnmount(() => {
                 <a
                   href="https://www.stm.info/fr/a-propos/developpeurs"
                   target="_blank"
-                  class="text-white underline hover:text-yellow-300"
+                  class="text-white underline hover:text-blue-400"
                 >
                   STM : Développeurs | Société de transport de Montréal
                 </a>
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
                 <a
                   href="https://exo.quebec/fr/a-propos/donnees-ouvertes"
                   target="_blank"
-                  class="text-white underline hover:text-yellow-300"
+                  class="text-white underline hover:text-blue-400"
                 >
                   Exo : Autobus, trains et transport adapté dans la région de
                   Montréal
@@ -353,14 +353,14 @@ onBeforeUnmount(() => {
               <button
                 v-if="updateState === 'idle' || updateState === 'up_to_date'"
                 @click="checkForUpdates"
-                class="inline-flex items-center px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 font-bold"
+                class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
               >
                 Rechercher des mises à jour
               </button>
               <button
                 v-else-if="updateState === 'available'"
                 @click="performUpdate"
-                class="inline-flex items-center px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 font-bold"
+                class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
               >
                 Mettre à jour
               </button>
@@ -369,7 +369,7 @@ onBeforeUnmount(() => {
                   updateState === 'checking' || updateState === 'updating'
                 "
                 disabled
-                class="inline-flex items-center px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 font-bold opacity-50"
+                class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold opacity-50"
               >
                 <span v-if="updateState === 'checking'">Vérification…</span>
                 <span v-else>Mise à jour…</span>
@@ -377,7 +377,7 @@ onBeforeUnmount(() => {
               <button
                 v-else-if="updateState === 'error'"
                 @click="checkForUpdates"
-                class="inline-flex items-center px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 font-bold"
+                class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
               >
                 Réessayer
               </button>
@@ -401,7 +401,52 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div v-else-if="active === 'about'">
-          <p class="text-gray-300">ℹ️ Ici la section À propos…</p>
+          
+<div class="bg-gray-900 rounded-2xl p-10 flex flex-row items-center justify-between space-x-8">
+    <!-- left column: text info -->
+    <div class="space-y-2">
+      <h2 class="text-2xl font-bold text-white">Higher Pierre</h2>
+      <p class="text-xl text-white">Designer graphique UX/UI</p>
+      <p class="text-xl text-white">Créateur de contenu multimédia</p>
+      <p class="text-xl text-white flex items-center">
+        Fait avec
+        <span class="ml-2 text-red-500">❤️</span>
+      </p>
+    </div>
+
+    <!-- right column: avatar + buttons -->
+    <div class="flex flex-col items-center space-y-4">
+      <!-- circular profile picture -->
+      <img
+        src="../assets/images/hp.jpg"
+        alt="Mon profil"
+        class="w-32 h-32 rounded-full object-cover shadow-lg"
+      />
+
+      <!-- social buttons -->
+      <div class="flex space-x-2">
+        <a
+          href="https://www.linkedin.com/in/higherpierre/"
+          target="_blank"
+          rel="noopener"
+          class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+        >
+          <Linkedin class="w-5 h-5" />
+          <span class="ml-2 font-medium">LinkedIn</span>
+        </a>
+
+        <a
+          href="https://github.com/Retexc"
+          target="_blank"
+          rel="noopener"
+          class="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition"
+        >
+          <Github class="w-5 h-5" />
+          <span class="ml-2 font-medium">GitHub</span>
+        </a>
+      </div>
+    </div>
+  </div>
         </div>
       </div>
     </div>

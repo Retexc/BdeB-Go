@@ -21,7 +21,7 @@
       <button
         type="button"
         @click="trigger"
-        class="inline-flex items-center px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 font-bold"
+        class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
       >
         <!-- upload icon -->
         <svg

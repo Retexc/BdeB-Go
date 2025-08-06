@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-  "dev:backend": "cd ../backend && .venv\\Scripts\\python -m flask --app=admin.py --debug run --port 5001",
-  "dev:frontend": "vite",
-  "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd ../backend && .venv\\Scripts\\python -m flask --app=admin.py --debug run --port 5001",
+    "dev:frontend": "vite",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "axios": "^1.10.0",
     "crossenv": "^0.0.2-security",
+    "lucide-vue-next": "^0.536.0",
     "motion-v": "^1.5.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",

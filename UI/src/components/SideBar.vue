@@ -14,17 +14,17 @@ function logout() {
       <div class="py-4 px-6">
         <a href="/">
           <img
-            src="../assets/images/logo-menu.svg"
+            src="../assets/icons/bdebgo.svg"
             alt="Bdeblogo"
-            class="w-16 mb-2 mt-8"
+            class="w-32 mb-2 mt-8"
           />
         </a>
       </div>
       <div class="mb-10">
         <router-link
           to="/console"
-          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-amber-300"
-          active-class="text-amber-300"
+          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-blue-400"
+          active-class="text-blue-400"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +48,8 @@ function logout() {
       <div class="mb-10">
         <router-link
           to="/background"
-          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-amber-300"
+          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-blue-400"
+          active-class="text-blue-400"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -71,7 +72,8 @@ function logout() {
       <div class="mb-10">
         <router-link
           to="/settings"
-          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-amber-300"
+          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-blue-400"
+          active-class="text-blue-400"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -96,29 +98,7 @@ function logout() {
           Paramètres
         </router-link>
       </div>
-      <div class="mb-10">
-        <router-link
-          to="/login"
-          class="flex items-center font-semibold px-6 py-2.5 gap-2 hover:text-red-600"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-8"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15"
-            />
-          </svg>
 
-          Déconnexion
-        </router-link>
-      </div>
     </div>
   </div>
 </template>
