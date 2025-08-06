@@ -2,8 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { motion } from "motion-v";
 import ConsoleLog from "../components/ConsoleLog.vue";
-import playIcon from "../assets/images/play_arrow.svg";
-import stopIcon from "../assets/images/stop.svg";
+import playIcon from "../assets/icons/play.svg";
+import stopIcon from "../assets/icons/stop-circle.svg";
 
 const running     = ref(false)
 let   statusTimer = null
@@ -39,8 +39,8 @@ const btnLabel       = computed(() => running.value ? 'Arrêter'   : 'Démarrer'
 const btnIcon        = computed(() => running.value ? stopIcon    : playIcon)
 const btnClass       = computed(() =>
   running.value
-    ? 'bg-red-600 hover:bg-red-700'
-    : 'bg-blue-600 hover:bg-blue-700'
+    ? 'bg-red-400 hover:bg-red-500 rounded-lg'
+    : 'bg-blue-400 hover:bg-blue-500 rounded-lg'
 )
 const statusText     = computed(() =>
   running.value ? 'État : Actif' : 'État : Arrêté'
@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
         <button
           v-if="running"
           @click="goToExternal"
-          class="btn btn-link bg-blue-600 font-black rounded p-2"
+          class="btn btn-link bg-blue-400 font-black rounded-lg p-2"
         >
           Accéder au tableau
         </button>
@@ -83,11 +83,11 @@ onBeforeUnmount(() => {
         <button
           @click="toggleApp"
           :disabled="loading"
-          :class="['px-4 py-2 text-white rounded', btnClass]"
+          :class="['px-4 py-2 text-black rounded font-bold', btnClass]"
         >
           <img
             :src="btnIcon"
-            class="inline w-4 h-4 mr-1 align-text-bottom"
+            class="inline w-4 h-4.5 mr-1 align-text-bottom"
             alt=""
           />
           {{ running ? "Arrêter" : "Démarrer" }}
