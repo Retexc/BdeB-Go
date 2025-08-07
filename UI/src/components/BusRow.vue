@@ -7,7 +7,6 @@ import fewSeatsIcon from "../assets/icons/FEW_SEATS_AVAILABLE.svg";
 import standingRoomOnlyIcon from "../assets/icons/STANDING_ROOM_ONLY.svg";
 import fullIcon from "../assets/icons/FULL.svg";
 
-// 1) Only *one* defineProps call!
 const props = defineProps({
   bus: {
     type: Object,
@@ -15,7 +14,6 @@ const props = defineProps({
   },
 });
 
-// 2) Compute minutes until arrival
 const minutes = computed(() => props.bus.arrival_time); // the number of minutes
 const direction = computed(() => props.bus.direction); // "Est" / "Ouest"
 const location = computed(() => props.bus.location); // stop name
@@ -47,12 +45,10 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
   <div
     class="flex flex-row justify-between items-center ml-8 mr-8 border-b border-gray-300"
   >
-    <!-- fixed-size square -->
-
     <div class="flex flex-row items-center gap-8">
       <span
-        class="inline-flex items-center justify-center w-18 h-12 bg-pink-500 text-white text-2xl font-black rounded-lg"
-        :class="routeId === '171' ? 'bg-pink-500' : 'bg-blue-600'"
+        class="inline-flex items-center justify-center w-18 h-12 text-white text-2xl font-black rounded-lg"
+        :class="props.bus.route_id === '171' ? 'bg-pink-500' : 'bg-blue-600'"
       >
         {{ props.bus.route_id }}
       </span>
@@ -82,23 +78,24 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
 
     <div class="flex flex-row items-center gap-8">
       <div class="flex flex-row gap-1">
-      <span class="text-green-400 font-bold text-xl mt-2">{{ minutes }} min</span
-      ><svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#05df55"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="animate-pulse [animation-duration: 1s]"
-      >
-        <path d="M4 11a9 9 0 0 1 9 9"></path>
-        <path d="M4 4a16 16 0 0 1 16 16"></path>
-        <circle cx="5" cy="19" r="1"></circle>
-      </svg>        
+        <span class="text-green-400 font-bold text-xl mt-2"
+          >{{ minutes }} min</span
+        ><svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#05df55"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="animate-pulse [animation-duration: 1s]"
+        >
+          <path d="M4 11a9 9 0 0 1 9 9"></path>
+          <path d="M4 4a16 16 0 0 1 16 16"></path>
+          <circle cx="5" cy="19" r="1"></circle>
+        </svg>
       </div>
 
       <img :src="iconSrc" alt="No data" class="w-24 h-24" />
