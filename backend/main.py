@@ -1,7 +1,7 @@
 # app.py
 import os, sys, time, json, logging, subprocess, threading, re, requests
 from datetime import datetime
-# src/bdeb_gfts/main.py
+from flask_cors import CORS
 
 from flask import Flask, render_template, request, jsonify
 # ────── PACKAGE IMPORTS ───────────────────────────────────────
@@ -46,7 +46,7 @@ _weather_cache = {
 CACHE_TTL = 5 * 60  # seconds (5 minutes)
 logger = logging.getLogger('BdeB-GTFS')
 app = Flask(__name__)
-
+CORS(app)
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 GTFS_BASE = os.path.join(PACKAGE_DIR, "GTFS")  # points to backend/GTFS
 STM_DIR = os.path.join(GTFS_BASE, "stm")

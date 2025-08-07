@@ -7,65 +7,67 @@
     <link rel="stylesheet" href="./static/index.css" />
 
     <script>
-async function applyActiveBackground() {
-  try {
-    const res = await fetch("http://127.0.0.1:5001/admin/backgrounds");
-    if (!res.ok) return;
-    const slots = await res.json();
+      async function applyActiveBackground() {
+        try {
+          const res = await fetch("http://127.0.0.1:5001/admin/backgrounds");
+          if (!res.ok) return;
+          const slots = await res.json();
 
-    const now = new Date();
-    const active = slots.find(s => {
-      if (!s?.path) return false;
-      if (s.end && new Date(s.end) < now) return false;
-      return true;
-    });
+          const now = new Date();
+          const active = slots.find((s) => {
+            if (!s?.path) return false;
+            if (s.end && new Date(s.end) < now) return false;
+            return true;
+          });
 
-    const bgPath = (active && active.path) || '/static/assets/images/Printemps - Banner Big.png';
-    const container = document.querySelector('.scaling-container');
-    if (container) {
-      container.style.setProperty('--active-bg', `url(${bgPath})`);
-    }
-  } catch (err) {
-    console.warn('Could not apply active background', err);
-  }
-}
+          const bgPath =
+            (active && active.path) ||
+            "/static/assets/images/Printemps - Banner Big.png";
+          const container = document.querySelector(".scaling-container");
+          if (container) {
+            container.style.setProperty("--active-bg", `url(${bgPath})`);
+          }
+        } catch (err) {
+          console.warn("Could not apply active background", err);
+        }
+      }
 
-function scaleContent() {
-  const container = document.querySelector('.scaling-container');
-  const designWidth = 1920;
-  const designHeight = 1080;
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  const scaleX = windowWidth / designWidth;
-  const scaleY = windowHeight / designHeight;
-  const scale = Math.min(scaleX, scaleY);
+      function scaleContent() {
+        const container = document.querySelector(".scaling-container");
+        const designWidth = 1920;
+        const designHeight = 1080;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        const scaleX = windowWidth / designWidth;
+        const scaleY = windowHeight / designHeight;
+        const scale = Math.min(scaleX, scaleY);
 
-  if (container) {
-    container.style.transform = `translate(-50%, -50%) scale(${scale})`;
-  }
-}
+        if (container) {
+          container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+      }
 
-document.addEventListener('DOMContentLoaded', () => {
-  applyActiveBackground();
-  scaleContent();
-  setInterval(applyActiveBackground, 15000);
-  const preloader = document.querySelector('.preloader');
-  const mainContent = document.querySelector('.main-container');
+      document.addEventListener("DOMContentLoaded", () => {
+        applyActiveBackground();
+        scaleContent();
+        setInterval(applyActiveBackground, 15000);
+        const preloader = document.querySelector(".preloader");
+        const mainContent = document.querySelector(".main-container");
 
-  mainContent.style.display = 'none';
+        mainContent.style.display = "none";
 
-  const bWrapper = document.querySelector('.b-wrapper');
-  bWrapper?.addEventListener('animationend', () => {
-    preloader.classList.add('fade-out');
-  });
+        const bWrapper = document.querySelector(".b-wrapper");
+        bWrapper?.addEventListener("animationend", () => {
+          preloader.classList.add("fade-out");
+        });
 
-  preloader?.addEventListener('transitionend', () => {
-    preloader.style.display = 'none';
-    mainContent.style.display = 'block';
-  });
-});
+        preloader?.addEventListener("transitionend", () => {
+          preloader.style.display = "none";
+          mainContent.style.display = "block";
+        });
+      });
 
-window.addEventListener('resize', scaleContent);
+      window.addEventListener("resize", scaleContent);
       window.addEventListener("DOMContentLoaded", scaleContent);
 
       document.addEventListener("DOMContentLoaded", () => {

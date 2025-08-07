@@ -240,7 +240,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
         ("180","50270","180_Est"),
         ("180","62374","180_Ouest"),
         ("164","50270","164_Est"),
-        ("164","62374","164_Ouest"),
+        ("164","62420","164_Ouest"),
     ]
 
     combo_info = {
@@ -249,7 +249,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
         "180_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
         "180_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
         "164_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
-        "164_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
+        "164_Ouest": {"direction": "Ouest",  "location": "du Bois-de-Boulogne/Henri-Bourassa"},
     }
 
     closest_buses = { combo[2]: None for combo in desired_combos }
@@ -376,7 +376,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
             closest_buses[final_key] = fallback
 
     # 3) Return in desired order
-    order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est"]
+    order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est","164_Ouest"]
     return [closest_buses[k] for k in order if closest_buses[k] is not None]
 
 
