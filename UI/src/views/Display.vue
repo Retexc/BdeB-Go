@@ -11,12 +11,13 @@ import ExoLogo from "../assets/icons/exo_white.png";
 
 const buses = ref([])
 const activeBackground = ref('')
-const showBuses = ref(true) 
+const showBuses = ref(true) // Toggle between buses and metro
 let viewInterval = null
 
 // Configurable view switch timing (in milliseconds)
-const VIEW_SWITCH_INTERVAL = 45000 
+const VIEW_SWITCH_INTERVAL = 45000 // 45 seconds - change this value to modify timing
 
+// Metro lines data (4 lines as you requested)
 const metroLines = ref([
   {
     id: 1,
@@ -55,9 +56,32 @@ const metroLines = ref([
 // Trains from API data
 const trains = ref([])
 
+// Computed property to sort buses by arrival time (ascending)
 const sortedBuses = computed(() => {
   return [...buses.value].sort((a, b) => {
-    return a.arrival_time.localeCompare(b.arrival_time);
+    const timeA = a.arrival_time;
+    const timeB = b.arrival_time;
+    
+    // If both are numbers (minutes), sort numerically
+    if (typeof timeA === 'number' && typeof timeB === 'number') {
+      return timeA - timeB;
+    }
+    
+    // If both are strings (time format), sort by string
+    if (typeof timeA === 'string' && typeof timeB === 'string') {
+      return timeA.localeCompare(timeB);
+    }
+    
+    // Numbers (real-time) should come before strings (scheduled)
+    if (typeof timeA === 'number' && typeof timeB === 'string') {
+      return -1;
+    }
+    
+    if (typeof timeA === 'string' && typeof timeB === 'number') {
+      return 1;
+    }
+    
+    return 0;
   });
 });
 
@@ -69,8 +93,9 @@ async function fetchData() {
       ['171','180','164'].includes(b.route_id)
     )
     
+    // Update trains with real data from API
     if (json.next_trains && json.next_trains.length > 0) {
-      trains.value = json.next_trains.slice(0, 3); 
+      trains.value = json.next_trains.slice(0, 3); // Take first 3 trains
     }
   } catch (err) {
     console.error(err)
@@ -171,8 +196,10 @@ onBeforeUnmount(() => {
         </TransitionGroup>
       </div>
 
+      <!-- Spacing between metro and train sections -->
       <div class="mt-8"></div>
 
+      <!-- Exo Logo and Train Rows -->
       <img :src="ExoLogo" alt="Exo logo" class="w-22 h-auto mt-4 ml-6"></img>
       <div class="flex flex-col">
         
@@ -191,12 +218,14 @@ onBeforeUnmount(() => {
     </div>
   </Transition>
 
+  <!-- Alert Banner at bottom -->
   <AlertBanner />
 </div>
 
 </template>
 
 <style scoped>
+/* ensure full‐height so motion has space */
 :host {
   display: block;
   height: 100%;
@@ -210,7 +239,7 @@ onBeforeUnmount(() => {
   background-repeat: no-repeat;
   transition: background-image 0.5s ease-in-out;
   position: relative;
-  overflow: hidden; 
+  overflow: hidden; /* Prevent scrollbars during transitions */
 }
 
 /* Dark overlay to make background less bright */
@@ -221,23 +250,25 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.65); 
-  pointer-events: none; 
+  background: rgba(0, 0, 0, 0.65); /* 65% dark overlay */
+  pointer-events: none; /* Allow clicks to pass through */
   z-index: 1;
 }
 
+/* Ensure content appears above the overlay */
 .display-container > * {
   position: relative;
   z-index: 2;
 }
 
-
+/* View container for smooth transitions */
 .view-container {
   opacity: 1;
   width: 100%;
-  overflow: hidden; 
+  overflow: hidden; /* Prevent content overflow during transitions */
 }
 
+/* Main view transition (buses <-> metro) - Vertical fade */
 .view-fade-enter-active,
 .view-fade-leave-active {
   transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -245,12 +276,29 @@ onBeforeUnmount(() => {
 
 .view-fade-enter-from {
   opacity: 0;
+  transform: translateY(50px); /* Enter from bottom, going up */
 }
 
 .view-fade-leave-to {
   opacity: 0;
+  /* No transform - just fade out in place */
 }
 
+/* Stable positioning for leaving view */
+.view-fade-leave-active {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+/* Ensure entering view appears properly */
+.view-fade-enter-active {
+  transition-delay: 0.1s;
+  position: relative;
+  z-index: 3;
+}
 
 /* Transition animations for bus list reordering */
 .bus-list-move,
@@ -271,7 +319,7 @@ onBeforeUnmount(() => {
 
 .bus-list-leave-active {
   position: absolute;
-  width: calc(100% - 4rem); 
+  width: calc(100% - 4rem); /* Account for margins */
   left: 2rem;
 }
 
@@ -321,22 +369,26 @@ onBeforeUnmount(() => {
   left: 2rem;
 }
 
+/* Optional: Add a subtle scale effect during movement */
 .bus-list-move,
 .metro-list-move,
 .train-list-move {
   transform-origin: center;
 }
 
+/* Ensure smooth repositioning */
 .bus-list-enter-active,
 .metro-list-enter-active,
 .train-list-enter-active {
   transition-delay: 0.1s;
 }
 
+/* Hide scrollbars globally during transitions */
 body {
   overflow: hidden;
 }
 
+/* Reset scrollbars after transitions if needed */
 .display-container:not(.transitioning) {
   overflow: auto;
 }

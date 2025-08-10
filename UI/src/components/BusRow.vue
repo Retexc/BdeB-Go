@@ -14,7 +14,20 @@ const props = defineProps({
   },
 });
 
-const minutes = computed(() => props.bus.arrival_time); // the number of minutes
+// Handle both number (minutes) and string (time) formats
+const displayTime = computed(() => {
+  const arrivalTime = props.bus.arrival_time;
+  if (typeof arrivalTime === 'number') {
+    return `${Math.round(arrivalTime)} min`;
+  }
+  return arrivalTime; // Already a formatted time string like "05:39 AM"
+});
+
+// Only show pulse animation for minute-based times
+const showPulse = computed(() => {
+  return typeof props.bus.arrival_time === 'number';
+});
+
 const direction = computed(() => props.bus.direction); // "Est" / "Ouest"
 const location = computed(() => props.bus.location); // stop name
 const routeId = computed(() => props.bus.route_id); // "171", "180", etc
@@ -23,6 +36,7 @@ const wheelchair = computed(() => props.bus.wheelchair_accessible); // boolean
 
 const occupancyIcons = {
   NO_DATA: noDataIcon,
+  Unknown: noDataIcon, // Handle "Unknown" from API
   MANY_SEATS_AVAILABLE: manySeatsIcon,
   FEW_SEATS_AVAILABLE: fewSeatsIcon,
   STANDING_ROOM_ONLY: standingRoomOnlyIcon,
@@ -79,8 +93,9 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
     <div class="flex flex-row items-center gap-8">
       <div class="flex flex-row gap-1">
         <span class="text-green-400 font-bold text-xl mt-2"
-          >{{ minutes }} min</span
+          >{{ displayTime }}</span
         ><svg
+          v-if="showPulse"
           xmlns="http://www.w3.org/2000/svg"
           width="18"
           height="18"

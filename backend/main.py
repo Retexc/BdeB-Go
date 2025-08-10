@@ -2,6 +2,7 @@
 import os, sys, time, json, logging, subprocess, threading, re, requests
 from datetime import datetime
 from flask_cors import CORS
+from flask import Flask, render_template, request, jsonify, redirect
 
 from flask import Flask, render_template, request, jsonify
 # ────── PACKAGE IMPORTS ───────────────────────────────────────
@@ -202,28 +203,8 @@ def get_active_background(css_path):
 # ====================================================================
 @app.route("/")
 def index():
-    exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
-    exo_vehicle_data = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
-    
-    exo_trains = process_exo_train_schedule_with_occupancy(
-        exo_stop_times,
-        exo_trips,
-        exo_vehicle_data,
-        exo_trip_updates
-    )
-    
-    current_time = time.strftime("%I:%M:%S %p")
-    css_path = os.path.join(app.static_folder, "index.css")
-    active_bg = get_active_background(css_path)
-    weather = get_weather()
-
-    return render_template(
-        "index.html",
-        next_trains  = exo_trains,
-        current_time = current_time,
-        active_bg    = active_bg,
-        weather      = weather        
-    )
+    # Redirect to your Vue.js app instead of rendering old template
+    return redirect("http://localhost:3000") 
 
 # ====================================================================
 # ROUTE: API JSON Data for buses, trains, and alerts
