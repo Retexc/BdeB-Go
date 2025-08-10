@@ -1,42 +1,83 @@
 <template>
-  <div class="min-h-screen bg-black flex flex-row justify-center items-center pl-16 overflow-hidden" :style="{ fontFamily: 'AtlasGrotesk, sans-serif' }">
-    
+  <div
+    class="min-h-screen bg-black flex flex-row justify-center items-center pl-16 overflow-hidden gap-8"
+    :style="{ fontFamily: 'AtlasGrotesk, sans-serif' }"
+  >
     <!-- 100% Badge -->
-    <div class="bg-white px-8 py-4 rounded-2xl mb-12">
-      <h1 class="text-black text-6xl md:text-7xl" :style="{ fontWeight: 900 }">100%</h1>
-    </div>
-    
-    <!-- Animated Words Container -->
-    <div class="relative h-full overflow-hidden w-full">
-      <!-- Word Stack - animates upward -->
-      <div 
-        class="transition-transform duration-1000 ease-in-out space-y-6"
-        :style="{ 
-          transform: `translateY(${-currentIndex * 140}px)`,
-        }"
-      >
-        <!-- Add extra words at the beginning for smooth entry -->
-        <h1 class="text-6xl md:text-7xl leading-tight opacity-0" :style="{ fontWeight: 900 }">.</h1>
-        <h1 class="text-6xl md:text-7xl leading-tight opacity-0" :style="{ fontWeight: 900 }">.</h1>
-        <h1 class="text-6xl md:text-7xl leading-tight opacity-0" :style="{ fontWeight: 900 }">.</h1>
-        
-        <h1 
-          v-for="(word, index) in words" 
-          :key="index"
-          class="text-6xl md:text-7xl leading-tight transition-opacity duration-500"
-          :class="getWordClass(index)"
-          :style="{ fontWeight: 900 }"
-        >
-          {{ word }}
-        </h1>
-        
-        <!-- Add extra words at the end for smooth exit -->
-        <h1 class="text-6xl md:text-7xl leading-tight opacity-0" :style="{ fontWeight: 900 }">.</h1>
-        <h1 class="text-6xl md:text-7xl leading-tight opacity-0" :style="{ fontWeight: 900 }">.</h1>
-        <h1 class="text-6xl md:text-7xl leading-tight opacity-0" :style="{ fontWeight: 900 }">.</h1>
-      </div>
+    <div class="bg-white px-12 py-6 rounded-2xl">
+      <h1 class="text-black text-6xl md:text-9xl" :style="{ fontWeight: 900 }">
+        100%
+      </h1>
     </div>
 
+    <!-- Animated Words Container -->
+    <div class="relative h-screen overflow-hidden w-full flex items-center">
+      <!-- Word Stack - animates from bottom to center "Ponctuel." -->
+      <div 
+        class="space-y-6 transition-transform duration-2000 ease-out"
+        :style="{ transform: `translateY(${scrollPosition}px)` }"
+      >
+        <!-- Words above Ponctuel -->
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Motivé.
+        </h1>
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Cavalier.
+        </h1>
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Fier.
+        </h1>
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Réussite.
+        </h1>
+
+        <!-- Ponctuel - Always in the center -->
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-white opacity-100"
+          :style="{ fontWeight: 900 }"
+        >
+          Ponctuel.
+        </h1>
+
+        <!-- Words below Ponctuel -->
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Ensemble.
+        </h1>
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Heureux.
+        </h1>
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          BdeB.
+        </h1>
+        <h1
+          class="text-6xl md:text-9xl leading-tight text-gray-400 opacity-60"
+          :style="{ fontWeight: 900 }"
+        >
+          Vous.
+        </h1>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -44,40 +85,16 @@
 export default {
   data() {
     return {
-      words: ['Réussite.', 'Fier.', 'Cavalier.', 'Motivé.', 'Transport.', 'Ensemble.', 'Heureux.', 'BdeB.', 'Vous.'],
-      currentIndex: 0,
-      timeoutId: null,
-      targetWordIndex: 4 // Index of "Transport." in the array
-    }
+      scrollPosition: 1300, // Start below the visible area (bottom)
+    };
   },
   mounted() {
-    this.startSmoothAnimation()
+    // Wait 1 second, then scroll up to center "Ponctuel."
+    setTimeout(() => {
+      this.scrollPosition = 0; // Move up to center "Ponctuel." (4 words × 140px)
+    }, 1000);
+    
+    console.log('Loading animation ready - Words will scroll from bottom!');
   },
-  beforeUnmount() {
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId)
-    }
-  },
-  methods: {
-    startSmoothAnimation() {
-      // Wait 1 second, then smoothly animate to Transport
-      this.timeoutId = setTimeout(() => {
-        this.currentIndex = this.targetWordIndex // This will trigger the CSS transition
-      }, 1000)
-    },
-    getWordClass(index) {
-      const position = index - this.currentIndex
-      
-      if (position === 0) {
-        return 'text-white opacity-100' // Current word - fully visible
-      } else if (position === 1) {
-        return 'text-gray-400 opacity-60' // Next word - medium opacity
-      } else if (position === 2) {
-        return 'text-gray-500 opacity-30' // Word after - low opacity
-      } else {
-        return 'text-gray-600 opacity-10' // Other words - barely visible
-      }
-    }
-  }
-}
+};
 </script>
