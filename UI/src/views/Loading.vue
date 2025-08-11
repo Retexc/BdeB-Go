@@ -103,7 +103,7 @@ export default {
   emits: ['loading-complete'],
   data() {
     return {
-      scrollPosition: 1300, 
+      scrollPosition: 1500, 
       maskPosition: 0,   
       yellowSlide: -100, 
       whiteSlide: -120,

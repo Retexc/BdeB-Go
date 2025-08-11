@@ -14,12 +14,95 @@ const props = defineProps({
   },
 });
 
-// Use the correct API data structure for trains
-const displayTime = computed(() => props.train.display_time); // "12 min" or "07:12 AM"
-const direction = computed(() => props.train.direction); // "Saint-Jérôme", "Mascouche", etc
-const location = computed(() => props.train.location); // "Gare Bois-de-Boulogne"
+// Quebec holidays
+const quebecHolidays = computed(() => {
+  const year = new Date().getFullYear();
+  const holidays = [];
+  
+  // Fixed holidays
+  holidays.push(`${year}-01-01`); // Jour de l'An
+  holidays.push(`${year}-01-02`); // Lendemain du jour de l'An
+  holidays.push(`${year}-06-24`); // Fête nationale du Québec
+  holidays.push(`${year}-07-01`); // Fête du Canada
+  holidays.push(`${year}-09-01`); // Fête du Travail (first Monday in September)
+  holidays.push(`${year}-12-25`); // Jour de Noël
+  holidays.push(`${year}-12-26`); // Lendemain de Noël
+  
+  // Calculate Easter-based holidays (Vendredi saint)
+  const easter = calculateEaster(year);
+  const goodFriday = new Date(easter);
+  goodFriday.setDate(easter.getDate() - 2);
+  holidays.push(goodFriday.toISOString().split('T')[0]);
+  
+  // Victoria Day (Journée nationale des patriotes) - Monday before May 25
+  const victoriaDay = calculateVictoriaDay(year);
+  holidays.push(victoriaDay.toISOString().split('T')[0]);
+  
+  // Thanksgiving (Action de grâces) - second Monday in October
+  const thanksgiving = calculateThanksgiving(year);
+  holidays.push(thanksgiving.toISOString().split('T')[0]);
+  
+  return holidays;
+});
+
+// Helper function to calculate Easter
+function calculateEaster(year) {
+  const f = Math.floor;
+  const G = year % 19;
+  const C = f(year / 100);
+  const H = (C - f(C / 4) - f((8 * C + 13) / 25) + 19 * G + 15) % 30;
+  const I = H - f(H / 28) * (1 - f(29 / (H + 1)) * f((21 - G) / 11));
+  const J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7;
+  const L = I - J;
+  const month = 3 + f((L + 40) / 44);
+  const day = L + 28 - 31 * f(month / 4);
+  return new Date(year, month - 1, day);
+}
+
+// Helper function to calculate Victoria Day (Monday before May 25)
+function calculateVictoriaDay(year) {
+  const may25 = new Date(year, 4, 25); // May 25
+  const dayOfWeek = may25.getDay();
+  const mondayBefore = new Date(may25);
+  mondayBefore.setDate(25 - ((dayOfWeek + 6) % 7));
+  return mondayBefore;
+}
+
+// Helper function to calculate Thanksgiving (second Monday in October)
+function calculateThanksgiving(year) {
+  const oct1 = new Date(year, 9, 1); // October 1
+  const firstMonday = new Date(oct1);
+  firstMonday.setDate(1 + ((7 - oct1.getDay() + 1) % 7));
+  const secondMonday = new Date(firstMonday);
+  secondMonday.setDate(firstMonday.getDate() + 7);
+  return secondMonday;
+}
+
+// Check if today is a weekend or holiday
+const isNoServiceDay = computed(() => {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const todayString = today.toISOString().split('T')[0];
+  
+  // Check if weekend (Saturday = 6, Sunday = 0)
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  
+  // Check if holiday
+  const isHoliday = quebecHolidays.value.includes(todayString);
+  
+  return isWeekend || isHoliday;
+});
+
+const displayTime = computed(() => {
+  if (isNoServiceDay.value) {
+    return "Aucun service aujourd'hui";
+  }
+  return props.train.display_time;
+});
+
+const direction = computed(() => props.train.direction); 
+const location = computed(() => props.train.location); 
 const routeId = computed(() => {
-  // Convert route_id to display format: "4" -> "SJ", "6" -> "MA"
   if (props.train.route_id === "4") return "SJ";
   if (props.train.route_id === "6") return "MA";
   return props.train.route_id;
@@ -30,7 +113,7 @@ const bikesAllowed = computed(() => props.train.bikes_allowed);
 
 const occupancyIcons = {
   NO_DATA: noDataIcon,
-  UNKNOWN: noDataIcon, // Handle "UNKNOWN" from API
+  UNKNOWN: noDataIcon, 
   Unknown: noDataIcon,
   MANY_SEATS_AVAILABLE: manySeatsIcon,
   FEW_SEATS_AVAILABLE: fewSeatsIcon,
@@ -87,9 +170,13 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
 
     <div class="flex flex-row items-center gap-8">
       <div class="flex flex-row gap-1">
-        <span class="text-green-400 font-bold text-xl mt-2"
-          >{{ displayTime }}</span
-        ><svg
+        <span 
+          class="font-bold text-xl mt-2"
+          :class="isNoServiceDay ? 'text-red-500' : 'text-green-400'"
+        >
+          {{ displayTime }}
+        </span>
+        <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"
           height="18"
@@ -100,7 +187,7 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
           stroke-linecap="round"
           stroke-linejoin="round"
           class="animate-pulse [animation-duration: 1s]"
-          v-if="displayTime.includes('min')"
+          v-if="!isNoServiceDay && displayTime.includes('min')"
         >
           <path d="M4 11a9 9 0 0 1 9 9"></path>
           <path d="M4 4a16 16 0 0 1 16 16"></path>

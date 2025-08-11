@@ -22,7 +22,7 @@ const handleLoadingComplete = () => {
   // Start timer for transition to EndDisplay after 45 seconds
   displayTimer = setTimeout(() => {
     startTransitionToEnd()
-  }, 45000) // 45 seconds
+  }, 60000) // 60 seconds
 }
 
 const startTransitionToEnd = () => {

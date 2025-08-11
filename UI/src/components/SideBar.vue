@@ -16,7 +16,7 @@ function logout() {
           <img
             src="../assets/icons/bdebgo.svg"
             alt="Bdeblogo"
-            class="w-32 mb-2 mt-8"
+            class="w-42 mb-2 mt-8"
           />
         </a>
       </div>
