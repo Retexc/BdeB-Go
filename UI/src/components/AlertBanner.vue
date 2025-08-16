@@ -12,9 +12,15 @@ const fetchAlerts = async () => {
     const data = await response.json();
     
     if (data.alerts && data.alerts.length > 0) {
-      alerts.value = data.alerts;
+      // Remove duplicates by creating a unique key for each alert
+      const uniqueAlerts = data.alerts.filter((alert, index, arr) => {
+        const alertKey = `${alert.header}-${alert.description}-${alert.train_route || alert.routes}`;
+        return arr.findIndex(a => `${a.header}-${a.description}-${a.train_route || a.routes}` === alertKey) === index;
+      });
       
-      const combinedAlerts = data.alerts
+      alerts.value = uniqueAlerts;
+      
+      const combinedAlerts = uniqueAlerts
         .map((alert) => {
           if (alert.routes === "Custom" && alert.stop === "Message") {
             return `${alert.header}: ${alert.description}`;
@@ -59,25 +65,50 @@ onBeforeUnmount(() => {
     v-if="showBanner" 
     class="alert-banner"
   >
-    <div class="alert-marquee">
-      <svg 
-        class="alert-icon" 
-        xmlns="http://www.w3.org/2000/svg" 
-        width="24" 
-        height="24" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="white" 
-        stroke-width="2" 
-        stroke-linecap="round" 
-        stroke-linejoin="round"
-      >
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-        <path d="M12 9v4"/>
-        <path d="M12 17h.01"/>
-      </svg>
-      
-      <span class="alert-text">{{ allAlertsText }}</span>
+    <div class="alert-track">
+      <div class="alert-content">
+        <svg 
+          class="alert-icon" 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+        >
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <path d="M12 9v4"/>
+          <path d="M12 17h.01"/>
+        </svg>
+        
+        <span class="alert-text">{{ allAlertsText }}</span>
+        <span class="alert-text-spacer">•••</span>
+      </div>
+      <!-- Duplicate content for seamless loop -->
+      <div class="alert-content" aria-hidden="true">
+        <svg 
+          class="alert-icon" 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="24" 
+          height="24" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+        >
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <path d="M12 9v4"/>
+          <path d="M12 17h.01"/>
+        </svg>
+        
+        <span class="alert-text">{{ allAlertsText }}</span>
+        <span class="alert-text-spacer">•••</span>
+      </div>
     </div>
   </div>
 </template>
@@ -88,19 +119,25 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(135deg, #ff8c00, #ff6b00); /* Orange gradient */
-  color: white;
+  background: linear-gradient(135deg, #ff8c00, #ff6b00);
+  color: black;
   padding: 12px 0;
   z-index: 1000;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
-.alert-marquee {
+.alert-track {
+  display: flex;
+  width: fit-content;
+  animation: scroll 30s linear infinite;
+}
+
+.alert-content {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: marquee 30s linear infinite;
+  padding-right: 50px;
 }
 
 .alert-icon {
@@ -109,36 +146,45 @@ onBeforeUnmount(() => {
   height: 24px;
   margin-right: 12px;
   margin-left: 20px;
+  color: white;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .alert-text {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  padding-right: 50px; /* Space at the end before loop */
 }
 
-/* Marquee animation */
-@keyframes marquee {
-  0% {
-    transform: translateX(100%);
+.alert-text-spacer {
+  margin: 0 20px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes scroll {
+  0%, 5% {
+    transform: translateX(0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .alert-text {
-    font-size: 16px;
+    font-size: 14px;
   }
   
   .alert-icon {
     width: 20px;
     height: 20px;
     margin-left: 15px;
+  }
+  
+  .alert-track {
+    animation-duration: 20s;
   }
 }
 </style>

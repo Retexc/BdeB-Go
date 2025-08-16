@@ -181,9 +181,8 @@ onBeforeUnmount(() => {
   </Transition>
 
   <!-- Alert Banner at bottom -->
-  <AlertBanner />
 </div>
-
+  <AlertBanner />
 </template>
 
 <style scoped>
