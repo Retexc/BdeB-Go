@@ -401,52 +401,53 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div v-else-if="active === 'about'">
-          
-<div class="bg-gray-900 rounded-2xl p-10 flex flex-row items-center justify-between space-x-8">
-    <!-- left column: text info -->
-    <div class="space-y-2">
-      <h2 class="text-2xl font-bold text-white">Higher Pierre</h2>
-      <p class="text-xl text-white">Designer graphique UX/UI</p>
-      <p class="text-xl text-white">Créateur de contenu multimédia</p>
-      <p class="text-xl text-white flex items-center">
-        Fait avec
-        <span class="ml-2 text-red-500">❤️</span>
-      </p>
-    </div>
+          <div
+            class="bg-gray-900 rounded-2xl p-10 flex flex-row items-center justify-between space-x-8"
+          >
+            <!-- left column: text info -->
+            <div class="space-y-2">
+              <h2 class="text-2xl font-bold text-white">Higher Pierre</h2>
+              <p class="text-xl text-white">Designer graphique UX/UI</p>
+              <p class="text-xl text-white">Créateur de contenu multimédia</p>
+              <p class="text-xl text-white flex items-center">
+                Fait avec
+                <span class="ml-2 text-red-500">❤️</span>
+              </p>
+            </div>
 
-    <!-- right column: avatar + buttons -->
-    <div class="flex flex-col items-center space-y-4">
-      <!-- circular profile picture -->
-      <img
-        src="../assets/images/hp.jpg"
-        alt="Mon profil"
-        class="w-32 h-32 rounded-full object-cover shadow-lg"
-      />
+            <!-- right column: avatar + buttons -->
+            <div class="flex flex-col items-center space-y-4">
+              <!-- circular profile picture -->
+              <img
+                src="../assets/images/hp.jpg"
+                alt="Mon profil"
+                class="w-32 h-32 rounded-full object-cover shadow-lg"
+              />
 
-      <!-- social buttons -->
-      <div class="flex space-x-2">
-        <a
-          href="https://www.linkedin.com/in/higherpierre/"
-          target="_blank"
-          rel="noopener"
-          class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-        >
-          <Linkedin class="w-5 h-5" />
-          <span class="ml-2 font-medium">LinkedIn</span>
-        </a>
+              <!-- social buttons -->
+              <div class="flex space-x-2">
+                <a
+                  href="https://www.linkedin.com/in/higherpierre/"
+                  target="_blank"
+                  rel="noopener"
+                  class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                >
+                  <Linkedin class="w-5 h-5" />
+                  <span class="ml-2 font-medium">LinkedIn</span>
+                </a>
 
-        <a
-          href="https://github.com/Retexc"
-          target="_blank"
-          rel="noopener"
-          class="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition"
-        >
-          <Github class="w-5 h-5" />
-          <span class="ml-2 font-medium">GitHub</span>
-        </a>
-      </div>
-    </div>
-  </div>
+                <a
+                  href="https://github.com/Retexc"
+                  target="_blank"
+                  rel="noopener"
+                  class="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition"
+                >
+                  <Github class="w-5 h-5" />
+                  <span class="ml-2 font-medium">GitHub</span>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

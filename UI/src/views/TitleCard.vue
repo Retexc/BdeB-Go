@@ -6,7 +6,14 @@ import placeholderBg from "../assets/images/background.png";
 import Loading from "./Loading.vue";
 import LoadingPreview from "../components/LoadingPreview.vue";
 import EndCardPreview from "../components/EndCardPreview.vue";
+import WordList from "../components/WordList.vue";
 onMounted(async () => {});
+
+const active = ref('text');
+const tabs = [
+  { id: "text", label: "Texte" },
+  { id: "looks", label: "Apparence" },
+];
 </script>
 
 <template>
@@ -53,11 +60,38 @@ onMounted(async () => {});
       <!-- Settings -->
       <div class="flex flex-col gap-4">
         <h2 class="text-2xl font-bold text-white">Paramètres</h2>
-        <hr class="border-t border-[#404040] mt-3" />
+        <div
+          class="mt-2 text-sm font-medium text-center text-gray-500 border-b border-gray-200"
+        >
+          <ul class="flex flex-wrap -mb-px">
+            <li v-for="tab in tabs" :key="tab.id" class="mr-2">
+              
+               <a href="#"
+                @click.prevent="active = tab.id"
+                :class="[
+                  'inline-block p-4 border-b-2 rounded-t-lg',
+                  active === tab.id
+                    ? 'text-blue-400 border-blue-400'
+                    : 'border-transparent hover:text-gray-600 hover:border-gray-300',
+                ]"
+              >
+                {{ tab.label }}
+              </a>
+            </li>
+          </ul>
+        </div>
 
+        <div class="mt-6 w-full">
+          <div v-if="active === 'text'" class="w-full">
+            <WordList></WordList>
+          </div>
+          <div v-else-if="active === 'looks'" class="w-full">
 
+          </div>
+        </div>
       </div>
     </div>
+    
   </motion.div>
 </template>
 
