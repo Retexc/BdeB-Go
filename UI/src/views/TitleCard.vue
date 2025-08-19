@@ -237,7 +237,7 @@ onMounted(async () => {
             @click="selectCard('loading')"
             :class="[
               'w-150 h-86 border-2 rounded-lg overflow-hidden bg-black cursor-pointer transition-all duration-200',
-              selectedCard === 'loading' ? 'border-yellow-400 border-4' : 'border-[#404040] hover:border-gray-500'
+              selectedCard === 'loading' ? 'border-blue-400 border-4' : 'border-[#404040] hover:border-gray-500'
             ]"
           >
             <LoadingPreview 
@@ -254,7 +254,7 @@ onMounted(async () => {
             @click="selectCard('endcard')"
             :class="[
               'w-150 h-86 border-2 rounded-lg overflow-hidden bg-black cursor-pointer transition-all duration-200',
-              selectedCard === 'endcard' ? 'border-yellow-400 border-4' : 'border-[#404040] hover:border-gray-500'
+              selectedCard === 'endcard' ? 'border-blue-400 border-4' : 'border-[#404040] hover:border-gray-500'
             ]"
           >
             <EndCardPreview 
