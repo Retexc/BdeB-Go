@@ -11,10 +11,11 @@ import ExoLogo from "../assets/icons/exo_white.png";
 
 const buses = ref([])
 const activeBackground = ref('')
+const overlayOpacity = ref(0.65) 
 const showBuses = ref(true) 
 let viewInterval = null
 
-// Configurable view switch timing (in milliseconds)
+// Configurable view switch timing
 const VIEW_SWITCH_INTERVAL = 45000 // 45 seconds 
 
 const metroLines = ref([])
@@ -46,6 +47,14 @@ const sortedBuses = computed(() => {
   });
 });
 
+const overlayStyle = computed(() => ({
+  background: `rgba(0, 0, 0, ${overlayOpacity.value})`
+}));
+
+const backgroundStyle = computed(() => ({
+  backgroundImage: activeBackground.value
+}));
+
 async function fetchData() {
   try {
     const res = await fetch('/api/data')
@@ -73,7 +82,17 @@ async function applyActiveBackground() {
   try {
     const res = await fetch("http://127.0.0.1:5001/admin/backgrounds");
     if (!res.ok) return;
-    const slots = await res.json();
+    const data = await res.json();
+
+    let slots;
+    if (Array.isArray(data)) {
+      slots = data;
+    } else {
+      slots = data.slots || [];
+      if (data.overlay !== undefined) {
+        overlayOpacity.value = data.overlay;
+      }
+    }
 
     const now = new Date();
     const active = slots.find((s) => {
@@ -94,6 +113,27 @@ async function applyActiveBackground() {
   }
 }
 
+async function fetchOverlayOpacity() {
+  try {
+    const storedOpacity = localStorage.getItem('backgroundOverlayOpacity');
+    if (storedOpacity) {
+      overlayOpacity.value = JSON.parse(storedOpacity);
+      return;
+    }
+    
+    const res = await fetch("http://127.0.0.1:5001/admin/backgrounds/overlay");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.opacity !== undefined) {
+        overlayOpacity.value = data.opacity;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch overlay opacity", err);
+    // Keep default value
+  }
+}
+
 function toggleView() {
   showBuses.value = !showBuses.value;
 }
@@ -101,8 +141,10 @@ function toggleView() {
 onMounted(() => {
   fetchData()
   applyActiveBackground()
+  fetchOverlayOpacity()
   setInterval(fetchData, 30_000) 
   setInterval(applyActiveBackground, 15_000) // Update background every 15 seconds
+  setInterval(fetchOverlayOpacity, 15_000) // Update overlay every 15 seconds
   
   viewInterval = setInterval(toggleView, VIEW_SWITCH_INTERVAL)
 })
@@ -115,229 +157,109 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-<div class="display-container" :style="{ backgroundImage: activeBackground }">
-<Header />
+<div 
+  class="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden transition-all duration-500 ease-in-out"
+  :style="backgroundStyle"
+>
+  <!-- Overlay -->
+  <div 
+    class="absolute inset-0 pointer-events-none z-10 transition-all duration-300 ease-in-out"
+    :style="overlayStyle"
+  ></div>
 
-  <Transition name="view-fade" mode="out-in">
-    <!-- STM Bus View -->
-    <div v-if="showBuses" key="buses" class="view-container">
-      <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
-      <div class="flex flex-col">
-        
-        <TransitionGroup 
-          name="bus-list" 
-          tag="div" 
-          class="flex flex-col"
-          v-if="sortedBuses.length"
-        >
-          <BusRow
-            v-for="bus in sortedBuses"
-            :key="bus.trip_id"
-            :bus="bus"
-          />
-        </TransitionGroup>
-        <p v-if="buses.length === 0" class="text-gray-500">
-          Aucun autobus à afficher…
-        </p>
-      </div>
+  <!-- Content -->
+  <div class="relative z-20">
+    <Header />
+
+    <!-- Main content area with fixed positioning for transitions -->
+    <div class="relative min-h-[calc(100vh-120px)] overflow-hidden">
+      <Transition 
+        name="view-transition" 
+        mode="out-in"
+        enter-active-class="transition-all duration-700 ease-out"
+        leave-active-class="transition-all duration-700 ease-out absolute top-0 left-0 right-0 w-full"
+        enter-from-class="opacity-0 translate-y-8"
+        leave-to-class="opacity-0 -translate-y-8"
+      >
+        <!-- STM Bus View -->
+        <div v-if="showBuses" key="buses" class="w-full">
+          <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
+          <div class="flex flex-col">
+            
+            <TransitionGroup 
+              name="bus-list" 
+              tag="div" 
+              class="flex flex-col"
+              v-if="sortedBuses.length"
+              move-class="transition-all duration-600 ease-out origin-center"
+              enter-active-class="transition-all duration-600 ease-out delay-100"
+              leave-active-class="transition-all duration-600 ease-out absolute left-8 w-[calc(100%-4rem)]"
+              enter-from-class="opacity-0 -translate-x-8"
+              leave-to-class="opacity-0 translate-x-8"
+            >
+              <BusRow
+                v-for="bus in sortedBuses"
+                :key="bus.trip_id"
+                :bus="bus"
+              />
+            </TransitionGroup>
+            <p v-if="buses.length === 0" class="text-gray-500">
+              Aucun autobus à afficher…
+            </p>
+          </div>
+        </div>
+
+        <!-- Metro View -->
+        <div v-else key="metro" class="w-full">
+          <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
+          <div class="flex flex-col">
+            
+            <TransitionGroup 
+              name="metro-list" 
+              tag="div" 
+              class="flex flex-col"
+              move-class="transition-all duration-600 ease-out origin-center"
+              enter-active-class="transition-all duration-600 ease-out delay-100"
+              leave-active-class="transition-all duration-600 ease-out absolute left-8 w-[calc(100%-4rem)]"
+              enter-from-class="opacity-0 -translate-x-8"
+              leave-to-class="opacity-0 translate-x-8"
+            >
+              <MetroRow
+                v-for="line in metroLines"
+                :key="line.id"
+                :line="line"
+              />
+            </TransitionGroup>
+          </div>
+
+          <div class="mt-8"></div>
+          <!-- Exo Logo and Train Rows -->
+          <img :src="ExoLogo" alt="Exo logo" class="w-22 h-auto mt-4 ml-6"></img>
+          <div class="flex flex-col">
+            
+            <TransitionGroup 
+              name="train-list" 
+              tag="div" 
+              class="flex flex-col"
+              move-class="transition-all duration-600 ease-out origin-center"
+              enter-active-class="transition-all duration-600 ease-out delay-100"
+              leave-active-class="transition-all duration-600 ease-out absolute left-8 w-[calc(100%-4rem)]"
+              enter-from-class="opacity-0 -translate-x-8"
+              leave-to-class="opacity-0 translate-x-8"
+            >
+              <TrainRow
+                v-for="train in trains"
+                :key="train.id"
+                :train="train"
+              />
+            </TransitionGroup>
+          </div>
+        </div>
+      </Transition>
     </div>
-
-    <!-- Metro View -->
-    <div v-else key="metro" class="view-container">
-      <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
-      <div class="flex flex-col">
-        
-        <TransitionGroup 
-          name="metro-list" 
-          tag="div" 
-          class="flex flex-col"
-        >
-          <MetroRow
-            v-for="line in metroLines"
-            :key="line.id"
-            :line="line"
-          />
-        </TransitionGroup>
-      </div>
-
-      <div class="mt-8"></div>
-      <!-- Exo Logo and Train Rows -->
-      <img :src="ExoLogo" alt="Exo logo" class="w-22 h-auto mt-4 ml-6"></img>
-      <div class="flex flex-col">
-        
-        <TransitionGroup 
-          name="train-list" 
-          tag="div" 
-          class="flex flex-col"
-        >
-          <TrainRow
-            v-for="train in trains"
-            :key="train.id"
-            :train="train"
-          />
-        </TransitionGroup>
-      </div>
-    </div>
-  </Transition>
+  </div>
 
   <!-- Alert Banner at bottom -->
-</div>
   <AlertBanner />
+</div>
 </template>
-
-<style scoped>
-:host {
-  display: block;
-  height: 100%;
-}
-
-.display-container {
-  min-height: 100vh;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  transition: background-image 0.5s ease-in-out;
-  position: relative;
-  overflow: hidden;
-}
-
-
-.display-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.65); /* 65% dark overlay */
-  pointer-events: none; 
-  z-index: 1;
-}
-
-.display-container > * {
-  position: relative;
-  z-index: 2;
-}
-
-.view-container {
-  opacity: 1;
-  width: 100%;
-  overflow: hidden; 
-}
-
-.view-fade-enter-active,
-.view-fade-leave-active {
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.view-fade-enter-from {
-  opacity: 0;
-  transform: translateY(50px);
-}
-
-.view-fade-leave-to {
-  opacity: 0;
-}
-
-.view-fade-leave-active {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-}
-
-.view-fade-enter-active {
-  transition-delay: 0.1s;
-  position: relative;
-  z-index: 3;
-}
-
-.bus-list-move,
-.bus-list-enter-active,
-.bus-list-leave-active {
-  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.bus-list-enter-from {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.bus-list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-.bus-list-leave-active {
-  position: absolute;
-  width: calc(100% - 4rem);
-  left: 2rem;
-}
-
-/* Metro list animations */
-.metro-list-move,
-.metro-list-enter-active,
-.metro-list-leave-active {
-  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.metro-list-enter-from {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.metro-list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-.metro-list-leave-active {
-  position: absolute;
-  width: calc(100% - 4rem);
-  left: 2rem;
-}
-
-/* Train list animations */
-.train-list-move,
-.train-list-enter-active,
-.train-list-leave-active {
-  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.train-list-enter-from {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.train-list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-.train-list-leave-active {
-  position: absolute;
-  width: calc(100% - 4rem);
-  left: 2rem;
-}
-
-.bus-list-move,
-.metro-list-move,
-.train-list-move {
-  transform-origin: center;
-}
-
-.bus-list-enter-active,
-.metro-list-enter-active,
-.train-list-enter-active {
-  transition-delay: 0.1s;
-}
-
-body {
-  overflow: hidden;
-}
-
-.display-container:not(.transitioning) {
-  overflow: auto;
-}
-</style>

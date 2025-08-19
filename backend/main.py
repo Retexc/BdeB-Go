@@ -131,6 +131,35 @@ def process_metro_alerts():
             logger.warning("No metro alerts data received")
             return get_default_metro_status()
         
+        # Handle case where alerts_data might be a string (JSON string)
+        if isinstance(alerts_data, str):
+            try:
+                alerts_data = json.loads(alerts_data)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse alerts_data as JSON: {e}")
+                return get_default_metro_status()
+        
+        # Handle different response formats from STM API
+        alerts_list = []
+        if isinstance(alerts_data, dict):
+            # If it's a dict, look for common keys that contain the alerts list
+            if 'alerts' in alerts_data:
+                alerts_list = alerts_data['alerts']
+            elif 'entity' in alerts_data:
+                alerts_list = alerts_data['entity']
+            elif 'data' in alerts_data:
+                alerts_list = alerts_data['data']
+            else:
+                # If none of the common keys exist, treat the dict as a single alert
+                alerts_list = [alerts_data]
+        elif isinstance(alerts_data, list):
+            alerts_list = alerts_data
+        else:
+            logger.error(f"Unexpected alerts_data type: {type(alerts_data)}")
+            return get_default_metro_status()
+        
+        logger.info(f"Processing {len(alerts_list)} alerts for metro status")
+        
         # Initialize metro lines with default normal status
         metro_status = {
             "1": {
@@ -168,21 +197,35 @@ def process_metro_alerts():
         }
         
         # Process alerts from API
-        for alert in alerts_data:
+        for alert in alerts_list:
             try:
+                # Ensure alert is a dictionary
+                if not isinstance(alert, dict):
+                    logger.warning(f"Expected alert to be a dict, got {type(alert)}: {alert}")
+                    continue
+                
                 # Check if alert has informed_entities for metro lines
                 informed_entities = alert.get("informed_entities", [])
+                if not isinstance(informed_entities, list):
+                    continue
+                    
                 for entity in informed_entities:
+                    if not isinstance(entity, dict):
+                        continue
+                        
                     route_short_name = entity.get("route_short_name")
                     
                     # Only process metro lines (1, 2, 4, 5)
                     if route_short_name in ["1", "2", "4", "5"]:
                         # Get French description text
                         description_texts = alert.get("description_texts", [])
+                        if not isinstance(description_texts, list):
+                            continue
+                            
                         french_description = None
                         
                         for desc in description_texts:
-                            if desc.get("language") == "fr":
+                            if isinstance(desc, dict) and desc.get("language") == "fr":
                                 french_description = desc.get("text", "")
                                 break
                         
@@ -194,8 +237,11 @@ def process_metro_alerts():
                             metro_status[route_short_name]["is_normal"] = is_normal_service
                             metro_status[route_short_name]["statusColor"] = "text-green-400" if is_normal_service else "text-red-400"
                             
+                            logger.info(f"Updated metro line {route_short_name}: {french_description[:50]}...")
+                            
             except Exception as e:
-                logger.error(f"Error processing metro alert: {e}")
+                logger.error(f"Error processing individual metro alert: {e}")
+                logger.error(f"Alert data: {alert}")
                 continue
         
         # Convert to list format expected by frontend
@@ -219,6 +265,7 @@ def process_metro_alerts():
         
     except Exception as e:
         logger.error(f"Error in process_metro_alerts: {e}")
+        logger.error(f"alerts_data type: {type(alerts_data) if 'alerts_data' in locals() else 'undefined'}")
         return get_default_metro_status()
 
 def get_default_metro_status():
@@ -230,7 +277,7 @@ def get_default_metro_status():
             "id": 1,
             "name": "Ligne 1",
             "color": "Verte",
-            "status": "Service normal du métro",
+            "status": "Données non disponibles pour le moment",
             "statusColor": "text-green-400",
             "icon": "green-line",
             "is_normal": True
@@ -239,7 +286,7 @@ def get_default_metro_status():
             "id": 2,
             "name": "Ligne 2", 
             "color": "Orange",
-            "status": "Service normal du métro",
+            "status": "Données non disponibles pour le moment",
             "statusColor": "text-green-400",
             "icon": "orange-line",
             "is_normal": True
@@ -248,7 +295,7 @@ def get_default_metro_status():
             "id": 4,
             "name": "Ligne 4",
             "color": "Jaune", 
-            "status": "Service normal du métro",
+            "status": "Données non disponibles pour le moment",
             "statusColor": "text-green-400",
             "icon": "yellow-line",
             "is_normal": True
@@ -257,7 +304,7 @@ def get_default_metro_status():
             "id": 5,
             "name": "Ligne 5",
             "color": "Bleue",
-            "status": "Service normal du métro", 
+            "status": "Données non disponibles pour le moment", 
             "statusColor": "text-green-400",
             "icon": "blue-line",
             "is_normal": True
