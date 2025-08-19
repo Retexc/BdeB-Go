@@ -575,6 +575,11 @@ opacity: 0.2;
 /* MULTISLOT:
 [
   {
+    "path": "/static/assets/images/bdeb_wallaper.jpeg",
+    "start": "2025-08-19",
+    "end": null
+  },
+  {
     "path": "/static/assets/images/waves-purple-3840x2160-11757.png",
     "start": "2025-08-14",
     "end": null
@@ -588,11 +593,6 @@ opacity: 0.2;
     "end": null,
     "path": "/static/assets/images/green-abstract-3d-3840x2160-21975.jpg",
     "start": "2025-08-05"
-  },
-  {
-    "end": null,
-    "path": "/static/assets/images/green-abstract-3d-3840x2160-21975.jpg",
-    "start": "2025-08-04"
   }
 ]
 */

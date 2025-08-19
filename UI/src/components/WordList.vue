@@ -1,5 +1,6 @@
 <template>
   <div class="text-white font-sans w-full">
+    <!-- Header with title and crown icon -->
     <div class="flex items-center mb-4">
       <div class="mr-3">
         <svg class="w-6 h-6 text-yellow-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -89,7 +90,7 @@ import { ref, computed } from 'vue'
 
 // Props
 const props = defineProps({
-  initialWords: {
+  modelValue: {
     type: Array,
     default: () => ['Motivé', 'Cavalier', 'Fier', 'Réussite', 'Ponctuel', 'Heureux', 'BdeB', 'Ensemble']
   },
@@ -99,25 +100,40 @@ const props = defineProps({
   },
   crownPosition: {
     type: Number,
-    default: 4 
+    default: 4 // 5th position (0-indexed)
   }
 })
 
-const words = ref([...props.initialWords])
+// Reactive data
+const words = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
 const newWord = ref('')
 const draggedIndex = ref(null)
 const dragOverIndex = ref(null)
 
+// Emits
+const emit = defineEmits(['update:modelValue', 'principal-changed'])
+
+// Computed properties
 const isLimitReached = computed(() => words.value.length >= props.maxWords)
 const principalWord = computed(() => words.value[props.crownPosition] || null)
 
+// Methods
 const removeWord = (index) => {
-  words.value.splice(index, 1)
+  const newWords = [...words.value]
+  newWords.splice(index, 1)
+  words.value = newWords
+  if (index === props.crownPosition) {
+    emit('principal-changed')
+  }
 }
 
 const addWord = (word) => {
   if (words.value.length < props.maxWords && !words.value.includes(word.trim()) && word.trim()) {
-    words.value.push(word.trim())
+    const newWords = [...words.value, word.trim()]
+    words.value = newWords
     return true
   }
   return false
@@ -147,9 +163,12 @@ const onDrop = (event, dropIndex) => {
   event.preventDefault()
   
   if (draggedIndex.value !== null && draggedIndex.value !== dropIndex) {
-    const draggedWord = words.value[draggedIndex.value]
-    words.value.splice(draggedIndex.value, 1)
-    words.value.splice(dropIndex, 0, draggedWord)
+    const newWords = [...words.value]
+    const draggedWord = newWords[draggedIndex.value]
+    newWords.splice(draggedIndex.value, 1)
+    newWords.splice(dropIndex, 0, draggedWord)
+    words.value = newWords
+    emit('principal-changed') // Always emit since the principal word position might change
   }
   
   draggedIndex.value = null
@@ -161,6 +180,7 @@ const onDragEnd = () => {
   dragOverIndex.value = null
 }
 
+// Expose methods for parent component
 defineExpose({
   addWord,
   removeWord,
@@ -169,253 +189,3 @@ defineExpose({
   principalWord
 })
 </script>
-
-<style scoped>
-.word-list-container {
-  background-color: transparent;
-  color: white;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  width: 100%;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.title-section {
-  margin-right: 12px;
-}
-
-.crown-icon {
-  width: 24px;
-  height: 24px;
-  color: #fbbf24;
-}
-
-.title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: white;
-}
-
-.words-container {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: nowrap;
-  width: 100%;
-}
-
-.word-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  align-items: flex-end;
-}
-
-.word-wrapper {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: move;
-  user-select: none;
-  margin-top: 24px; /* Space for crown */
-}
-
-.word-wrapper.dragging {
-  opacity: 0.5;
-  transform: rotate(5deg);
-  z-index: 1000;
-}
-
-.word-wrapper.drag-over {
-  transform: translateY(-2px);
-}
-
-.crown-top {
-  position: absolute;
-  top: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
-  color: #fbbf24;
-  z-index: 10;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-}
-
-.word-tag {
-  display: inline-flex;
-  align-items: center;
-  background-color: #fbbf24;
-  color: #1a1a1a;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.word-tag:hover {
-  background-color: #f59e0b;
-  transform: translateY(-1px);
-}
-
-.word-wrapper.drag-over .word-tag {
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-}
-
-.word-tag.crowned,
-.word-tag.crown-position {
-  background-color: #fcd34d;
-  border: 2px solid #f59e0b;
-  font-weight: 600;
-}
-
-.crown-small {
-  width: 16px;
-  height: 16px;
-  color: #1a1a1a;
-  flex-shrink: 0;
-}
-
-.word-text {
-  white-space: nowrap;
-}
-
-.remove-btn {
-  background: none;
-  border: none;
-  color: #1a1a1a;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s ease;
-}
-
-.remove-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.limit-indicator {
-  color: #9ca3af;
-  font-size: 14px;
-  font-style: italic;
-  padding: 8px 12px;
-  border: 1px dashed #4b5563;
-  border-radius: 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.input-container {
-  margin-top: 16px;
-  width: 100%;
-}
-
-.input-wrapper {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.word-input {
-  flex: 1;
-  background-color: #2a2a2a;
-  border: 1px solid #404040;
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: white;
-  font-size: 14px;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.word-input:focus {
-  outline: none;
-  border-color: #fbbf24;
-  background-color: #333333;
-}
-
-.word-input::placeholder {
-  color: #9ca3af;
-}
-
-.word-input.disabled {
-  background-color: #1a1a1a;
-  border-color: #2a2a2a;
-  color: #666666;
-  cursor: not-allowed;
-}
-
-.word-input.disabled::placeholder {
-  color: #666666;
-}
-
-.add-btn {
-  background-color: #fbbf24;
-  color: #1a1a1a;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-  white-space: nowrap;
-}
-
-.add-btn:hover:not(.disabled) {
-  background-color: #f59e0b;
-  transform: translateY(-1px);
-}
-
-.add-btn.disabled {
-  background-color: #404040;
-  color: #666666;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Responsive design */
-@media (max-width: 640px) {
-  .word-list-container {
-    padding: 12px;
-  }
-  
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .words-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .word-tags {
-    justify-content: center;
-  }
-
-  .input-wrapper {
-    flex-direction: column;
-    max-width: none;
-  }
-}
-</style>
