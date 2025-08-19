@@ -5,12 +5,14 @@
     :class="{ 'fade-out': overlayComplete }"
   >
     <div
-      class="absolute h-full w-full bg-[#FFCF25] transition-transform duration-1200 ease-in-out"
+      class="absolute h-full w-full bg-white transition-transform duration-1200 ease-in-out"
       :style="{ transform: `translateX(${yellowSlide}%)` }"
     ></div>
     <div
       class="absolute h-full w-full bg-white transition-transform duration-1200 ease-in-out"
-      :style="{ transform: `translateX(${whiteSlide}%)` }"
+      :style="{ transform: `translateX(${whiteSlide}%)`,
+       backgroundColor: backgroundColor, 
+       }"
     ></div>
   </div>
 
