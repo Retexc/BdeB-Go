@@ -132,6 +132,144 @@ def fetch_stm_alerts():
         print(f"Error fetching alerts: {str(e)}")
         return None
 
+def process_metro_alerts():
+    """
+    Fetch and process metro line alerts from STM API.
+    Returns a dictionary mapping line numbers to their status information.
+    """
+    alerts_data = fetch_stm_alerts()
+    if not alerts_data:
+        print("No alerts data received")
+        return get_default_metro_status()
+    
+    # Initialize metro lines with default normal status
+    metro_status = {
+        "1": {
+            "name": "Ligne 1",
+            "color": "Verte", 
+            "status": "Service normal du métro",
+            "statusColor": "text-green-400",
+            "icon": "green-line",
+            "is_normal": True
+        },
+        "2": {
+            "name": "Ligne 2",
+            "color": "Orange",
+            "status": "Service normal du métro", 
+            "statusColor": "text-green-400",
+            "icon": "orange-line",
+            "is_normal": True
+        },
+        "4": {
+            "name": "Ligne 4", 
+            "color": "Jaune",
+            "status": "Service normal du métro",
+            "statusColor": "text-green-400", 
+            "icon": "yellow-line",
+            "is_normal": True
+        },
+        "5": {
+            "name": "Ligne 5",
+            "color": "Bleue", 
+            "status": "Service normal du métro",
+            "statusColor": "text-green-400",
+            "icon": "blue-line", 
+            "is_normal": True
+        }
+    }
+    
+    # Process alerts from API
+    for alert in alerts_data:
+        try:
+            # Check if alert has informed_entities for metro lines
+            informed_entities = alert.get("informed_entities", [])
+            for entity in informed_entities:
+                route_short_name = entity.get("route_short_name")
+                
+                # Only process metro lines (1, 2, 4, 5)
+                if route_short_name in ["1", "2", "4", "5"]:
+                    # Get French description text
+                    description_texts = alert.get("description_texts", [])
+                    french_description = None
+                    
+                    for desc in description_texts:
+                        if desc.get("language") == "fr":
+                            french_description = desc.get("text", "")
+                            break
+                    
+                    if french_description:
+                        # Check if it's a normal service message
+                        is_normal_service = "service normal" in french_description.lower()
+                        
+                        metro_status[route_short_name]["status"] = french_description
+                        metro_status[route_short_name]["is_normal"] = is_normal_service
+                        metro_status[route_short_name]["statusColor"] = "text-green-400" if is_normal_service else "text-red-400"
+                        
+        except Exception as e:
+            print(f"Error processing alert: {e}")
+            continue
+    
+    # Convert to list format expected by frontend
+    metro_lines = []
+    for line_id, line_data in metro_status.items():
+        metro_lines.append({
+            "id": int(line_id),
+            "name": line_data["name"],
+            "color": line_data["color"],
+            "status": line_data["status"],
+            "statusColor": line_data["statusColor"],
+            "icon": line_data["icon"],
+            "is_normal": line_data["is_normal"]
+        })
+    
+    # Sort by line ID to maintain consistent order
+    metro_lines.sort(key=lambda x: x["id"])
+    
+    return metro_lines
+
+def get_default_metro_status():
+    """
+    Returns default metro status when API is unavailable.
+    """
+    return [
+        {
+            "id": 1,
+            "name": "Ligne 1",
+            "color": "Verte",
+            "status": "Service normal du métro",
+            "statusColor": "text-green-400",
+            "icon": "green-line",
+            "is_normal": True
+        },
+        {
+            "id": 2,
+            "name": "Ligne 2", 
+            "color": "Orange",
+            "status": "Service normal du métro",
+            "statusColor": "text-green-400",
+            "icon": "orange-line",
+            "is_normal": True
+        },
+        {
+            "id": 4,
+            "name": "Ligne 4",
+            "color": "Jaune", 
+            "status": "Service normal du métro",
+            "statusColor": "text-green-400",
+            "icon": "yellow-line",
+            "is_normal": True
+        },
+        {
+            "id": 5,
+            "name": "Ligne 5",
+            "color": "Bleue",
+            "status": "Service normal du métro", 
+            "statusColor": "text-green-400",
+            "icon": "blue-line",
+            "is_normal": True
+        }
+    ]
+
 def load_stm_routes(routes_file):
     routes_data = {}
     with open(routes_file, mode="r", encoding="utf-8") as f:
@@ -166,8 +304,6 @@ def load_stm_gtfs_trips(filepath, routes_map):
                 "wheelchair_accessible": w_str
             }
     return trips_data
-
-
 
 def stm_map_occupancy_status(status):
     mapping = {
@@ -240,7 +376,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
         ("180","50270","180_Est"),
         ("180","62374","180_Ouest"),
         ("164","50270","164_Est"),
-        ("164","62374","164_Ouest"),
+        ("164","62420","164_Ouest"),
     ]
 
     combo_info = {
@@ -249,7 +385,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
         "180_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
         "180_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
         "164_Est":   {"direction": "Est",    "location": "Collège de Bois-de-Boulogne"},
-        "164_Ouest": {"direction": "Ouest",  "location": "Henri-Bourassa/du Bois-de-Boulogne"},
+        "164_Ouest": {"direction": "Ouest",  "location": "du Bois-de-Boulogne/Henri-Bourassa"},
     }
 
     closest_buses = { combo[2]: None for combo in desired_combos }
@@ -376,7 +512,7 @@ def process_stm_trip_updates(trip_entities, stm_trips, stm_stop_times, positions
             closest_buses[final_key] = fallback
 
     # 3) Return in desired order
-    order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est"]
+    order = ["171_Est","171_Ouest","180_Est","180_Ouest","164_Est","164_Ouest"]
     return [closest_buses[k] for k in order if closest_buses[k] is not None]
 
 
@@ -424,5 +560,3 @@ def debug_print_stm_occupancy_status(desired_routes, stm_trips):
                     f"currentStatus={current_stat_str}"
                 )
     print("--------------------------------------------------------------------------")
-
-

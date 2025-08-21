@@ -1,7 +1,8 @@
 # app.py
 import os, sys, time, json, logging, subprocess, threading, re, requests
 from datetime import datetime
-# src/bdeb_gfts/main.py
+from flask_cors import CORS
+from flask import Flask, render_template, request, jsonify, redirect
 
 from flask import Flask, render_template, request, jsonify
 # ────── PACKAGE IMPORTS ───────────────────────────────────────
@@ -46,7 +47,7 @@ _weather_cache = {
 CACHE_TTL = 5 * 60  # seconds (5 minutes)
 logger = logging.getLogger('BdeB-GTFS')
 app = Flask(__name__)
-
+CORS(app)
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 GTFS_BASE = os.path.join(PACKAGE_DIR, "GTFS")  # points to backend/GTFS
 STM_DIR = os.path.join(GTFS_BASE, "stm")
@@ -116,6 +117,199 @@ def get_weather():
 
     return _weather_cache["data"] or {"icon":"", "text":"", "temp":""}
 
+# ====================================================================
+# Metro Alerts Processing Functions
+# ====================================================================
+def process_metro_alerts():
+    """
+    Fetch and process metro line alerts from STM API.
+    Returns a list of metro lines with their current status.
+    """
+    try:
+        alerts_data = fetch_stm_alerts()
+        if not alerts_data:
+            logger.warning("No metro alerts data received")
+            return get_default_metro_status()
+        
+        # Handle case where alerts_data might be a string (JSON string)
+        if isinstance(alerts_data, str):
+            try:
+                alerts_data = json.loads(alerts_data)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse alerts_data as JSON: {e}")
+                return get_default_metro_status()
+        
+        # Handle different response formats from STM API
+        alerts_list = []
+        if isinstance(alerts_data, dict):
+            # If it's a dict, look for common keys that contain the alerts list
+            if 'alerts' in alerts_data:
+                alerts_list = alerts_data['alerts']
+            elif 'entity' in alerts_data:
+                alerts_list = alerts_data['entity']
+            elif 'data' in alerts_data:
+                alerts_list = alerts_data['data']
+            else:
+                # If none of the common keys exist, treat the dict as a single alert
+                alerts_list = [alerts_data]
+        elif isinstance(alerts_data, list):
+            alerts_list = alerts_data
+        else:
+            logger.error(f"Unexpected alerts_data type: {type(alerts_data)}")
+            return get_default_metro_status()
+        
+        logger.info(f"Processing {len(alerts_list)} alerts for metro status")
+        
+        # Initialize metro lines with default normal status
+        metro_status = {
+            "1": {
+                "name": "Ligne 1",
+                "color": "Verte", 
+                "status": "Service normal du métro",
+                "statusColor": "text-green-400",
+                "icon": "green-line",
+                "is_normal": True
+            },
+            "2": {
+                "name": "Ligne 2",
+                "color": "Orange",
+                "status": "Service normal du métro", 
+                "statusColor": "text-green-400",
+                "icon": "orange-line",
+                "is_normal": True
+            },
+            "4": {
+                "name": "Ligne 4", 
+                "color": "Jaune",
+                "status": "Service normal du métro",
+                "statusColor": "text-green-400", 
+                "icon": "yellow-line",
+                "is_normal": True
+            },
+            "5": {
+                "name": "Ligne 5",
+                "color": "Bleue", 
+                "status": "Service normal du métro",
+                "statusColor": "text-green-400",
+                "icon": "blue-line", 
+                "is_normal": True
+            }
+        }
+        
+        # Process alerts from API
+        for alert in alerts_list:
+            try:
+                # Ensure alert is a dictionary
+                if not isinstance(alert, dict):
+                    logger.warning(f"Expected alert to be a dict, got {type(alert)}: {alert}")
+                    continue
+                
+                # Check if alert has informed_entities for metro lines
+                informed_entities = alert.get("informed_entities", [])
+                if not isinstance(informed_entities, list):
+                    continue
+                    
+                for entity in informed_entities:
+                    if not isinstance(entity, dict):
+                        continue
+                        
+                    route_short_name = entity.get("route_short_name")
+                    
+                    # Only process metro lines (1, 2, 4, 5)
+                    if route_short_name in ["1", "2", "4", "5"]:
+                        # Get French description text
+                        description_texts = alert.get("description_texts", [])
+                        if not isinstance(description_texts, list):
+                            continue
+                            
+                        french_description = None
+                        
+                        for desc in description_texts:
+                            if isinstance(desc, dict) and desc.get("language") == "fr":
+                                french_description = desc.get("text", "")
+                                break
+                        
+                        if french_description:
+                            # Check if it's a normal service message
+                            is_normal_service = "service normal" in french_description.lower()
+                            
+                            metro_status[route_short_name]["status"] = french_description
+                            metro_status[route_short_name]["is_normal"] = is_normal_service
+                            metro_status[route_short_name]["statusColor"] = "text-green-400" if is_normal_service else "text-red-400"
+                            
+                            logger.info(f"Updated metro line {route_short_name}: {french_description[:50]}...")
+                            
+            except Exception as e:
+                logger.error(f"Error processing individual metro alert: {e}")
+                logger.error(f"Alert data: {alert}")
+                continue
+        
+        # Convert to list format expected by frontend
+        metro_lines = []
+        for line_id, line_data in metro_status.items():
+            metro_lines.append({
+                "id": int(line_id),
+                "name": line_data["name"],
+                "color": line_data["color"],
+                "status": line_data["status"],
+                "statusColor": line_data["statusColor"],
+                "icon": line_data["icon"],
+                "is_normal": line_data["is_normal"]
+            })
+        
+        # Sort by line ID to maintain consistent order
+        metro_lines.sort(key=lambda x: x["id"])
+        
+        logger.info(f"Processed {len(metro_lines)} metro lines with alerts")
+        return metro_lines
+        
+    except Exception as e:
+        logger.error(f"Error in process_metro_alerts: {e}")
+        logger.error(f"alerts_data type: {type(alerts_data) if 'alerts_data' in locals() else 'undefined'}")
+        return get_default_metro_status()
+
+def get_default_metro_status():
+    """
+    Returns default metro status when API is unavailable.
+    """
+    return [
+        {
+            "id": 1,
+            "name": "Ligne 1",
+            "color": "Verte",
+            "status": "Données non disponibles pour le moment",
+            "statusColor": "text-green-400",
+            "icon": "green-line",
+            "is_normal": True
+        },
+        {
+            "id": 2,
+            "name": "Ligne 2", 
+            "color": "Orange",
+            "status": "Données non disponibles pour le moment",
+            "statusColor": "text-green-400",
+            "icon": "orange-line",
+            "is_normal": True
+        },
+        {
+            "id": 4,
+            "name": "Ligne 4",
+            "color": "Jaune", 
+            "status": "Données non disponibles pour le moment",
+            "statusColor": "text-green-400",
+            "icon": "yellow-line",
+            "is_normal": True
+        },
+        {
+            "id": 5,
+            "name": "Ligne 5",
+            "color": "Bleue",
+            "status": "Données non disponibles pour le moment", 
+            "statusColor": "text-green-400",
+            "icon": "blue-line",
+            "is_normal": True
+        }
+    ]
 
 @app.route("/debug-occupancy")
 def debug_occupancy():
@@ -202,31 +396,11 @@ def get_active_background(css_path):
 # ====================================================================
 @app.route("/")
 def index():
-    exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
-    exo_vehicle_data = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
-    
-    exo_trains = process_exo_train_schedule_with_occupancy(
-        exo_stop_times,
-        exo_trips,
-        exo_vehicle_data,
-        exo_trip_updates
-    )
-    
-    current_time = time.strftime("%I:%M:%S %p")
-    css_path = os.path.join(app.static_folder, "index.css")
-    active_bg = get_active_background(css_path)
-    weather = get_weather()
-
-    return render_template(
-        "index.html",
-        next_trains  = exo_trains,
-        current_time = current_time,
-        active_bg    = active_bg,
-        weather      = weather        
-    )
+    # Redirect to your Vue.js app instead of rendering old template
+    return redirect("http://localhost:3000") 
 
 # ====================================================================
-# ROUTE: API JSON Data for buses, trains, and alerts
+# ROUTE: API JSON Data for buses, trains, metro, and alerts
 # ====================================================================
 @app.route("/api/data")
 def api_data():
@@ -320,11 +494,15 @@ def api_data():
             train["delayed_text"] = None
             train["early_text"] = None
 
+    # ========== METRO LINES ==========
+    metro_lines = process_metro_alerts()
+
     weather = get_weather()
 
     return {
         "buses":       buses,
         "next_trains": exo_trains,
+        "metro_lines": metro_lines,  # Add metro lines to the response
         "current_time": time.strftime("%I:%M:%S %p"),
         "alerts":      filtered_alerts,
         "weather":     weather        
