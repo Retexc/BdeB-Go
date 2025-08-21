@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import { motion } from "motion-v";
+import { AnimatePresence, motion } from "motion-v";
 import BusRow from "../components/BusRow.vue";
 import TrainRow from "../components/TrainRow.vue";
 import MetroRow from "../components/MetroRow.vue";
@@ -212,27 +212,40 @@ onBeforeUnmount(() => {
         <div v-if="showBuses" key="buses" class="w-full">
           <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
           <div class="flex flex-col">
-            
-            <TransitionGroup 
-              name="bus-list" 
-              tag="div" 
-              class="flex flex-col"
-              v-if="sortedBuses.length"
-              move-class="transition-all duration-600 ease-out origin-center"
-              enter-active-class="transition-all duration-600 ease-out delay-100"
-              leave-active-class="transition-all duration-600 ease-out absolute left-8 w-[calc(100%-4rem)]"
-              enter-from-class="opacity-0 -translate-x-8"
-              leave-to-class="opacity-0 translate-x-8"
-            >
-              <BusRow
-                v-for="bus in sortedBuses"
-                :key="bus.trip_id"
-                :bus="bus"
-              />
-            </TransitionGroup>
             <p v-if="buses.length === 0" class="text-gray-500">
               Aucun autobus à afficher…
             </p>
+            <AnimatePresence>
+
+            <motion.div
+            v-show="buses.length !== 0"
+            :initial="{ filter: 'blur(10px)', opacity: 0 }"
+            :animate="{ filter: 'blur(0px)', opacity: 1 }"
+            :exit="{ filter: 'blur(10px)', opacity: 0 }"
+              :transition="{ duration: 0.5 }"
+
+            >
+              <TransitionGroup 
+                name="bus-list" 
+                tag="div" 
+                class="flex flex-col"
+                move-class="transition-all duration-600 ease-out origin-center"
+                enter-active-class="transition-all duration-600 ease-out delay-100"
+                leave-active-class="transition-all duration-600 ease-out absolute left-8 w-[calc(100%-4rem)]"
+                enter-from-class="opacity-0 -translate-x-8"
+                leave-to-class="opacity-0 translate-x-8"
+              >
+                <BusRow
+                  v-for="bus in sortedBuses"
+                  :key="bus.trip_id"
+                  :bus="bus"
+                />
+              </TransitionGroup>
+            </motion.div>
+            
+            </AnimatePresence>
+            
+
           </div>
         </div>
 

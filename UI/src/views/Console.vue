@@ -4,58 +4,62 @@ import { motion } from "motion-v";
 import ConsoleLog from "../components/ConsoleLog.vue";
 import playIcon from "../assets/icons/play.svg";
 import stopIcon from "../assets/icons/stop-circle.svg";
-
-const running     = ref(false)
-let   statusTimer = null
+import { useRouter } from "vue-router";
+const running = ref(false);
+let statusTimer = null;
 
 async function updateStatus() {
   try {
-    const resp = await fetch('/admin/status')
-    const { running: isUp } = await resp.json()
-    running.value = isUp
+    const resp = await fetch("/admin/status");
+    const { running: isUp } = await resp.json();
+    running.value = isUp;
   } catch (e) {
-    console.error('Error fetching status:', e)
+    console.error("Error fetching status:", e);
   }
 }
 
+const router = useRouter();
+
 function goToExternal() {
-   window.open('http://localhost:5174/display', '_blank', 'noopener')
+  const route = router.resolve("/display");
+
+  window.open(route.fullPath, "_blank", "noopener");
 }
 // **Mark async** so we can `await` the fetch
 async function toggleApp() {
-    console.log('🔘 button clicked, running =', running.value)
-  const url = running.value ? '/admin/stop' : '/admin/start'
+  console.log("🔘 button clicked, running =", running.value);
+  const url = running.value ? "/admin/stop" : "/admin/start";
   try {
-    const resp = await fetch(url, { method: 'POST' })
-    console.log(await resp.json())
+    const resp = await fetch(url, { method: "POST" });
+    console.log(await resp.json());
   } catch (e) {
-    console.error('Error toggling app:', e)
+    console.error("Error toggling app:", e);
   }
-  updateStatus()
+  updateStatus();
 }
 
 // now only **one** of each computed
-const btnLabel       = computed(() => running.value ? 'Arrêter'   : 'Démarrer')
-const btnIcon        = computed(() => running.value ? stopIcon    : playIcon)
-const btnClass       = computed(() =>
+const btnLabel = computed(() => (running.value ? "Arrêter" : "Démarrer"));
+const btnIcon = computed(() => (running.value ? stopIcon : playIcon));
+const btnClass = computed(() =>
   running.value
-    ? 'bg-red-400 hover:bg-red-500 rounded-lg'
-    : 'bg-blue-400 hover:bg-blue-500 rounded-lg'
-)
-const statusText     = computed(() =>
-  running.value ? 'État : Actif' : 'État : Arrêté'
-)
-const statusTextColor= computed(() =>
-  running.value ? 'text-green-400' : 'text-red-500'
-)
+    ? "bg-red-400 hover:bg-red-500 rounded-lg"
+    : "bg-blue-400 hover:bg-blue-500 rounded-lg"
+);
+const statusText = computed(() =>
+  running.value ? "État : Actif" : "État : Arrêté"
+);
+const statusTextColor = computed(() =>
+  running.value ? "text-green-400" : "text-red-500"
+);
 
 onMounted(() => {
-  updateStatus()
-  statusTimer = setInterval(updateStatus, 2000)
-})
+  updateStatus();
+  statusTimer = setInterval(updateStatus, 2000);
+});
 onBeforeUnmount(() => {
-  clearInterval(statusTimer)
-})
+  clearInterval(statusTimer);
+});
 </script>
 
 <template>
