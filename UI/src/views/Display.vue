@@ -47,6 +47,33 @@ const sortedBuses = computed(() => {
   });
 });
 
+// Computed property to sort trains by arrival time (ascending) - same logic as buses
+const sortedTrains = computed(() => {
+  return [...trains.value].sort((a, b) => {
+    // For trains, we'll use minutes_remaining if available, otherwise display_time
+    const timeA = a.minutes_remaining !== undefined ? a.minutes_remaining : a.display_time;
+    const timeB = b.minutes_remaining !== undefined ? b.minutes_remaining : b.display_time;
+    
+    if (typeof timeA === 'number' && typeof timeB === 'number') {
+      return timeA - timeB;
+    }
+    
+    if (typeof timeA === 'string' && typeof timeB === 'string') {
+      return timeA.localeCompare(timeB);
+    }
+
+    if (typeof timeA === 'number' && typeof timeB === 'string') {
+      return -1;
+    }
+    
+    if (typeof timeA === 'string' && typeof timeB === 'number') {
+      return 1;
+    }
+    
+    return 0;
+  });
+});
+
 const overlayStyle = computed(() => ({
   background: `rgba(0, 0, 0, ${overlayOpacity.value})`
 }));
@@ -248,7 +275,7 @@ onBeforeUnmount(() => {
               leave-to-class="opacity-0 translate-x-8"
             >
               <TrainRow
-                v-for="train in trains"
+                v-for="train in sortedTrains"
                 :key="train.id"
                 :train="train"
               />

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Loading from './Loading.vue'
 import Display from './Display.vue'
 import EndDisplay from './EndDisplay.vue'
@@ -15,14 +15,37 @@ const overlayComplete = ref(false)
 
 let displayTimer = null
 
+// Default fallback colors
+const defaultColors = {
+  principalTextColor: "#FFFFFF",
+  secondaryTextColor: "#6B7280",
+  backgroundColor: "#000000",
+  pillColor: "#FFFFFF",
+  pillTextColor: "#000000",
+}
+
+// Load colors from localStorage
+const colorsFromStorage = computed(() => {
+  try {
+    const savedColors = localStorage.getItem("titleCard-colors")
+    return savedColors ? JSON.parse(savedColors) : defaultColors
+  } catch (error) {
+    console.error("Error loading colors from localStorage:", error)
+    return defaultColors
+  }
+})
+
+// Background color only
+const backgroundColor = computed(() => colorsFromStorage.value.backgroundColor)
+
 const handleLoadingComplete = () => {
   console.log('Loading complete event received!')
   showLoading.value = false
   
-  // Start timer for transition to EndDisplay after 45 seconds
+  // Start timer for transition to EndDisplay after 60 seconds
   displayTimer = setTimeout(() => {
     startTransitionToEnd()
-  }, 60000) // 60 seconds
+  }, 60000)
 }
 
 const startTransitionToEnd = () => {
@@ -38,13 +61,13 @@ const startTransitionToEnd = () => {
     whiteSlide.value = 0
   }, 50)
   
-  // Switch to EndDisplay when slides cover the screen (mid-animation)
+  // Switch to EndDisplay when slides cover the screen
   setTimeout(() => {
     console.log('Slides covering screen - switching to EndDisplay')
     showEndDisplay.value = true
   }, 650) 
   
-  // Fade out overlay after slide animation completes
+  // Fade out overlay
   setTimeout(() => {
     console.log('Starting overlay fade out')
     overlayComplete.value = true
@@ -68,8 +91,8 @@ onBeforeUnmount(() => {
     clearTimeout(displayTimer)
   }
 })
-
 </script>
+
 
 <template>
   <div class="app-container">
@@ -87,12 +110,14 @@ onBeforeUnmount(() => {
       :class="{ 'fade-out': overlayComplete }"
     >
       <div 
-        class="absolute h-full w-full bg-[#FFCF25] transition-transform duration-1200 ease-in-out"
+        class="absolute h-full w-full bg-white transition-transform duration-1200 ease-in-out"
         :style="{ transform: `translateX(${yellowSlide}%)` }"
       ></div>
       <div 
         class="absolute h-full w-full bg-white transition-transform duration-1200 ease-in-out"
-        :style="{ transform: `translateX(${whiteSlide}%)` }"
+        :style="{ transform: `translateX(${whiteSlide}%)`,
+          backgroundColor: backgroundColor,
+         }"
       ></div>
     </div>
   </div>
