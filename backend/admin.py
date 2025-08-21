@@ -44,9 +44,9 @@ CORS(app)
 
 # === Constants / paths ===
 PYTHON_EXEC = sys.executable
-BASE_DIR = Path(__file__).resolve().parent  
-PROJECT_ROOT = BASE_DIR.parent   
-INSTALL_DIR = BASE_DIR  
+BASE_DIR = Path(__file__).resolve().parent  # /backend/
+PROJECT_ROOT = BASE_DIR.parent               
+INSTALL_DIR = PROJECT_ROOT                   
 GITHUB_REPO = "https://github.com/Retexc/BdeB-Go.git"
 
 CSS_FILE_PATH = BASE_DIR / "static" / "index.css"
@@ -285,45 +285,176 @@ def api_import_background():
 @app.route("/admin/check_update", methods=["GET"])
 def admin_check_update():
     """
-    Compare local HEAD to remote HEAD. Return whether an update is available.
+    Compare local HEAD to remote HEAD with correct directory.
     """
     try:
-        # Get local commit
-        local = subprocess.check_output(
-            ["git", "-C", INSTALL_DIR, "rev-parse", "HEAD"],
-            universal_newlines=True
-        ).strip()
+        # Check if we're in a git repository (use PROJECT_ROOT)
+        git_dir = PROJECT_ROOT / ".git"
+        if not git_dir.is_dir():
+            return jsonify({
+                "error": f"Not a git repository at {PROJECT_ROOT}",
+                "up_to_date": False,
+                "needs_clone": True
+            }), 200
 
-        # Get remote HEAD (without using shell=True for safety)
-        remote_output = subprocess.check_output(
+        # Get local commit
+        local_result = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if local_result.returncode != 0:
+            return jsonify({"error": f"Could not get local HEAD: {local_result.stderr}"}), 500
+        
+        local = local_result.stdout.strip()
+
+        # Get remote HEAD
+        remote_result = subprocess.run(
             ["git", "ls-remote", GITHUB_REPO, "HEAD"],
-            universal_newlines=True
-        ).strip()
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if remote_result.returncode != 0:
+            return jsonify({"error": f"Could not get remote HEAD: {remote_result.stderr}"}), 500
+            
+        remote_output = remote_result.stdout.strip()
         remote = remote_output.split()[0] if remote_output else None
 
         if not remote:
-            return jsonify(error="could not get remote HEAD"), 500
+            return jsonify({"error": "Could not parse remote HEAD"}), 500
 
         up_to_date = local == remote
 
         return jsonify({
             "up_to_date": up_to_date,
-            "local": local,
-            "remote": remote,
+            "local": local[:8],
+            "remote": remote[:8],
+            "local_full": local,
+            "remote_full": remote,
+            "git_dir": str(PROJECT_ROOT),
         }), 200
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Timeout while checking for updates"}), 500
     except Exception as e:
         logger.error("Error checking update: %s", e)
-        return jsonify(error=str(e)), 500
+        return jsonify({"error": str(e)}), 500
     
 def perform_app_update():
-    if (INSTALL_DIR / ".git").is_dir():
-        subprocess.check_call(["git", "-C", str(INSTALL_DIR), "pull"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    else:
-        subprocess.check_call(["git", "clone", GITHUB_REPO, str(INSTALL_DIR)], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    req = INSTALL_DIR / "requirements.txt"
-    if req.exists():
-        subprocess.check_call([PYTHON_EXEC, "-m", "pip", "install", "-r", str(req)], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    """
+    Perform git pull with better error handling and logging
+    """
+    try:
+        # Check if we're in a git repository (use PROJECT_ROOT, not backend/)
+        git_dir = PROJECT_ROOT / ".git"
+        if not git_dir.is_dir():
+            logger.error(f"No git repository found at {PROJECT_ROOT}")
+            raise Exception(f"Not a git repository: {PROJECT_ROOT}")
+        
+        logger.info(f"Git repository found at {PROJECT_ROOT}, updating...")
+        
+        # First, check the current status
+        status_result = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if status_result.returncode != 0:
+            raise Exception(f"Git status failed: {status_result.stderr}")
+        
+        if status_result.stdout.strip():
+            logger.warning("Uncommitted changes detected, stashing them...")
+            # Stash any uncommitted changes
+            stash_result = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "stash", "push", "-m", f"Auto-stash before update {datetime.now()}"],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if stash_result.returncode != 0:
+                logger.warning(f"Stash failed: {stash_result.stderr}")
+        
+        # Reset to HEAD to ensure clean state
+        reset_result = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "reset", "--hard", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if reset_result.returncode != 0:
+            logger.warning(f"Reset failed: {reset_result.stderr}")
+        
+        # Fetch the latest changes
+        logger.info("Fetching latest changes...")
+        fetch_result = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "fetch", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if fetch_result.returncode != 0:
+            raise Exception(f"Git fetch failed: {fetch_result.stderr}")
+        
+        # Pull the changes
+        logger.info("Pulling changes...")
+        pull_result = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "pull", "origin", "main"],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if pull_result.returncode != 0:
+            # Try master branch if main fails
+            logger.info("Main branch failed, trying master...")
+            pull_result = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "pull", "origin", "master"],
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            if pull_result.returncode != 0:
+                raise Exception(f"Git pull failed: {pull_result.stderr}")
+        
+        logger.info(f"Git pull successful: {pull_result.stdout}")
+
+        # Update pip
+        logger.info("Updating pip...")
+        pip_result = subprocess.run(
+            [PYTHON_EXEC, "-m", "pip", "install", "--upgrade", "pip"],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if pip_result.returncode != 0:
+            logger.warning(f"Pip upgrade failed: {pip_result.stderr}")
+
+        # Install requirements if they exist
+        req = PROJECT_ROOT / "requirements.txt"
+        if req.exists():
+            logger.info("Installing requirements...")
+            req_result = subprocess.run(
+                [PYTHON_EXEC, "-m", "pip", "install", "-r", str(req)],
+                capture_output=True,
+                text=True,
+                timeout=600
+            )
+            if req_result.returncode != 0:
+                logger.warning(f"Requirements installation had issues: {req_result.stderr}")
+        
+        logger.info("Update completed successfully")
+        
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Update timeout: {e}")
+        raise Exception(f"Update timed out: {e}")
+    except Exception as e:
+        logger.error(f"Update failed: {e}")
+        raise
 
 
 @app.route("/admin/app_update", methods=["POST"])
@@ -337,7 +468,110 @@ def admin_app_update():
         err_msg = f"Erreur lors de la mise à jour : {e}"
         return jsonify({"status": "error", "message": err_msg}), 500
 
+@app.route("/admin/debug/git_status", methods=["GET"])
+def debug_git_status():
+    """Debug route to check git repository status"""
+    try:
+        results = {}
+        
+        # Check if .git directory exists in PROJECT_ROOT
+        git_dir = PROJECT_ROOT / ".git"
+        results["is_git_repo"] = git_dir.is_dir()
+        results["project_root"] = str(PROJECT_ROOT)
+        results["base_dir"] = str(BASE_DIR)
+        results["git_dir_path"] = str(git_dir)
+        
+        if results["is_git_repo"]:
+            # Get current branch
+            branch_result = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True, text=True
+            )
+            results["current_branch"] = branch_result.stdout.strip() if branch_result.returncode == 0 else f"ERROR: {branch_result.stderr}"
+            
+            # Get current commit
+            commit_result = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"],
+                capture_output=True, text=True
+            )
+            results["current_commit"] = commit_result.stdout.strip() if commit_result.returncode == 0 else f"ERROR: {commit_result.stderr}"
+            
+            # Get repository status
+            status_result = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "status", "--porcelain"],
+                capture_output=True, text=True
+            )
+            results["uncommitted_changes"] = status_result.stdout.strip() if status_result.returncode == 0 else f"ERROR: {status_result.stderr}"
+            
+            # Get remote URL
+            remote_result = subprocess.run(
+                ["git", "-C", str(PROJECT_ROOT), "config", "--get", "remote.origin.url"],
+                capture_output=True, text=True
+            )
+            results["remote_url"] = remote_result.stdout.strip() if remote_result.returncode == 0 else f"ERROR: {remote_result.stderr}"
+            
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+
+@app.route("/admin/debug/test_update", methods=["POST"])
+def debug_test_update():
+    """Test the update process step by step"""
+    try:
+        results = []
+        
+        # Step 1: Check git status
+        if not (INSTALL_DIR / ".git").is_dir():
+            results.append("❌ Not a git repository")
+            return jsonify({"results": results}), 200
+        
+        results.append("✅ Git repository found")
+        
+        # Step 2: Check for uncommitted changes
+        status_result = subprocess.run(
+            ["git", "-C", str(INSTALL_DIR), "status", "--porcelain"],
+            capture_output=True, text=True, timeout=30
+        )
+        
+        if status_result.returncode == 0:
+            if status_result.stdout.strip():
+                results.append(f"⚠️ Uncommitted changes: {status_result.stdout.strip()}")
+            else:
+                results.append("✅ No uncommitted changes")
+        else:
+            results.append(f"❌ Could not check status: {status_result.stderr}")
+            
+        # Step 3: Test fetch
+        fetch_result = subprocess.run(
+            ["git", "-C", str(INSTALL_DIR), "fetch", "origin", "--dry-run"],
+            capture_output=True, text=True, timeout=60
+        )
+        
+        if fetch_result.returncode == 0:
+            results.append("✅ Fetch test successful")
+        else:
+            results.append(f"❌ Fetch test failed: {fetch_result.stderr}")
+            
+        # Step 4: Check if we can pull
+        pull_test = subprocess.run(
+            ["git", "-C", str(INSTALL_DIR), "pull", "origin", "main", "--dry-run"],
+            capture_output=True, text=True, timeout=60
+        )
+        
+        if pull_test.returncode == 0:
+            results.append("✅ Pull test successful")
+        else:
+            results.append(f"❌ Pull test failed: {pull_test.stderr}")
+            
+        return jsonify({"results": results}), 200
+        
+    except subprocess.TimeoutExpired:
+        results.append("❌ Timeout during test")
+        return jsonify({"results": results}), 500
+    except Exception as e:
+        results.append(f"❌ Error: {str(e)}")
+        return jsonify({"results": results}), 500
 
 @app.route("/admin/auto_update_settings", methods=["POST"])
 def auto_update_settings():
