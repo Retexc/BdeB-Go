@@ -34,9 +34,9 @@ cd BdeB-Go
 ```
 # 2. Ouvrez l'installateur
 ```
-.\setup.ps1
+.\install.bat
 ```
 # 3. Lancer l’application
 ```
-.\run.ps1
+.\start.bat
 ```
