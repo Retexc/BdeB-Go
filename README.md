@@ -14,6 +14,8 @@ BdeB-Go est une application d’affichage en temps réel des horaires de transpo
 
 ## 🛠 Prérequis
 
+**L'installateur s'occupe normalement de l'installation des prérequis**
+
 1. **Python 3.11+**  
    - Pour exécuter le backend.  
    - Installez-le depuis : https://www.python.org/downloads/
