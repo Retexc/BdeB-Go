@@ -21,11 +21,11 @@ async function updateStatus() {
 const router = useRouter();
 
 function goToExternal() {
-  const route = router.resolve("/display");
-
-  window.open(route.fullPath, "_blank", "noopener");
+  const displayUrl = `${window.location.protocol}//${window.location.host}/display`;
+  console.log("Generated URL:", displayUrl);
+  
+  window.open(displayUrl, "_blank", "noopener");
 }
-// **Mark async** so we can `await` the fetch
 async function toggleApp() {
   console.log("🔘 button clicked, running =", running.value);
   const url = running.value ? "/admin/stop" : "/admin/start";
