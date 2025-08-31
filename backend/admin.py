@@ -759,6 +759,37 @@ def serve_spa(path):
         return send_from_directory(str(SPA_DIST), path)
     return send_from_directory(str(SPA_DIST), "index.html")
 
+def auto_start_main_app():
+    """Auto-start the main app when admin server starts"""
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true' and os.getenv("FLASK_ENV") == "development":
+        return
+    def delayed_start():
+        time.sleep(5)
+        
+        if app.config["APP_RUNNING"]:
+            logger.info("Main application is already running, skipping auto-start")
+            return
+        try:
+            logger.info("Auto-starting main application...")
+            with app.app_context():
+                result = admin_start()
+                data, status_code = result
+                if status_code == 200:
+                    response_data = data.get_json()
+                    if response_data.get("status") == "started":
+                        logger.info(" BdeB-Go has started successfully!")
+                        time.sleep(3)
+                    elif response_data.get("status") == "already_running":
+                        logger.info(" Bdeb-Go was already running")
+                else:
+                    logger.error("❌ Failed to auto-start BdeB-Go")
+        except Exception as e:
+            logger.error("❌ Error auto-starting Bdeb-Go: %s", e)
+            main_app_logs.append(f"{datetime.now()} - Auto-start failed: {e}")
+    
+    threading.Thread(target=delayed_start, daemon=True).start()
+
+auto_start_main_app()  
 
 if __name__ == "__main__":
     if os.getenv("FLASK_ENV") == "development":

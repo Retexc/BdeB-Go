@@ -38,7 +38,7 @@ async function toggleApp() {
   updateStatus();
 }
 
-// now only **one** of each computed
+
 const btnLabel = computed(() => (running.value ? "Arrêter" : "Démarrer"));
 const btnIcon = computed(() => (running.value ? stopIcon : playIcon));
 const btnClass = computed(() =>
