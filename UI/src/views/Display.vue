@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { AnimatePresence, motion } from "motion-v";
 import BusRow from "../components/BusRow.vue";
 import TrainRow from "../components/TrainRow.vue";
@@ -15,11 +15,42 @@ const overlayOpacity = ref(0.65)
 const showBuses = ref(true) 
 let viewInterval = null
 
-// Configurable view switch timing
-const VIEW_SWITCH_INTERVAL = 45000 // 45 seconds 
+const switchInterval = ref(45) 
+const VIEW_SWITCH_INTERVAL = computed(() => switchInterval.value * 1000) 
+
+const loadSwitchInterval = () => {
+  try {
+    const saved = localStorage.getItem("titleCard-switchInterval");
+    if (saved) {
+      switchInterval.value = JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error("Error loading switch interval:", error);
+  }
+}
 
 const metroLines = ref([])
 const trains = ref([])
+
+watch(switchInterval, (newValue) => {
+  restartViewInterval()
+})
+
+const watchLocalStorage = () => {
+  setInterval(() => {
+    try {
+      const saved = localStorage.getItem("titleCard-switchInterval");
+      if (saved) {
+        const savedValue = JSON.parse(saved);
+        if (savedValue !== switchInterval.value) {
+          switchInterval.value = savedValue;
+        }
+      }
+    } catch (error) {
+
+    }
+  }, 1000); 
+};
 
 // Computed property to sort buses by arrival time (ascending)
 const sortedBuses = computed(() => {
@@ -47,10 +78,9 @@ const sortedBuses = computed(() => {
   });
 });
 
-// Computed property to sort trains by arrival time (ascending) - same logic as buses
+//  same logic as buses
 const sortedTrains = computed(() => {
   return [...trains.value].sort((a, b) => {
-    // For trains, we'll use minutes_remaining if available, otherwise display_time
     const timeA = a.minutes_remaining !== undefined ? a.minutes_remaining : a.display_time;
     const timeB = b.minutes_remaining !== undefined ? b.minutes_remaining : b.display_time;
     
@@ -135,7 +165,7 @@ async function applyActiveBackground() {
     activeBackground.value = `url(${bgPath})`;
   } catch (err) {
     console.warn("Could not apply active background", err);
-    // Fallback to default background
+    // if all fails fallback to default background and pretend everything is ok
     activeBackground.value = "url(/static/assets/images/Printemps - Banner Big.png)";
   }
 }
@@ -157,7 +187,6 @@ async function fetchOverlayOpacity() {
     }
   } catch (err) {
     console.warn("Could not fetch overlay opacity", err);
-    // Keep default value
   }
 }
 
@@ -165,7 +194,24 @@ function toggleView() {
   showBuses.value = !showBuses.value;
 }
 
+function startViewInterval() {
+  viewInterval = setInterval(toggleView, VIEW_SWITCH_INTERVAL.value)
+}
+
+function stopViewInterval() {
+  if (viewInterval) {
+    clearInterval(viewInterval);
+    viewInterval = null;
+  }
+}
+
+function restartViewInterval() {
+  stopViewInterval()
+  startViewInterval()
+}
+
 onMounted(() => {
+  loadSwitchInterval() 
   fetchData()
   applyActiveBackground()
   fetchOverlayOpacity()
@@ -173,13 +219,16 @@ onMounted(() => {
   setInterval(applyActiveBackground, 15_000) // Update background every 15 seconds
   setInterval(fetchOverlayOpacity, 15_000) // Update overlay every 15 seconds
   
-  viewInterval = setInterval(toggleView, VIEW_SWITCH_INTERVAL)
+  startViewInterval()
+  watchLocalStorage() 
 })
 
 onBeforeUnmount(() => {
-  if (viewInterval) {
-    clearInterval(viewInterval);
-  }
+  stopViewInterval()
+})
+
+defineExpose({
+  switchInterval
 })
 </script>
 
@@ -298,8 +347,6 @@ onBeforeUnmount(() => {
       </Transition>
     </div>
   </div>
-
-  <!-- Alert Banner at bottom -->
   <AlertBanner />
 </div>
 </template>
