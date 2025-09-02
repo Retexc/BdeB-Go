@@ -353,11 +353,10 @@ def admin_check_update():
     
 def perform_app_update():
     """
-    Perform git pull with better error handling and logging, 
-    including frontend rebuild
+    Perform git pull and then run install.bat to rebuild everything
     """
     try:
-        # Check if we're in a git repository (use PROJECT_ROOT, not backend/)
+        # Check if we're in a git repository
         git_dir = PROJECT_ROOT / ".git"
         if not git_dir.is_dir():
             logger.error(f"No git repository found at {PROJECT_ROOT}")
@@ -378,7 +377,6 @@ def perform_app_update():
         
         if status_result.stdout.strip():
             logger.warning("Uncommitted changes detected, stashing them...")
-            # Stash any uncommitted changes
             stash_result = subprocess.run(
                 ["git", "-C", str(PROJECT_ROOT), "stash", "push", "-m", f"Auto-stash before update {datetime.now()}"],
                 capture_output=True,
@@ -455,124 +453,38 @@ def perform_app_update():
             if req_result.returncode != 0:
                 logger.warning(f"Requirements installation had issues: {req_result.stderr}")
         
-        # === NEW: Frontend rebuild section ===
-        ui_dir = PROJECT_ROOT / "UI"
-        dist_dir = ui_dir / "dist"
-        package_json = ui_dir / "package.json"
-        
-        if ui_dir.exists() and package_json.exists():
-            logger.info("Frontend directory found, rebuilding...")
-            
-            # Remove old dist folder if it exists
-            if dist_dir.exists():
-                logger.info("Removing old dist folder...")
-                try:
-                    shutil.rmtree(dist_dir)
-                    logger.info("Old dist folder removed successfully")
-                except Exception as e:
-                    logger.warning(f"Could not remove old dist folder: {e}")
-            
-            # Check if node_modules exists, if not run npm install first
-            node_modules = ui_dir / "node_modules"
-            if not node_modules.exists():
-                logger.info("Node modules not found, running npm install...")
-                npm_install_result = subprocess.run(
-                    ["npm", "install"],
-                    cwd=str(ui_dir),
+        # === NEW: Simple approach - just run install.bat ===
+        install_bat = PROJECT_ROOT / "install.bat"
+        if install_bat.exists():
+            logger.info("Running install.bat to rebuild frontend...")
+            try:
+                # Run install.bat in the background
+                install_result = subprocess.run(
+                    [str(install_bat)],
+                    cwd=str(PROJECT_ROOT),
                     capture_output=True,
                     text=True,
-                    timeout=600
-                )
-                if npm_install_result.returncode != 0:
-                    logger.error(f"npm install failed: {npm_install_result.stderr}")
-                    raise Exception(f"npm install failed: {npm_install_result.stderr}")
-                logger.info("npm install completed successfully")
-            
-            # Run npm run build
-            logger.info("Building frontend...")
-            npm_build_result = subprocess.run(
-                ["npm", "run", "build"],
-                cwd=str(ui_dir),
-                capture_output=True,
-                text=True,
-                timeout=600
-            )
-            
-            if npm_build_result.returncode != 0:
-                logger.error(f"npm run build failed: {npm_build_result.stderr}")
-                raise Exception(f"Frontend build failed: {npm_build_result.stderr}")
-            
-            logger.info("Frontend build completed successfully")
-            
-            # Verify dist folder was created
-            if not dist_dir.exists():
-                logger.warning("Dist folder was not created after build")
-            else:
-                logger.info("New dist folder created successfully")
-                
-        else:
-            logger.info("No frontend directory or package.json found, skipping frontend build")
-        
-        # === Also rebuild admin frontend if it exists ===
-        admin_frontend_dir = PROJECT_ROOT / "admin-frontend"
-        admin_dist_dir = admin_frontend_dir / "dist"
-        admin_package_json = admin_frontend_dir / "package.json"
-        
-        if admin_frontend_dir.exists() and admin_package_json.exists():
-            logger.info("Admin frontend directory found, rebuilding...")
-            
-            # Remove old admin dist folder if it exists
-            if admin_dist_dir.exists():
-                logger.info("Removing old admin dist folder...")
-                try:
-                    shutil.rmtree(admin_dist_dir)
-                    logger.info("Old admin dist folder removed successfully")
-                except Exception as e:
-                    logger.warning(f"Could not remove old admin dist folder: {e}")
-            
-            # Check if node_modules exists for admin frontend
-            admin_node_modules = admin_frontend_dir / "node_modules"
-            if not admin_node_modules.exists():
-                logger.info("Admin node modules not found, running npm install...")
-                admin_npm_install_result = subprocess.run(
-                    ["npm", "install"],
-                    cwd=str(admin_frontend_dir),
-                    capture_output=True,
-                    text=True,
-                    timeout=600
-                )
-                if admin_npm_install_result.returncode != 0:
-                    logger.error(f"Admin npm install failed: {admin_npm_install_result.stderr}")
-                    # Don't fail the whole update for admin frontend issues
-                    logger.warning("Continuing update despite admin frontend npm install failure")
-                else:
-                    logger.info("Admin npm install completed successfully")
-            
-            # Run npm run build for admin frontend
-            if admin_node_modules.exists():  # Only build if install succeeded
-                logger.info("Building admin frontend...")
-                admin_npm_build_result = subprocess.run(
-                    ["npm", "run", "build"],
-                    cwd=str(admin_frontend_dir),
-                    capture_output=True,
-                    text=True,
-                    timeout=600
+                    timeout=900,  # 15 minutes timeout
+                    shell=True
                 )
                 
-                if admin_npm_build_result.returncode != 0:
-                    logger.error(f"Admin npm run build failed: {admin_npm_build_result.stderr}")
-                    # Don't fail the whole update for admin frontend issues
-                    logger.warning("Continuing update despite admin frontend build failure")
+                if install_result.returncode == 0:
+                    logger.info("install.bat completed successfully")
+                    logger.info(f"install.bat output: {install_result.stdout}")
                 else:
-                    logger.info("Admin frontend build completed successfully")
+                    logger.warning(f"install.bat returned code {install_result.returncode}")
+                    logger.warning(f"install.bat stderr: {install_result.stderr}")
+                    # Don't fail the whole update just because of frontend issues
+                    logger.info("Continuing despite install.bat issues...")
                     
-                    # Verify admin dist folder was created
-                    if not admin_dist_dir.exists():
-                        logger.warning("Admin dist folder was not created after build")
-                    else:
-                        logger.info("New admin dist folder created successfully")
+            except subprocess.TimeoutExpired:
+                logger.error("install.bat timed out after 15 minutes")
+                raise Exception("Frontend rebuild timed out")
+            except Exception as e:
+                logger.error(f"Error running install.bat: {e}")
+                raise Exception(f"Frontend rebuild failed: {e}")
         else:
-            logger.info("No admin frontend directory found, skipping admin frontend build")
+            logger.warning("install.bat not found, skipping frontend rebuild")
         
         logger.info("Update completed successfully")
         
