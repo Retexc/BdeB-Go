@@ -5,6 +5,8 @@ import ConfirmButton from "../components/ConfirmButton.vue";
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { Linkedin } from "lucide-vue-next";
 import { Github } from "lucide-vue-next";
+import { useUpdateStore } from "../composables/useUpdateStore.js";
+
 const tabs = [
   { id: "gtfs", label: "GTFS" },
   { id: "update", label: "Mise à jour" },
@@ -15,21 +17,15 @@ const active = ref("gtfs");
 const stmLastUpdate = ref("N/A");
 const exoLastUpdate = ref("N/A");
 
-const updateState = ref("idle"); // "idle" | "checking" | "up_to_date" | "available" | "updating" | "error"
-const lastChecked = ref("N/A");
-const updateMessage = ref("");
-const localHash = ref("");
-const remoteHash = ref("");
+// Use the update store composable
+const { updateState, checkForUpdates, performUpdate, clearNotification } = useUpdateStore();
 
 const icons = {
   idle: new URL("../assets/icons/status_good.png", import.meta.url).href,
-  checking: new URL("../assets/icons/status_updating.png", import.meta.url)
-    .href,
+  checking: new URL("../assets/icons/status_updating.png", import.meta.url).href,
   up_to_date: new URL("../assets/icons/status_good.png", import.meta.url).href,
-  available: new URL("../assets/icons/status_important.png", import.meta.url)
-    .href,
-  updating: new URL("../assets/icons/status_updating.png", import.meta.url)
-    .href,
+  available: new URL("../assets/icons/status_important.png", import.meta.url).href,
+  updating: new URL("../assets/icons/status_updating.png", import.meta.url).href,
   error: new URL("../assets/icons/status_warning.png", import.meta.url).href,
 };
 
@@ -77,68 +73,29 @@ function scheduleNextUpdate() {
   updateTimeout = setTimeout(async () => {
     console.log("[Scheduler] ⏰ Timeout fired! Running update check now.");
     await checkForUpdates();
-    await performUpdate();
+    if (updateState.available) {
+      await performUpdate();
+    }
     scheduleNextUpdate(); // schedule tomorrow
   }, msUntilNext);
-}
-async function checkForUpdates() {
-  updateState.value = "checking";
-  try {
-    const res = await fetch("/admin/check_update");
-    const body = await res.json();
-    if (!res.ok) {
-      updateState.value = "error";
-      updateMessage.value = body.error || "Erreur inconnue";
-      return;
-    }
-    if (body.up_to_date) {
-      updateState.value = "up_to_date";
-    } else {
-      updateState.value = "available";
-    }
-  } catch (e) {
-    updateState.value = "error";
-    updateMessage.value = e.message;
-  }
-}
-
-async function performUpdate() {
-  if (updateState.value !== "available") return;
-  updateState.value = "updating";
-  try {
-    const res = await fetch("/admin/app_update", { method: "POST" });
-    const body = await res.json();
-    if (res.ok && body.status === "success") {
-      updateState.value = "up_to_date";
-      updateMessage.value = body.message;
-      lastChecked.value = new Date().toLocaleString();
-    } else {
-      updateState.value = "error";
-      updateMessage.value = body.message || "Échec de la mise à jour";
-    }
-  } catch (e) {
-    updateState.value = "error";
-    updateMessage.value = e.message;
-  }
 }
 
 async function uploadGTFS(transport, file) {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("transport", transport);
+  formData.append("gtfs_zip", file);
+  
   try {
     const res = await fetch("/admin/update_gtfs", {
       method: "POST",
       body: formData,
     });
-    const body = await res.json();
-    if (!res.ok) {
-      console.error("Upload error:", body.error);
-      return;
-    }
-    if (transport === "stm") {
-      stmLastUpdate.value = body.updated_at;
+    
+    if (res.ok) {
+      console.log(`${transport.toUpperCase()} GTFS uploaded successfully`);
+      await fetchLastUpdates(); // Refresh the last update info
     } else {
-      exoLastUpdate.value = body.updated_at;
+      console.error("Upload error:", res.statusText);
     }
   } catch (e) {
     console.error("Network error uploading GTFS:", e);
@@ -147,11 +104,12 @@ async function uploadGTFS(transport, file) {
 
 function onStmFileChange(e) {
   const file = e.target.files[0];
-  uploadGTFS("stm", file);
+  if (file) uploadGTFS("stm", file);
 }
+
 function onExoFileChange(e) {
   const file = e.target.files[0];
-  uploadGTFS("exo", file);
+  if (file) uploadGTFS("exo", file);
 }
 
 async function fetchLastUpdates() {
@@ -167,8 +125,14 @@ async function fetchLastUpdates() {
   }
 }
 
+// Clear notification when switching to update tab
+watch(active, (newTab) => {
+  if (newTab === 'update') {
+    clearNotification();
+  }
+});
+
 onMounted(() => {
-  checkForUpdates();
   fetchLastUpdates();
   scheduleNextUpdate();
 });
@@ -188,6 +152,19 @@ onBeforeUnmount(() => {
     clearTimeout(updateTimeout);
   }
 });
+
+// Helper function to get current update state for display
+function getCurrentUpdateState() {
+  if (updateState.checking) return 'checking';
+  if (updateState.available) return 'available';
+  if (updateState.message && !updateState.available) {
+    if (updateState.message.includes('error') || updateState.message.includes('Erreur')) {
+      return 'error';
+    }
+    return 'up_to_date';
+  }
+  return 'up_to_date';
+}
 </script>
 
 <template>
@@ -208,7 +185,7 @@ onBeforeUnmount(() => {
           Modifier les paramètres de l'application
         </p>
 
-        <!-- ───────── Tabs ───────── -->
+        <!-- ──────── Tabs ──────── -->
         <div
           class="mt-2 text-sm font-medium text-center text-gray-500 border-b border-gray-200"
         >
@@ -231,7 +208,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- ───────── Tab Panels ───────── -->
+      <!-- ──────── Tab Panels ──────── -->
       <div class="mt-4">
         <div v-if="active === 'gtfs'">
           <div class="bg-gray-900 rounded-lg p-6 mb-6 text-white space-y-4">
@@ -246,7 +223,7 @@ onBeforeUnmount(() => {
             </p>
             <p>
               Pour télécharger les dernières versions des données GTFS,
-              consultez :
+              consultez :
             </p>
             <ul class="list-disc list-inside space-y-1">
               <li>
@@ -255,7 +232,7 @@ onBeforeUnmount(() => {
                   target="_blank"
                   class="text-white underline hover:text-blue-400"
                 >
-                  STM : Développeurs | Société de transport de Montréal
+                  STM : Développeurs | Société de transport de Montréal
                 </a>
               </li>
               <li>
@@ -264,7 +241,7 @@ onBeforeUnmount(() => {
                   target="_blank"
                   class="text-white underline hover:text-blue-400"
                 >
-                  Exo : Autobus, trains et transport adapté dans la région de
+                  Exo : Autobus, trains et transport adapté dans la région de
                   Montréal
                 </a>
               </li>
@@ -314,68 +291,62 @@ onBeforeUnmount(() => {
           >
             <div class="flex flex-row items-center gap-2 mb-0">
               <img
-                :src="icons[updateState] ?? icons.idle"
+                :src="icons[getCurrentUpdateState()] ?? icons.idle"
                 alt="status"
                 class="h-18 self-start"
               />
 
               <div class="flex flex-col">
                 <h3 class="text-2xl font-bold">
-                  <template v-if="updateState === 'available'"
-                    >Mise à jour disponible</template
-                  >
-                  <template v-else-if="updateState === 'up_to_date'"
-                    >Tout est à jour !</template
-                  >
-                  <template v-else-if="updateState === 'checking'"
-                    >Vérification en cours...</template
-                  >
-                  <template v-else-if="updateState === 'updating'"
-                    >Mise à jour en cours...</template
-                  >
-                  <template v-else-if="updateState === 'error'"
-                    >Erreur</template
-                  >
+                  <template v-if="updateState.available">
+                    Mise à jour disponible
+                  </template>
+                  <template v-else-if="getCurrentUpdateState() === 'up_to_date'">
+                    Tout est à jour !
+                  </template>
+                  <template v-else-if="updateState.checking">
+                    Vérification en cours...
+                  </template>
+                  <template v-else-if="getCurrentUpdateState() === 'error'">
+                    Erreur
+                  </template>
                   <template v-else>Statut inconnu</template>
                 </h3>
                 <p class="text-xl text-white">
-                  Dernière vérification : {{ lastChecked }}
-                  <span v-if="updateState === 'available'"
-                    >(nouvelle version disponible)</span
-                  >
-                  <span v-if="updateState === 'error'"
-                    >- {{ updateMessage }}</span
-                  >
+                  Dernière vérification : {{ updateState.lastChecked }}
+                  <span v-if="updateState.available">
+                    (nouvelle version disponible)
+                  </span>
+                  <span v-if="getCurrentUpdateState() === 'error' && updateState.message">
+                    - {{ updateState.message }}
+                  </span>
                 </p>
               </div>
             </div>
             <div>
               <button
-                v-if="updateState === 'idle' || updateState === 'up_to_date'"
+                v-if="!updateState.checking && !updateState.available"
                 @click="checkForUpdates"
                 class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
               >
                 Rechercher des mises à jour
               </button>
               <button
-                v-else-if="updateState === 'available'"
+                v-else-if="updateState.available && !updateState.checking"
                 @click="performUpdate"
                 class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
               >
                 Mettre à jour
               </button>
               <button
-                v-else-if="
-                  updateState === 'checking' || updateState === 'updating'
-                "
+                v-else-if="updateState.checking"
                 disabled
                 class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold opacity-50"
               >
-                <span v-if="updateState === 'checking'">Vérification…</span>
-                <span v-else>Mise à jour…</span>
+                <span>Traitement…</span>
               </button>
               <button
-                v-else-if="updateState === 'error'"
+                v-else-if="getCurrentUpdateState() === 'error'"
                 @click="checkForUpdates"
                 class="inline-flex items-center px-4 py-2 bg-blue-400 text-black rounded-lg hover:bg-blue-500 font-bold"
               >
@@ -390,7 +361,7 @@ onBeforeUnmount(() => {
               </h3>
               <p class="text-xl text-white">
                 Heure durant laquelle l'application sera mise à jour
-                automatiquement tout les jours.
+                automatiquement tous les jours.
               </p>
             </div>
             <input
