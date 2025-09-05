@@ -53,13 +53,13 @@ const statusColor = computed(() => {
   }
   
   if (props.line.is_normal === true) {
-    return "text-green-400";
+    return "text-black";
   }
   
   // Final fallback: check status text content
   const statusLower = (props.line.status || '').toLowerCase();
   if (statusLower.includes('service normal') || statusLower.includes('normal service')) {
-    return "text-green-400";
+    return "text-black ";
   }
   
   // Default to red for any other status
@@ -82,12 +82,12 @@ const statusColor = computed(() => {
 
     <div class="flex flex-row items-center gap-8">
       <div class="flex flex-col items-end">
-        <h1 :class="`font-bold text-xl ${statusColor}`">
+        <h1 :class="`font-bold text-xl bg-green-500 rounded-xl text-black pr-4 pl-4 py-1.5`">
           {{ cleanStatus }}
         </h1>
         <div v-if="!props.line.is_normal" class="flex items-center gap-1 mt-1">
-          <div class="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-          <span class="text-red-400 text-sm">Service perturbé</span>
+          <div class="w-4 h-4 bg-red-400 rounded-full animate-pulse"></div>
+          <span class="text-black text-lg font-bold pr-4 pl-4 ml-2 rounded-xl bg-red-400">Service perturbé</span>
         </div>
       </div>
     </div>
