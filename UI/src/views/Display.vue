@@ -262,7 +262,7 @@ defineExpose({
           <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
           <div class="flex flex-col">
             <p v-if="buses.length === 0" class="text-gray-500">
-              Aucun autobus à afficher…
+              Chargement...
             </p>
             <AnimatePresence>
 
