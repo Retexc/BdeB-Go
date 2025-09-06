@@ -4,11 +4,12 @@ import csv
 from datetime import datetime, timedelta
 from google.transit import gtfs_realtime_pb2
 from ..config import (
-    EXO_TRIP_UPDATE_URL,
-    EXO_VEHICLE_POSITION_URL,
-    EXO_ALERTS_URL,
+    # New Chrono endpoints
+    CHRONO_TRIP_UPDATE_URL,
+    CHRONO_VEHICLE_POSITION_URL,
+    CHRONO_ALERTS_URL,
 )
-from ..utils     import load_csv_dict
+from ..utils import load_csv_dict
 import logging
 logger = logging.getLogger('BdeB-GTFS.exo')
 
@@ -19,33 +20,39 @@ def normalize_trip_id(trip_id):
     return trip_id.split('-')[0].strip()
 
 def fetch_exo_realtime_data():
+    """Updated function to use new Chrono API"""
     headers = { "accept": "application/x-protobuf" }
-    trip_updates_response = requests.get(EXO_TRIP_UPDATE_URL, headers=headers)
-    vehicle_positions_response = requests.get(EXO_VEHICLE_POSITION_URL, headers=headers)
+    
+    # Use new Chrono endpoints
+    trip_updates_response = requests.get(CHRONO_TRIP_UPDATE_URL, headers=headers)
+    vehicle_positions_response = requests.get(CHRONO_VEHICLE_POSITION_URL, headers=headers)
 
     if trip_updates_response.status_code == 200 and vehicle_positions_response.status_code == 200:
-        print("Exo API Fetch Success")
+        print("Chrono API Fetch Success")
         trip_updates_feed = gtfs_realtime_pb2.FeedMessage()
         vehicle_positions_feed = gtfs_realtime_pb2.FeedMessage()
         trip_updates_feed.ParseFromString(trip_updates_response.content)
         vehicle_positions_feed.ParseFromString(vehicle_positions_response.content)
         return trip_updates_feed.entity, vehicle_positions_feed.entity
     else:
-        print(f"Exo API Error: {trip_updates_response.status_code}, {vehicle_positions_response.status_code}")
+        print(f"Chrono API Error: {trip_updates_response.status_code}, {vehicle_positions_response.status_code}")
         return [], []
 
 def fetch_exo_alerts():
+    """Updated function to use new Chrono API"""
     headers = { "accept": "application/x-protobuf" }
+    print(f"DEBUG: fetch_exo_alerts calling URL: {CHRONO_ALERTS_URL}")  # Add this line
     try:
-        response = requests.get(EXO_ALERTS_URL, headers=headers)
+        response = requests.get(CHRONO_ALERTS_URL, headers=headers)
         if response.status_code == 200:
             feed = gtfs_realtime_pb2.FeedMessage()
             feed.ParseFromString(response.content)
             return feed.entity
         return []
     except Exception as e:
-        print(f"Error fetching EXO alerts: {str(e)}")
+        print(f"Error fetching Chrono alerts: {str(e)}")
         return []
+
 
 def load_exo_gtfs_trips(filepath):
     """Load Exo trips with full trip_id (including suffixes)."""
@@ -125,11 +132,7 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         else:
             direction = "Unknown"
         
-        # For route 4, we now override the stop name based on stop_id if needed.
         if route_id == "4":
-            # For route 4, you might choose to simply use the direction as location
-            # Or you can keep the original stop based on your business rule.
-            # Here we'll keep it as provided by stop_id_map if available.
             stop_name = stop_id_map.get(stop_id, "Unknown")
         else:
             stop_name = stop_id_map.get(stop_id, "Unknown")
@@ -164,8 +167,6 @@ def process_exo_vehicle_positions(entities, stop_times):
             trip_id = normalize_trip_id(raw_trip_id)
             route_id = vehicle.trip.route_id
             exo_occupancy_status = vehicle.occupancy_status if vehicle.HasField("occupancy_status") else "UNKNOWN"
-
-            # Match with stop_times to find the stop_id and arrival time.
             for stop_time in stop_times:
                 csv_trip_id = normalize_trip_id(stop_time["trip_id"])
                 candidate_stop = stop_time["stop_id"].strip()
@@ -210,7 +211,7 @@ def process_exo_vehicle_positions(entities, stop_times):
                 "arrival_time": arrival_str,
             })
 
-    print("Filtered Exo Vehicle Positions with Stop IDs:", filtered_vehicles)
+    print("Filtered Chrono Vehicle Positions with Stop IDs:", filtered_vehicles)
     return filtered_vehicles
 
 def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle_positions, exo_trip_updates):
@@ -243,7 +244,7 @@ def process_exo_train_schedule_with_occupancy(exo_stop_times, exo_trips, vehicle
             continue
 
         raw_trip_id = stop_time["trip_id"]
-        trip_id = normalize_trip_id(raw_trip_id)  # Normalize CSV trip_id.
+        trip_id = normalize_trip_id(raw_trip_id)  
         trip_data = exo_trips.get(raw_trip_id, {})
         route_id = trip_data.get("route_id")
         direction_id = trip_data.get("direction_id")

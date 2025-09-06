@@ -409,7 +409,9 @@ def api_data():
     processed_stm = process_stm_alerts(stm_alert_json, WEATHER_API_KEY) if stm_alert_json else []
 
     exo_alert_entities = fetch_exo_alerts()
+    print(f"DEBUG: EXO alerts returned: {len(exo_alert_entities) if exo_alert_entities else 0} entities")
     processed_exo = process_exo_alerts(exo_alert_entities)
+    print(f"DEBUG: Processed EXO alerts: {len(processed_exo)} alerts")
     all_alerts = processed_stm + processed_exo
 
     # === Custom Alert Logic ===
@@ -586,6 +588,7 @@ def admin_start():
 def logs_data():
     return "\n".join(main_app_logs)
 
+    
 from waitress import serve
 if __name__ == "__main__":
     serve(app,
