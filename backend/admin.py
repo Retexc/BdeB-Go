@@ -322,10 +322,10 @@ def perform_app_update():
         # Run install.bat 
         install_bat = PROJECT_ROOT / "install.bat"
         if install_bat.exists():
-            logger.info("Running install.bat to rebuild frontend...")
+            logger.info("Running install.bat in silent mode to rebuild frontend...")
             try:
                 install_result = subprocess.run(
-                    [str(install_bat)],
+                    [str(install_bat), "silent"], 
                     cwd=str(PROJECT_ROOT),
                     capture_output=True, text=True,
                     timeout=900, shell=True
@@ -343,8 +343,8 @@ def perform_app_update():
             except Exception as e:
                 logger.error(f"Error running install.bat: {e}")
                 raise Exception(f"Frontend rebuild failed: {e}")
-        
-        logger.info("Update completed successfully")
+        else:
+            logger.warning("install.bat not found, skipping frontend rebuild")
         
     except Exception as e:
         logger.error(f"Post-update steps failed: {e}")
@@ -586,7 +586,15 @@ def admin_app_update():
     try:
         perform_app_update()
         message = f"Application mise à jour ! ({datetime.now():%Y-%m-%d %H:%M:%S})"
-        return jsonify({"status": "success", "message": message}), 200
+        
+        # Return success with reload instruction
+        return jsonify({
+            "status": "success", 
+            "message": message,
+            "reload_required": True,
+            "reload_delay": 3000  # 3 seconds delay
+        }), 200
+        
     except Exception as e:
         err_msg = f"Erreur lors de la mise à jour : {str(e)}"
         return jsonify({"status": "error", "message": err_msg}), 500
