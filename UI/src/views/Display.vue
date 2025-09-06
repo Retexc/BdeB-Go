@@ -261,9 +261,16 @@ defineExpose({
         <div v-if="showBuses" key="buses" class="w-full">
           <img :src="STMLogo" alt="STM logo" class="w-22 h-auto mt-4 ml-6"></img>
           <div class="flex flex-col">
-            <p v-if="buses.length === 0" class="text-gray-500">
-              Chargement...
-            </p>
+          <div v-if="buses.length === 0" class="flex items-center justify-center min-h-[400px]">
+            <div class="flex flex-col items-center space-y-4">
+              <!-- Spinner -->
+              <div class="relative">
+                <div class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+              </div>
+              <p class="text-white/80 text-lg font-medium">Chargement...</p>
+            </div>
+          </div>
+
             <AnimatePresence>
 
             <motion.div
