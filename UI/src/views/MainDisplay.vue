@@ -79,7 +79,7 @@ const startTransitionToEnd = () => {
 
   // Switch to EndDisplay when slides cover the screen
   setTimeout(() => {
-    console.log("Slides covering screen - switching to EndDisplay");
+    console.log("Slides covering screen - switching to End Display");
     showEndDisplay.value = true;
   }, 650);
 
