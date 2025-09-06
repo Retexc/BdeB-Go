@@ -65,7 +65,7 @@ const handleLoadingComplete = () => {
 };
 
 const startTransitionToEnd = () => {
-  console.log("Starting transition to EndDisplay");
+  console.log("Starting transition to End Display");
   isTransitioning.value = true;
   overlayComplete.value = false;
 
