@@ -206,7 +206,7 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
       </div>      
       <div class="flex flex-row gap-1">
         <div
-          class="flex flex-box text-black font-bold text-xl bg-white rounded-xl px-3 py-1"
+          class="flex flex-box text-black font-bold text-xl bg-[#F8F8F8] opacity-90 rounded-xl px-3 py-1"
         >
           {{ displayTime }}
           <svg
