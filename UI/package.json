@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev:backend": "python -m flask --app=../backend/admin.py --debug run --port 5001",
-    "prod:backend": "python -m flask --app=../backend/admin.py run --port 5001",
+    "prod:backend": "python ../backend/admin.py",
     "dev:frontend": "vite",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "vite build",
-    "preview": "concurrently \"npm run dev:backend\" \"vite preview\"",
-    "start": "concurrently \"npm run dev:backend\" \"vite preview\""
+    "preview": "cross-env NODE_NO_WARNINGS=1 concurrently \"npm run prod:backend\" \"vite preview\"",
+    "start": "cross-env NODE_NO_WARNINGS=1 concurrently \"npm run prod:backend\" \"vite preview\""
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",

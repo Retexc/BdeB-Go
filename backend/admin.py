@@ -27,7 +27,15 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
-from .managers.background_manager import get_slots, set_slots, list_images
+try:
+    from .managers.background_manager import get_slots, set_slots, list_images
+except ImportError:
+    import sys
+    from pathlib import Path
+    backend_dir = Path(__file__).parent
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+    from managers.background_manager import get_slots, set_slots, list_images
 
 
 print(f"[DEBUG] Running admin.py from {Path(__file__).resolve()}")
@@ -909,8 +917,10 @@ def auto_start_main_app():
 auto_start_main_app()  
 
 if __name__ == "__main__":
-    if os.getenv("FLASK_ENV") == "development":
+    if os.getenv("FLASK_DEV_MODE") == "true":
+        print("[WARNING] Running in Flask development mode - not recommended for production")
         app.run(debug=True, use_reloader=True, host="127.0.0.1", port=5001)
     else:
+        print("[INFO] Starting admin server with Waitress (production mode)")
         from waitress import serve
-        serve(app, host="0.0.0.0", port=5001, threads=8)
+        serve(app, host="127.0.0.1", port=5001, threads=8)
