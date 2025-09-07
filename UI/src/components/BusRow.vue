@@ -27,48 +27,49 @@ const location = computed(() => props.bus.location); // stop name
 const routeId = computed(() => props.bus.route_id); // "171", "180", etc
 const atStop = computed(() => props.bus.at_stop); // boolean
 const wheelchair = computed(() => props.bus.wheelchair_accessible); // boolean
+const delay = computed(() => props.bus.delayed_text);
 
 const occupancyConfig = {
   NO_DATA: {
     count: 4,
     filledCount: 0,
-    bgColor: 'bg-gray-400',
-    iconColor: 'fill-gray-600'
+    bgColor: "bg-gray-400",
+    iconColor: "fill-gray-600",
   },
   Unknown: {
     count: 4,
     filledCount: 0,
-    bgColor: 'bg-gray-400',
-    iconColor: 'fill-gray-600'
+    bgColor: "bg-gray-400",
+    iconColor: "fill-gray-600",
   },
   MANY_SEATS_AVAILABLE: {
     count: 4,
     filledCount: 1,
-    bgColor: 'bg-green-400',
-    iconColor: 'fill-black'
+    bgColor: "bg-green-400",
+    iconColor: "fill-black",
   },
   FEW_SEATS_AVAILABLE: {
     count: 4,
     filledCount: 2,
-    bgColor: 'bg-green-400',
-    iconColor: 'fill-black'
+    bgColor: "bg-green-400",
+    iconColor: "fill-black",
   },
   STANDING_ROOM_ONLY: {
     count: 4,
     filledCount: 3,
-    bgColor: 'bg-orange-400',
-    iconColor: 'fill-black'
+    bgColor: "bg-orange-400",
+    iconColor: "fill-black",
   },
   FULL: {
     count: 4,
     filledCount: 4,
-    bgColor: 'bg-red-500',
-    iconColor: 'fill-black'
-  }
+    bgColor: "bg-red-500",
+    iconColor: "fill-black",
+  },
 };
 
-const currentOccupancy = computed(() => 
-  occupancyConfig[props.bus.occupancy] || occupancyConfig.NO_DATA
+const currentOccupancy = computed(
+  () => occupancyConfig[props.bus.occupancy] || occupancyConfig.NO_DATA
 );
 const wheelchairIcon = new URL(
   "../assets/icons/wheelchair.svg",
@@ -85,13 +86,19 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
   >
     <div class="flex flex-row items-center gap-8">
       <span
-        class="inline-flex items-center justify-center w-18 h-12 text-white text-2xl font-black bg-black rounded-lg"
-        :class="props.bus.route_id === '171' ? 'bg-pink-500' : 'bg-blue-600'"
+        class="inline-flex items-center justify-center w-22 h-16 text-2xl font-black rounded-lg"
+        :class="
+          props.bus.route_id === '171'
+            ? 'bg-[#FF5BB2] text-black'
+            : 'bg-[#2151BA] text-white'
+        "
       >
         {{ props.bus.route_id }}
       </span>
 
-      <div class="flex flex-col text-white font-bold">
+      <div
+        class="flex flex-col text-black font-bold bg-[#F8F8F8] opacity-90 rounded-xl w-100 px-4 py-1"
+      >
         <div class="flex flex-row items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -99,7 +106,7 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#ffffff"
+            stroke="#000000"
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -115,14 +122,20 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
     </div>
 
     <div class="flex flex-row items-center gap-8">
+      <div
+        v-if="props.bus.delayed_text"
+        class="flex flex-row items-center gap-8 bg-[#FF6063] text-black rounded-xl px-3 py-1 font-black"
+      >
+        {{ props.bus.delayed_text }}
+      </div>
       <div class="flex flex-row gap-1">
         <div
-          class="flex flex-box text-black font-bold text-xl  bg-white rounded-xl px-3 py-1 "
+          class="flex flex-box text-black font-bold text-xl bg-white rounded-xl px-3 py-1"
         >
           {{ displayTime }}
           <svg
-          v-if="showPulse"
-          class="animate-pulse [animation-duration: 1s] "
+            v-if="showPulse"
+            class="animate-pulse [animation-duration: 1s]"
             width="16"
             height="16"
             viewBox="0 0 16 16"
@@ -136,7 +149,7 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
           </svg>
         </div>
       </div>
-      <div 
+      <div
         class="flex flex-row rounded-xl px-3 py-2 gap-1 w-32 justify-center"
         :class="currentOccupancy.bgColor"
       >
@@ -148,23 +161,30 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
           :class="[
-            i <= currentOccupancy.filledCount 
-              ? currentOccupancy.iconColor 
-              : 'fill-black/30'
+            i <= currentOccupancy.filledCount
+              ? currentOccupancy.iconColor
+              : 'fill-black/30',
           ]"
         >
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          <path
+            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+          />
         </svg>
-        
+
         <svg
-          v-if="props.bus.occupancy === 'NO_DATA' || props.bus.occupancy === 'Unknown'"
+          v-if="
+            props.bus.occupancy === 'NO_DATA' ||
+            props.bus.occupancy === 'Unknown'
+          "
           width="22"
           height="22"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
           :class="currentOccupancy.iconColor"
         >
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+          />
         </svg>
       </div>
 
@@ -195,5 +215,4 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

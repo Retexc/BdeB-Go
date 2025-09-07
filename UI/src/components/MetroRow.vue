@@ -68,11 +68,11 @@ const statusColor = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-row justify-between items-center ml-8 mr-8 border-b border-gray-300">
+  <div class="flex flex-row justify-between items-center ml-8 mr-8 border-b border-gray-300  px-4">
     <div class="flex flex-row items-center gap-8">
       <img :src="lineIcon" :alt="`${props.line.color} line`" class="w-18 h-18 mt-4"></img>
 
-      <div class="flex flex-col text-white font-bold">
+      <div class="flex flex-col text-black font-bold bg-[#F8F8F8] rounded-xl w-100 px-4 py-1 ">
         <div class="flex flex-row items-center gap-2">
           <h1 class="text-2xl">{{ props.line.name }}</h1>       
         </div>

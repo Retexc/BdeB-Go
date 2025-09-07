@@ -104,6 +104,7 @@ const routeId = computed(() => {
 const atStop = computed(() => props.train.at_stop);
 const wheelchair = computed(() => props.train.wheelchair_accessible);
 const bikesAllowed = computed(() => props.train.bikes_allowed);
+const delay = computed(() => props.train.delayed_text);
 
 const occupancyConfig = {
   NO_DATA: {
@@ -163,17 +164,17 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
   >
     <div class="flex flex-row items-center gap-8">
       <span
-        class="inline-flex items-center justify-center w-18 h-12 text-2xl font-black rounded-lg"
+        class="inline-flex items-center justify-center w-22 h-16 text-2xl font-black rounded-lg"
         :class="
           routeId === 'MA'
-            ? 'bg-pink-500 text-black'
+            ? 'bg-[#FF5BB2] text-black'
             : 'bg-amber-300 text-black'
         "
       >
         {{ routeId }}
       </span>
 
-      <div class="flex flex-col text-white font-bold">
+      <div class="flex flex-col text-black font-bold bg-[#F8F8F8] opacity-90 rounded-xl w-100 px-4 py-1 ">
         <div class="flex flex-row items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +182,7 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#ffffff"
+            stroke="#000000"
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -197,6 +198,12 @@ const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
     </div>
 
     <div class="flex flex-row items-center gap-8">
+      <div
+        v-if="props.train.delayed_text"
+        class="flex flex-row items-center gap-8 bg-[#FF6063] text-black rounded-xl px-3 py-1 font-black"
+      >
+        {{ props.train.delayed_text }}
+      </div>      
       <div class="flex flex-row gap-1">
         <div
           class="flex flex-box text-black font-bold text-xl bg-white rounded-xl px-3 py-1"
