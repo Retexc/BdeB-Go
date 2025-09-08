@@ -23,7 +23,19 @@ BdeB-Go est une application d’affichage en temps réel des horaires de transpo
 2. **Node.js 16+ (LTS)**  
    - Pour construire et servir l’interface d’administration.  
    - Installez-le depuis : https://nodejs.org/ (version LTS recommandée)
+  
+3. **Clé API STM**
+   - Pour pouvoir afficher les données en temps réels pour les autobus de la STM et l'état du métro
+   - Créer un compte développeur sur le portail de la STM : https://portail.developpeurs.stm.info/apihub/#/
+  
+4. **Clé API Exo**
+   - Pour pouvoir afficher les données en temps réels pour les trains de banlieue
+   - Créer un compte développeur sur le portail Chrono : https://portail-developpeur.chrono-saeiv.com/
 
+5. **Clé WeatherAPI**
+   - Pour pouvoir afficher la météo et les alertes météorologiques.
+   - Créer un compte sur le portail WeatherAPI : https://www.weatherapi.com/
+     
 ## 🚀 Installation et démarrage
 
 Ouvrez un terminal (PowerShell sous Windows et suivez ces étapes :
@@ -34,11 +46,23 @@ Ouvrez un terminal (PowerShell sous Windows et suivez ces étapes :
 git clone https://github.com/Retexc/BdeB-Go
 cd BdeB-Go
 ```
-# 2. Ouvrez l'installateur
+# 2. Créer un fichier d’environnement
+Créer un nouveau fichier appelé . env dans le répertoire racine du projet :
+Windows : Cliquez avec le bouton droit de la souris dans le dossier du projet, Nouveau document texte et renommer le fichier à .env
+
+# 3. Ajoutez vos clés API au fichier .env
+Ouvrez le fichier .env dans n’importe quel éditeur de texte et ajoutez vos clés :
+```
+STM_API_KEY=your_stm_api_key_here
+CHRONO_TOKEN=your_exo_token_here
+WEATHER_API_KEY=your_weather_api_key_here
+GLOBAL_DELAY_MINUTES=0
+```
+# 4. Ouvrez l'installateur
 ```
 .\install.bat
 ```
-# 3. Lancer l’application
+# 5. Lancer l’application
 ```
 .\start.bat
 ```
