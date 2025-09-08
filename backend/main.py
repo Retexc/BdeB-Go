@@ -588,7 +588,34 @@ def admin_start():
 def logs_data():
     return "\n".join(main_app_logs)
 
+
+@app.route("/test/chrono-trips")
+def test_chrono_trips():
+    from .loaders.exo import fetch_exo_realtime_data
     
+    try:
+        trip_updates, vehicle_positions = fetch_exo_realtime_data()
+        
+        trip_data = []
+        for entity in trip_updates[:3]:  # First 3 for testing
+            if entity.HasField("trip_update"):
+                trip = entity.trip_update
+                trip_info = {
+                    "trip_id": trip.trip.trip_id,
+                    "route_id": trip.trip.route_id,
+                    "stop_updates": len(trip.stop_time_update),
+                }
+                trip_data.append(trip_info)
+        
+        return {
+            "status": "success",
+            "trip_update_count": len(trip_updates),
+            "vehicle_position_count": len(vehicle_positions),
+            "sample_trips": trip_data
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+            
 from waitress import serve
 if __name__ == "__main__":
     serve(app,

@@ -15,9 +15,9 @@ CHRONO_TOKEN = os.getenv("CHRONO_TOKEN")
 CHRONO_BASE_URL = "https://exo.chrono-saeiv.com/api/opendata/v1"
 
 # Chrono GTFS-RT endpoints 
-CHRONO_TRIP_UPDATE_URL = f"{CHRONO_BASE_URL}/exo/tripupdate?token={CHRONO_TOKEN}"
-CHRONO_VEHICLE_POSITION_URL = f"{CHRONO_BASE_URL}/exo/vehicleposition?token={CHRONO_TOKEN}"
-CHRONO_ALERTS_URL = f"{CHRONO_BASE_URL}/exo/alert?token={CHRONO_TOKEN}"
+CHRONO_TRIP_UPDATE_URL = f"{CHRONO_BASE_URL}/TRAINS/tripupdate?token={CHRONO_TOKEN}"
+CHRONO_VEHICLE_POSITION_URL = f"{CHRONO_BASE_URL}/TRAINS/vehicleposition?token={CHRONO_TOKEN}"
+CHRONO_ALERTS_URL = f"{CHRONO_BASE_URL}/TRAINS/alert?token={CHRONO_TOKEN}"
 
 # Weather API key
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
