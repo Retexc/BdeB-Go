@@ -744,7 +744,7 @@ def admin_update_gtfs():
     if transport == "stm":
         target = stm_dir
     else:
-        target = exo_dir / "Train"
+        target = exo_dir 
 
     timestamp = int(time.time())
     tmp_zip = GTFS_ROOT / f"{transport}_uploaded_{timestamp}.zip"

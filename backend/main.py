@@ -56,6 +56,12 @@ EXO_TRAIN_DIR = os.path.join(GTFS_BASE, "exo")
 os.makedirs(STM_DIR,       exist_ok=True)
 os.makedirs(EXO_TRAIN_DIR, exist_ok=True)
 
+_chrono_cache = {
+    "timestamp": 0,
+    "data": None
+}
+CHRONO_CACHE_TTL = 60
+
 # ─── check for required GTFS files ────────────────────────────
 required_stm = ["routes.txt", "trips.txt", "stop_times.txt"]
 required_exo = ["trips.txt",   "stop_times.txt"]
@@ -404,6 +410,10 @@ def index():
 # ====================================================================
 @app.route("/api/data")
 def api_data():
+    api_debug = {
+        "called_at": time.strftime('%H:%M:%S'),
+        "endpoint": "/api/data"
+    }    
     # ========== ALERTS ==========
     stm_alert_json = fetch_stm_alerts()
     processed_stm = process_stm_alerts(stm_alert_json, WEATHER_API_KEY) if stm_alert_json else []
@@ -480,15 +490,49 @@ def api_data():
     # Merge alerts into bus rows – update bus location with styled alert badges.
     buses = merge_alerts_into_buses(buses, processed_stm)
 
-    # ========== EXO TRAINS ==========
-    exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
-    exo_vehicle_data = process_exo_vehicle_positions(exo_vehicle_positions, exo_stop_times)
-    exo_trains = process_exo_train_schedule_with_occupancy(
-        exo_stop_times,
-        exo_trips,
-        exo_vehicle_data,
-        exo_trip_updates
-    )
+    # ========== EXO TRAINS WITH CACHING ==========
+    current_time = time.time()
+    
+    if current_time - _chrono_cache["timestamp"] < CHRONO_CACHE_TTL and _chrono_cache["data"]:
+        exo_trains = _chrono_cache["data"]
+        api_debug["chrono_cache"] = "using_cache"
+    else:
+        # Fetch data
+        EXO_TRAIN_DIR = os.path.join(PACKAGE_DIR, "GTFS", "exo")
+        exo_trips_fp = os.path.join(EXO_TRAIN_DIR, "trips.txt")
+        exo_stop_times_fp = os.path.join(EXO_TRAIN_DIR, "stop_times.txt")
+
+        fresh_exo_trips = load_exo_gtfs_trips(exo_trips_fp)
+        fresh_exo_stop_times = load_exo_stop_times(exo_stop_times_fp)
+
+        exo_trip_updates, exo_vehicle_positions = fetch_exo_realtime_data()
+        
+        if len(exo_trip_updates) > 0 or len(exo_vehicle_positions) > 0:
+            exo_vehicle_data = process_exo_vehicle_positions(exo_vehicle_positions, fresh_exo_stop_times)
+            exo_trains = process_exo_train_schedule_with_occupancy(
+                fresh_exo_stop_times,
+                fresh_exo_trips,
+                exo_vehicle_data,
+                exo_trip_updates
+            )
+            _chrono_cache["data"] = exo_trains
+            _chrono_cache["timestamp"] = current_time
+            api_debug["chrono_cache"] = f"fresh_data_{len(exo_trip_updates)}trips_{len(exo_vehicle_positions)}vehicles"
+        else:
+            if _chrono_cache["data"]:
+                exo_trains = _chrono_cache["data"]
+                api_debug["chrono_cache"] = "rate_limited_using_cache"
+            else:
+                # Fallback to static schedule processing
+                exo_vehicle_data = process_exo_vehicle_positions([], fresh_exo_stop_times)
+                exo_trains = process_exo_train_schedule_with_occupancy(
+                    fresh_exo_stop_times,
+                    fresh_exo_trips,
+                    exo_vehicle_data,
+                    []
+                )
+                api_debug["chrono_cache"] = "rate_limited_no_cache_static_fallback"
+    
     if is_service_unavailable():
         for train in exo_trains:
             train["no_service_text"] = "Aucun service aujourd'hui"
@@ -501,15 +545,14 @@ def api_data():
 
     weather = get_weather()
 
-    return {
-        "buses":       buses,
+    return {       
+        "buses": buses,
         "next_trains": exo_trains,
-        "metro_lines": metro_lines,  # Add metro lines to the response
+        "metro_lines": metro_lines,
         "current_time": time.strftime("%I:%M:%S %p"),
-        "alerts":      filtered_alerts,
-        "weather":     weather        
+        "alerts": filtered_alerts,
+        "weather": weather        
     }
-
 # ====================================================================
 # NEW: API endpoint to get and update custom messages
 # ====================================================================
@@ -589,33 +632,6 @@ def logs_data():
     return "\n".join(main_app_logs)
 
 
-@app.route("/test/chrono-trips")
-def test_chrono_trips():
-    from .loaders.exo import fetch_exo_realtime_data
-    
-    try:
-        trip_updates, vehicle_positions = fetch_exo_realtime_data()
-        
-        trip_data = []
-        for entity in trip_updates[:3]:  # First 3 for testing
-            if entity.HasField("trip_update"):
-                trip = entity.trip_update
-                trip_info = {
-                    "trip_id": trip.trip.trip_id,
-                    "route_id": trip.trip.route_id,
-                    "stop_updates": len(trip.stop_time_update),
-                }
-                trip_data.append(trip_info)
-        
-        return {
-            "status": "success",
-            "trip_update_count": len(trip_updates),
-            "vehicle_position_count": len(vehicle_positions),
-            "sample_trips": trip_data
-        }
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-            
 from waitress import serve
 if __name__ == "__main__":
     serve(app,

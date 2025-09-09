@@ -156,6 +156,7 @@ const wheelchairIcon = new URL(
 
 const bikeIconUrl = new URL("../assets/icons/bike.svg", import.meta.url).href;
 const trainIcon = new URL("../assets/icons/train.svg", import.meta.url).href;
+
 </script>
 
 <template>

@@ -345,7 +345,7 @@ defineExpose({
             >
               <TrainRow
                 v-for="train in sortedTrains"
-                :key="train.id"
+                :key="train.stop_id"
                 :train="train"
               />
             </TransitionGroup>

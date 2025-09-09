@@ -1,6 +1,7 @@
 import requests
 import os
 import csv
+import time
 from datetime import datetime, timedelta
 from google.transit import gtfs_realtime_pb2
 from ..config import (
@@ -16,23 +17,25 @@ logger = logging.getLogger('BdeB-GTFS.exo')
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 def normalize_trip_id(trip_id):
-    # If there is a hyphen, use the first part; otherwise, return the trip_id stripped.
     return trip_id.split('-')[0].strip()
 
 def fetch_exo_realtime_data():
-    """Updated function to use new Chrono API"""
     headers = { "accept": "application/x-protobuf" }
     
-    # Use new Chrono endpoints
     trip_updates_response = requests.get(CHRONO_TRIP_UPDATE_URL, headers=headers)
     vehicle_positions_response = requests.get(CHRONO_VEHICLE_POSITION_URL, headers=headers)
 
+    if trip_updates_response.status_code == 429:
+        print("Chrono API rate limited for trip updates")
+    if vehicle_positions_response.status_code == 429:
+        print("Chrono API rate limited for vehicle positions")
+    print(f"=== FETCH_EXO_REALTIME_DATA CALLED AT {time.strftime('%H:%M:%S')} ===")
     if trip_updates_response.status_code == 200 and vehicle_positions_response.status_code == 200:
         print("Chrono API Fetch Success")
         trip_updates_feed = gtfs_realtime_pb2.FeedMessage()
         vehicle_positions_feed = gtfs_realtime_pb2.FeedMessage()
         trip_updates_feed.ParseFromString(trip_updates_response.content)
-        vehicle_positions_feed.ParseFromString(vehicle_positions_response.content)
+        vehicle_positions_feed.ParseFromString(vehicle_positions_response.content)    
         return trip_updates_feed.entity, vehicle_positions_feed.entity
     else:
         print(f"Chrono API Error: {trip_updates_response.status_code}, {vehicle_positions_response.status_code}")
@@ -41,7 +44,7 @@ def fetch_exo_realtime_data():
 def fetch_exo_alerts():
     """Updated function to use new Chrono API"""
     headers = { "accept": "application/x-protobuf" }
-    print(f"DEBUG: fetch_exo_alerts calling URL: {CHRONO_ALERTS_URL}")  # Add this line
+    print(f"DEBUG: fetch_exo_alerts calling URL: {CHRONO_ALERTS_URL}")  
     try:
         response = requests.get(CHRONO_ALERTS_URL, headers=headers)
         if response.status_code == 200:
@@ -115,7 +118,7 @@ def exo_map_train_details(schedule, trips_data, stop_id_map):
         trip_id = train["trip_id"]
         route_id = train["route_id"]
         stop_id = train["stop_id"]
-        # For route 4, instead of relying on direction_id from trips_data, use stop_id.
+
         if route_id == "4":
             if stop_id == "MTL7D":
                 direction = "Lucien-L'allier"
