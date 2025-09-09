@@ -19,10 +19,12 @@ BdeB-Go est une application d’affichage en temps réel des horaires de transpo
 1. **Python 3.11+**  
    - Pour exécuter le backend.  
    - Installez-le depuis : https://www.python.org/downloads/
+   - **Important dans l'installation de cocher la case ajouter au PATH**
 
 2. **Node.js 16+ (LTS)**  
    - Pour construire et servir l’interface d’administration.  
    - Installez-le depuis : https://nodejs.org/ (version LTS recommandée)
+   - **Important dans l'installation de cocher la case ajouter au PATH**
   
 3. **Clé API STM**
    - Pour pouvoir afficher les données en temps réels pour les autobus de la STM et l'état du métro
