@@ -24,30 +24,19 @@ const lineIcon = computed(() => iconMap[props.line.icon] || greenLine);
 const cleanStatus = computed(() => {
   if (!props.line.status) return "Information non disponible";
   
-  // Remove HTML tags using regex
+
   let cleanText = props.line.status.replace(/<[^>]*>/g, '');
-  
-  // Decode HTML entities
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = cleanText;
-  cleanText = tempDiv.textContent || tempDiv.innerText || '';
-  
-  // Limit length for display (optional)
-  if (cleanText.length > 80) {
-    cleanText = cleanText.substring(0, 77) + '...';
-  }
+
   
   return cleanText;
 });
 
 // Determine status color based on content and is_normal flag
 const statusColor = computed(() => {
-  // First check if we have an explicit statusColor from API
   if (props.line.statusColor) {
     return props.line.statusColor;
   }
   
-  // Fallback logic based on is_normal flag or status text
   if (props.line.is_normal === false) {
     return "text-red-400";
   }
@@ -56,7 +45,6 @@ const statusColor = computed(() => {
     return "text-black";
   }
   
-  // Final fallback: check status text content
   const statusLower = (props.line.status || '').toLowerCase();
   if (statusLower.includes('service normal') || statusLower.includes('normal service')) {
     return "text-black ";
@@ -85,9 +73,9 @@ const statusColor = computed(() => {
         <h1 :class="`font-bold text-xl bg-green-500 rounded-xl text-black pr-4 pl-4 py-1.5`">
           {{ cleanStatus }}
         </h1>
-        <div v-if="!props.line.is_normal" class="flex items-center gap-1 mt-1">
+        <div v-if="!props.line.is_normal" class="flex items-center gap-4 mt-1">
           <div class="w-4 h-4 bg-red-400 rounded-full animate-pulse"></div>
-          <span class="text-black text-lg font-bold pr-4 pl-4 ml-2 rounded-xl bg-red-400">Service perturbé</span>
+          <span class="font-bold text-xl bg-red-400 rounded-xl text-black pr-4 pl-4 py-1.5">Service perturbé</span>
         </div>
       </div>
     </div>
