@@ -68,7 +68,7 @@ GLOBAL_DELAY_MINUTES=0
 ```
 .\start.bat
 ```
-#6. Ouvrez un navigateur web à la page :
+# 6. Ouvrez un navigateur web à la page :
 ```
 http://localhost:4173/console
 ```
