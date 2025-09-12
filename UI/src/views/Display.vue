@@ -190,6 +190,35 @@ async function fetchOverlayOpacity() {
   }
 }
 
+function setupResponsiveScaling() {
+  const baseWidth = 1920; 
+  const baseHeight = 1080;
+  
+  function updateScale() {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    const widthScale = screenWidth / baseWidth;
+    const heightScale = screenHeight / baseHeight;
+    
+    const scale = Math.min(widthScale, heightScale);
+    
+    const finalScale = Math.max(0.8, Math.min(scale, 2.5));
+    
+    document.documentElement.style.setProperty('--app-scale', finalScale);
+    document.body.style.transform = `scale(${finalScale})`;
+    document.body.style.transformOrigin = 'top left';
+
+    document.body.style.width = `${100 / finalScale}%`;
+    document.body.style.height = `${100 / finalScale}%`;
+  }
+  
+  updateScale();
+  window.addEventListener('resize', updateScale);
+  
+  return () => window.removeEventListener('resize', updateScale);
+}
+
 function toggleView() {
   showBuses.value = !showBuses.value;
 }
@@ -215,6 +244,7 @@ onMounted(() => {
   fetchData()
   applyActiveBackground()
   fetchOverlayOpacity()
+  const cleanupScaling = setupResponsiveScaling();
   setInterval(fetchData, 30_000) 
   setInterval(applyActiveBackground, 15_000) // Update background every 15 seconds
   setInterval(fetchOverlayOpacity, 15_000) // Update overlay every 15 seconds
@@ -224,7 +254,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  stopViewInterval()
+    stopViewInterval();
+    cleanupScaling();
 })
 
 defineExpose({
